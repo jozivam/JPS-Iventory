@@ -80,7 +80,7 @@
                 data-preco="<%= p.preco_unitario %>"
                 <%= (produtoPreSelecionado && produtoPreSelecionado.id === p.id) ? 'selected' : '' %>
               >
-                [<%= p.sku %>] <%= p.nome %> - Saldo: <%= p.quantidade %> <%= p.unidade_medida %>
+                [<%= p.sku %><%= p.tag ? ` | TAG: ${p.tag}` : '' %>] <%= p.nome %> - Saldo: <%= p.quantidade %> <%= p.unidade_medida %>
               </option>
             <% }) %>
           </select>

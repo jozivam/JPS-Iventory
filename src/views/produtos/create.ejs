@@ -11,7 +11,7 @@
   <div class="page-header-flex">
     <div class="page-title-wrap">
       <h2>Novo Produto</h2>
-      <p>Cadastre um novo item no catálogo do almoxarifado.</p>
+      <p>Cadastre um novo item no catálogo. Todos os campos são flexíveis e opcionais.</p>
     </div>
     <a href="/produtos" class="btn btn-outline btn-sm">
       <i class="fa-solid fa-arrow-left"></i> Voltar ao Inventário
@@ -24,7 +24,7 @@
         <!-- SKU -->
         <div class="form-group">
           <label class="form-label" for="produto-sku-input">
-            Código SKU <span class="required">*</span>
+            Código SKU
           </label>
           <div style="display: flex; gap: 0.5rem;">
             <input 
@@ -32,47 +32,62 @@
               id="produto-sku-input" 
               name="sku" 
               class="form-control" 
-              placeholder="Ex: AFZM647" 
+              placeholder="Ex: AFZM647 (Opcional)" 
               value="<%= produto.sku || '' %>" 
-              required 
               style="text-transform: uppercase;"
             >
             <button type="button" class="btn btn-outline btn-sm" id="btn-gerar-sku" title="Gerar código aleatório">
               <i class="fa-solid fa-wand-magic-sparkles"></i> Gerar
             </button>
           </div>
-          <span class="form-help">Código identificador exclusivo do material.</span>
+          <span class="form-help">Identificador único. Se vazio, será gerado automaticamente.</span>
+        </div>
+
+        <!-- TAG / Plaqueta -->
+        <div class="form-group">
+          <label class="form-label" for="produto-tag-input">
+            TAG / Plaqueta de Rastreamento
+          </label>
+          <input 
+            type="text" 
+            id="produto-tag-input" 
+            name="tag" 
+            class="form-control" 
+            placeholder="Ex: TAG-1049 ou PAT-0082" 
+            value="<%= produto.tag || '' %>" 
+            style="text-transform: uppercase;"
+          >
+          <span class="form-help">Etiqueta física, código RFID ou número de patrimônio.</span>
         </div>
 
         <!-- Nome / Descrição -->
         <div class="form-group">
           <label class="form-label" for="produto-nome-input">
-            Nome do Produto / Item <span class="required">*</span>
+            Nome do Produto / Item
           </label>
           <input 
             type="text" 
             id="produto-nome-input" 
             name="nome" 
             class="form-control" 
-            placeholder="Ex: Capacete de Segurança Azul" 
-            value="<%= produto.nome || '' %>" 
-            required
+            placeholder="Ex: Capacete de Segurança Azul (Opcional)" 
+            value="<%= produto.nome || '' %>"
           >
+          <span class="form-help">Descrição livre do material.</span>
         </div>
 
         <!-- Categoria -->
         <div class="form-group">
           <label class="form-label" for="produto-categoria-select">
-            Categoria <span class="required">*</span>
+            Categoria
           </label>
           <input 
             list="lista-categorias" 
             id="produto-categoria-select" 
             name="categoria" 
             class="form-control" 
-            placeholder="Selecione ou digite..." 
-            value="<%= produto.categoria || '' %>" 
-            required
+            placeholder="Selecione ou digite (Opcional)..." 
+            value="<%= produto.categoria || '' %>"
           >
           <datalist id="lista-categorias">
             <option value="Electronics">
@@ -120,7 +135,7 @@
         <!-- Estoque Mínimo -->
         <div class="form-group">
           <label class="form-label" for="produto-minimo-input">
-            Estoque Mínimo de Segurança <span class="required">*</span>
+            Estoque Mínimo de Segurança
           </label>
           <input 
             type="number" 
@@ -128,10 +143,9 @@
             name="estoque_minimo" 
             class="form-control" 
             min="0" 
-            value="<%= produto.estoque_minimo !== undefined ? produto.estoque_minimo : 5 %>" 
-            required
+            value="<%= produto.estoque_minimo !== undefined ? produto.estoque_minimo : 0 %>"
           >
-          <span class="form-help">Dispara o status de alerta quando atingido.</span>
+          <span class="form-help">Deixe 0 se este item não necessitar de alerta de estoque mínimo.</span>
         </div>
 
         <!-- Preço Unitário -->

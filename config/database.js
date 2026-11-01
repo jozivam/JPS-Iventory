@@ -24,12 +24,13 @@ function initDatabase() {
 
     CREATE TABLE IF NOT EXISTS produtos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      sku TEXT UNIQUE NOT NULL,
-      nome TEXT NOT NULL,
-      categoria TEXT NOT NULL,
+      sku TEXT UNIQUE,
+      tag TEXT,
+      nome TEXT,
+      categoria TEXT DEFAULT 'Geral',
       unidade_medida TEXT DEFAULT 'UN',
       quantidade INTEGER NOT NULL DEFAULT 0,
-      estoque_minimo INTEGER NOT NULL DEFAULT 5,
+      estoque_minimo INTEGER NOT NULL DEFAULT 0,
       preco_unitario REAL DEFAULT 0.0,
       localizacao TEXT,
       fornecedor_id INTEGER,
@@ -50,6 +51,13 @@ function initDatabase() {
       FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE
     );
   `);
+
+  // Migração segura para bases existentes adicionando a coluna tag se não existir
+  try {
+    db.exec(`ALTER TABLE produtos ADD COLUMN tag TEXT;`);
+  } catch (e) {
+    // Coluna já existe
+  }
 
   // Inserir dados de demonstração realistas se o banco estiver vazio
   const fornecedorCount = db.prepare('SELECT COUNT(*) AS total FROM fornecedores').get().total;

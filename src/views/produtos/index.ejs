@@ -181,11 +181,16 @@
                 <span style="color: var(--text-body); font-weight: 500;"><%= p.categoria %></span>
               </td>
 
-              <!-- SKU -->
+              <!-- SKU & TAG -->
               <td>
                 <span style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-body); font-weight: 600;">
                   <%= p.sku %>
                 </span>
+                <% if (p.tag) { %>
+                  <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem; margin-top: 2px;">
+                    <i class="fa-solid fa-tag" style="font-size: 0.65rem;"></i> <%= p.tag %>
+                  </div>
+                <% } %>
               </td>
 
               <!-- Incoming (Entradas / Reposição) -->

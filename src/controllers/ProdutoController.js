@@ -65,10 +65,11 @@ class ProdutoController {
    */
   static async store(req, res) {
     try {
-      const { sku, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id } = req.body;
+      const { sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id } = req.body;
 
-      Produto.create({
+      const novoProdutoId = Produto.create({
         sku,
+        tag,
         nome,
         categoria,
         unidade_medida,
@@ -79,7 +80,8 @@ class ProdutoController {
         fornecedor_id
       });
 
-      res.redirect('/produtos?sucesso=' + encodeURIComponent(`Produto "${nome}" cadastrado com sucesso!`));
+      const nomeItem = nome ? nome.trim() : (tag ? `Item [${tag}]` : 'Novo produto');
+      res.redirect('/produtos?sucesso=' + encodeURIComponent(`"${nomeItem}" salvo com sucesso no inventário!`));
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
       const fornecedores = Fornecedor.findAll();
@@ -131,10 +133,11 @@ class ProdutoController {
   static async update(req, res) {
     const { id } = req.params;
     try {
-      const { sku, nome, categoria, unidade_medida, estoque_minimo, preco_unitario, localizacao, fornecedor_id } = req.body;
+      const { sku, tag, nome, categoria, unidade_medida, estoque_minimo, preco_unitario, localizacao, fornecedor_id } = req.body;
 
       Produto.update(id, {
         sku,
+        tag,
         nome,
         categoria,
         unidade_medida,
@@ -144,7 +147,8 @@ class ProdutoController {
         fornecedor_id
       });
 
-      res.redirect('/produtos?sucesso=' + encodeURIComponent(`Produto "${nome}" atualizado com sucesso!`));
+      const nomeItem = nome ? nome.trim() : 'Produto';
+      res.redirect('/produtos?sucesso=' + encodeURIComponent(`"${nomeItem}" atualizado com sucesso!`));
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
       const fornecedores = Fornecedor.findAll();

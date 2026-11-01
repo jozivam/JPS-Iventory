@@ -11,7 +11,7 @@
   <div class="page-header-flex">
     <div class="page-title-wrap">
       <h2>Editar Produto</h2>
-      <p>Atualize as informações cadastrais do item.</p>
+      <p>Atualize as informações cadastrais do item. Todos os campos são flexíveis e opcionais.</p>
     </div>
     <a href="/produtos" class="btn btn-outline btn-sm">
       <i class="fa-solid fa-arrow-left"></i> Voltar ao Inventário
@@ -24,46 +24,64 @@
         <!-- SKU -->
         <div class="form-group">
           <label class="form-label" for="produto-sku-input">
-            Código SKU <span class="required">*</span>
+            Código SKU
           </label>
           <input 
             type="text" 
             id="produto-sku-input" 
             name="sku" 
             class="form-control" 
-            value="<%= produto.sku %>" 
-            required 
+            value="<%= produto.sku || '' %>" 
+            placeholder="Ex: AFZM647 (Opcional)" 
             style="text-transform: uppercase;"
           >
+          <span class="form-help">Código identificador único no almoxarifado.</span>
+        </div>
+
+        <!-- TAG / Plaqueta -->
+        <div class="form-group">
+          <label class="form-label" for="produto-tag-input">
+            TAG / Plaqueta de Rastreamento
+          </label>
+          <input 
+            type="text" 
+            id="produto-tag-input" 
+            name="tag" 
+            class="form-control" 
+            value="<%= produto.tag || '' %>" 
+            placeholder="Ex: TAG-1049 ou PAT-0082" 
+            style="text-transform: uppercase;"
+          >
+          <span class="form-help">Etiqueta física, código RFID ou número de patrimônio.</span>
         </div>
 
         <!-- Nome / Descrição -->
         <div class="form-group">
           <label class="form-label" for="produto-nome-input">
-            Nome do Produto / Item <span class="required">*</span>
+            Nome do Produto / Item
           </label>
           <input 
             type="text" 
             id="produto-nome-input" 
             name="nome" 
             class="form-control" 
-            value="<%= produto.nome %>" 
-            required
+            value="<%= produto.nome || '' %>" 
+            placeholder="Descrição ou nome do material"
           >
         </div>
 
         <!-- Categoria -->
         <div class="form-group">
           <label class="form-label" for="produto-categoria-select">
-            Categoria <span class="required">*</span>
+            Categoria
           </label>
           <input 
             list="lista-categorias" 
             id="produto-categoria-select" 
             name="categoria" 
             class="form-control" 
-            value="<%= produto.categoria %>" 
-            required
+            value="<%= produto.categoria || '' %>" 
+            placeholder="Selecione ou digite..."
           >
           <datalist id="lista-categorias">
             <option value="Electronics">
@@ -109,7 +127,7 @@
         <!-- Estoque Mínimo -->
         <div class="form-group">
           <label class="form-label" for="produto-minimo-input">
-            Estoque Mínimo <span class="required">*</span>
+            Estoque Mínimo
           </label>
           <input 
             type="number" 
@@ -117,9 +135,9 @@
             name="estoque_minimo" 
             class="form-control" 
             min="0" 
-            value="<%= produto.estoque_minimo %>" 
-            required
+            value="<%= produto.estoque_minimo !== undefined ? produto.estoque_minimo : 0 %>"
           >
+          <span class="form-help">Deixe 0 se este item não precisar de alerta de estoque mínimo.</span>
         </div>
 
         <!-- Preço Unitário -->
@@ -134,7 +152,7 @@
             class="form-control" 
             step="0.01" 
             min="0" 
-            value="<%= produto.preco_unitario %>"
+            value="<%= produto.preco_unitario !== undefined ? produto.preco_unitario : 0.00 %>"
           >
         </div>
 
@@ -149,6 +167,7 @@
             name="localizacao" 
             class="form-control" 
             value="<%= produto.localizacao || '' %>"
+            placeholder="Ex: Prateleira B-05"
           >
         </div>
 

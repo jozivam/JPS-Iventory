@@ -23,9 +23,9 @@ class Produto {
     const params = [];
 
     if (busca) {
-      query += ` AND (p.nome LIKE ? OR p.sku LIKE ? OR p.localizacao LIKE ?)`;
+      query += ` AND (p.nome LIKE ? OR p.sku LIKE ? OR p.tag LIKE ? OR p.localizacao LIKE ?)`;
       const term = `%${busca}%`;
-      params.push(term, term, term);
+      params.push(term, term, term, term);
     }
 
     if (categoria) {
@@ -88,6 +88,7 @@ class Produto {
    * Busca produto pelo código SKU único
    */
   static findBySku(sku) {
+    if (!sku) return null;
     return db.prepare('SELECT * FROM produtos WHERE sku = ?').get(sku);
   }
 
@@ -114,31 +115,47 @@ class Produto {
   }
 
   /**
-   * Cria um novo produto no almoxarifado
+   * Cria um novo produto no almoxarifado (Campos opcionais e flexíveis)
    */
-  static create({ sku, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id }) {
-    if (!sku || !nome || !categoria) {
-      throw new Error('SKU, Nome e Categoria são obrigatórios.');
+  static create({ sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id }) {
+    let finalSku = sku ? sku.trim().toUpperCase() : null;
+    let finalTag = tag ? tag.trim().toUpperCase() : null;
+    let finalNome = nome ? nome.trim() : null;
+
+    // Se SKU não foi preenchido, gera um código automático (pode utilizar a tag como base)
+    if (!finalSku) {
+      if (finalTag) {
+        finalSku = `TAG-${finalTag}`;
+      } else {
+        finalSku = 'ALM-' + Math.floor(10000 + Math.random() * 90000);
+      }
     }
 
-    const exist = this.findBySku(sku);
+    // Garante que o SKU seja único
+    let exist = this.findBySku(finalSku);
     if (exist) {
-      throw new Error(`O SKU "${sku}" já está cadastrado para outro produto.`);
+      finalSku = `${finalSku}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+
+    // Se nome não foi preenchido, define um fallback amigável
+    if (!finalNome) {
+      finalNome = finalTag ? `Item [${finalTag}]` : `Item ${finalSku}`;
     }
 
     const stmt = db.prepare(`
-      INSERT INTO produtos (sku, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO produtos (sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
-      sku.trim().toUpperCase(),
-      nome.trim(),
-      categoria.trim(),
+      finalSku,
+      finalTag,
+      finalNome,
+      categoria ? categoria.trim() : 'Geral',
       unidade_medida || 'UN',
       parseInt(quantidade, 10) || 0,
-      parseInt(estoque_minimo, 10) || 0,
-      parseFloat(preco_unitario) || 0.0,
+      estoque_minimo !== undefined && estoque_minimo !== '' ? parseInt(estoque_minimo, 10) : 0,
+      preco_unitario !== undefined && preco_unitario !== '' ? parseFloat(preco_unitario) : 0.0,
       localizacao ? localizacao.trim() : null,
       fornecedor_id ? parseInt(fornecedor_id, 10) : null
     );
@@ -147,24 +164,26 @@ class Produto {
   }
 
   /**
-   * Atualiza dados de um produto existente
+   * Atualiza dados de um produto existente (Campos opcionais e flexíveis)
    */
-  static update(id, { sku, nome, categoria, unidade_medida, estoque_minimo, preco_unitario, localizacao, fornecedor_id }) {
+  static update(id, { sku, tag, nome, categoria, unidade_medida, estoque_minimo, preco_unitario, localizacao, fornecedor_id }) {
     const atual = this.findById(id);
     if (!atual) {
       throw new Error('Produto não encontrado.');
     }
 
-    if (sku && sku !== atual.sku) {
-      const exist = this.findBySku(sku);
+    let finalSku = sku ? sku.trim().toUpperCase() : atual.sku;
+    if (finalSku && finalSku !== atual.sku) {
+      const exist = this.findBySku(finalSku);
       if (exist && exist.id !== parseInt(id, 10)) {
-        throw new Error(`O SKU "${sku}" já está em uso por outro produto.`);
+        throw new Error(`O SKU "${finalSku}" já está em uso por outro produto.`);
       }
     }
 
     const stmt = db.prepare(`
       UPDATE produtos
       SET sku = ?,
+          tag = ?,
           nome = ?,
           categoria = ?,
           unidade_medida = ?,
@@ -177,13 +196,14 @@ class Produto {
     `);
 
     stmt.run(
-      sku ? sku.trim().toUpperCase() : atual.sku,
-      nome ? nome.trim() : atual.nome,
-      categoria ? categoria.trim() : atual.categoria,
+      finalSku,
+      tag !== undefined ? (tag ? tag.trim().toUpperCase() : null) : atual.tag,
+      nome !== undefined ? (nome ? nome.trim() : atual.nome) : atual.nome,
+      categoria !== undefined ? (categoria ? categoria.trim() : 'Geral') : atual.categoria,
       unidade_medida || atual.unidade_medida,
-      estoque_minimo !== undefined ? parseInt(estoque_minimo, 10) : atual.estoque_minimo,
-      preco_unitario !== undefined ? parseFloat(preco_unitario) : atual.preco_unitario,
-      localizacao !== undefined ? localizacao.trim() : atual.localizacao,
+      estoque_minimo !== undefined && estoque_minimo !== '' ? parseInt(estoque_minimo, 10) : 0,
+      preco_unitario !== undefined && preco_unitario !== '' ? parseFloat(preco_unitario) : 0.0,
+      localizacao !== undefined ? (localizacao ? localizacao.trim() : null) : atual.localizacao,
       fornecedor_id ? parseInt(fornecedor_id, 10) : null,
       id
     );
