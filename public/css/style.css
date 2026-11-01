@@ -1270,19 +1270,130 @@ body {
   }
 }
 
-/* Impressão */
+/* ==========================================================================
+   ESTILOS DE RELATÓRIO & ANALYTICS (STORAXE / FIXORIA)
+   ========================================================================== */
+.report-grid-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
+}
+
+@media (max-width: 1024px) {
+  .report-grid-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+.report-table-tag {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-body);
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+}
+
+.deficit-badge {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--danger-text);
+  background: var(--danger-bg);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--danger-border);
+}
+
+.ranking-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: #f1f5f9;
+  color: var(--text-muted);
+}
+
+.ranking-1 { background: #fef3c7; color: #b45309; }
+.ranking-2 { background: #e2e8f0; color: #475569; }
+.ranking-3 { background: #ffedd5; color: #c2410c; }
+
+/* Impressão Formal de Relatório */
 @media print {
-  .app-sidebar, .topbar, .fixoria-filter-bar, .btn, .no-print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+  
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt;
+  }
+
+  .app-sidebar, .topbar, .fixoria-filter-bar, .no-print, .btn, .page-actions-group {
     display: none !important;
   }
+
   .app-main {
     margin-left: 0 !important;
+    padding: 0 !important;
   }
-  body {
-    background: #ffffff;
+
+  .page-content {
+    padding: 0 !important;
+    max-width: 100% !important;
   }
+
+  .print-only {
+    display: block !important;
+    margin-bottom: 1.5rem;
+  }
+
+  .print-header-brand {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
   .table-card, .storaxe-card {
-    box-shadow: none;
-    border: 1px solid #ddd;
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    margin-bottom: 1.5rem !important;
+    page-break-inside: avoid;
+  }
+
+  .clean-table th {
+    background: #f1f5f9 !important;
+    color: #000 !important;
+    border-bottom: 2px solid #94a3b8 !important;
+    font-size: 8pt !important;
+  }
+
+  .clean-table td {
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #000 !important;
+    font-size: 8.5pt !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  .storaxe-kpi-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .storaxe-kpi-card {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    padding: 0.75rem !important;
   }
 }

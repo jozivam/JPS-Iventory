@@ -1,29 +1,37 @@
 <%- include('../layouts/header') %>
 
+<!-- Cabeçalho Principal (Fixoria UI) -->
 <div class="page-header-flex no-print">
   <div class="page-title-wrap">
-    <h2>Relatórios & Auditoria</h2>
-    <p>Consolidado gerencial de giro de estoque, reposição e balanço financeiro.</p>
+    <h2>Relatórios & Análise de Dados</h2>
+    <p>Indicadores de giro, auditoria de consumo e estimativa de compras em tempo real.</p>
   </div>
 
   <div class="page-actions-group">
+    <!-- Botão Exportar CSV -->
+    <button type="button" class="btn btn-outline" id="btn-export-csv" onclick="exportarRelatorioParaCSV()">
+      <i class="fa-solid fa-file-csv" style="color: var(--teal);"></i> Exportar CSV
+    </button>
+    <!-- Botão Imprimir / PDF -->
     <button type="button" class="btn btn-primary" onclick="window.print()">
-      <i class="fa-solid fa-print"></i> Imprimir / Exportar PDF
+      <i class="fa-solid fa-print"></i> Imprimir / Gerar PDF
     </button>
   </div>
 </div>
 
-<!-- Barra de Filtros de Período -->
+<!-- Barra de Filtros e Parâmetros (Fixoria Filter Bar) -->
 <div class="fixoria-filter-bar no-print">
   <form action="/relatorios" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%;">
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Ano:</span>
-      <input type="number" name="ano" class="filter-select-pill" style="width: 100px;" value="<%= filtros.ano %>" min="2020" max="2035">
+    <!-- Filtro Ano -->
+    <div style="display: flex; align-items: center; gap: 0.4rem;">
+      <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Ano:</span>
+      <input type="number" name="ano" class="filter-select-pill" style="width: 95px;" value="<%= filtros.ano %>" min="2020" max="2035">
     </div>
 
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Mês:</span>
-      <select name="mes" class="filter-select-pill">
+    <!-- Filtro Mês -->
+    <div style="display: flex; align-items: center; gap: 0.4rem;">
+      <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Mês:</span>
+      <select name="mes" class="filter-select-pill" style="min-width: 140px;">
         <option value="">Ano Inteiro</option>
         <option value="1" <%= filtros.mes == '1' ? 'selected' : '' %>>Janeiro</option>
         <option value="2" <%= filtros.mes == '2' ? 'selected' : '' %>>Fevereiro</option>
@@ -40,129 +48,231 @@
       </select>
     </div>
 
+    <!-- Filtro Categoria -->
+    <div style="display: flex; align-items: center; gap: 0.4rem;">
+      <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Categoria:</span>
+      <select name="categoria" class="filter-select-pill" style="min-width: 170px;">
+        <option value="">Todas as Categorias</option>
+        <% categorias.forEach(c => { %>
+          <option value="<%= c %>" <%= filtros.categoria === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
+    </div>
+
     <button type="submit" class="btn btn-outline btn-sm">
-      <i class="fa-solid fa-filter"></i> Atualizar Relatório
+      <i class="fa-solid fa-sliders"></i> Atualizar Relatório
     </button>
+
+    <% if (filtros.mes || filtros.categoria || (filtros.ano != new Date().getFullYear())) { %>
+      <a href="/relatorios" class="btn btn-outline btn-sm" title="Limpar Filtros">
+        <i class="fa-solid fa-rotate-left"></i>
+      </a>
+    <% } %>
   </form>
 </div>
 
-<!-- Cabeçalho de Impressão -->
-<div style="display: none;" class="print-only">
-  <h2>JPS Almoxarifado - Relatório Gerencial</h2>
-  <p>Emissão: <%= new Date().toLocaleDateString('pt-BR') %> às <%= new Date().toLocaleTimeString('pt-BR') %></p>
-  <hr style="margin: 1rem 0; border: 1px solid #ddd;">
+<!-- Cabeçalho Exclusivo para Impressão Formal -->
+<div class="print-only" style="display: none;">
+  <div class="print-header-brand">
+    <div>
+      <h1 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.2rem;">JPS Almoxarifado - Relatório Gerencial</h1>
+      <p style="font-size: 0.85rem; color: #475569;">Inventário, Indicadores de Giro e Plano de Suprimentos</p>
+    </div>
+    <div style="text-align: right; font-size: 0.8rem; color: #475569;">
+      <div><strong>Emissão:</strong> <%= new Date().toLocaleDateString('pt-BR') %> às <%= new Date().toLocaleTimeString('pt-BR') %></div>
+      <div><strong>Filtro:</strong> Ano <%= filtros.ano %> <%= filtros.mes ? `(Mês ${filtros.mes})` : '(Geral)' %></div>
+    </div>
+  </div>
 </div>
 
-<!-- 3 KPI Cards Estilo Storaxe -->
+<!-- 4 Cards de KPIs Executivos (Storaxe Style) -->
 <div class="storaxe-kpi-grid">
+  <!-- Card 1: Capital em Estoque -->
   <div class="storaxe-kpi-card">
     <div class="kpi-title-row">
       <span class="kpi-dot teal"></span>
-      <span>Capital Imobilizado em Estoque</span>
+      <span>Capital Total em Estoque</span>
     </div>
     <div class="kpi-big-number"><%= formatMoney(estatisticas.valor_patrimonial) %></div>
-    <span class="kpi-comparison-text">Custo total dos materiais estocados</span>
+    <div>
+      <span class="kpi-badge-comparison badge-positive">
+        <i class="fa-solid fa-box"></i> <%= Number(estatisticas.total_unidades).toLocaleString('pt-BR') %> un
+      </span>
+      <span class="kpi-comparison-text">estocadas em almoxarifado</span>
+    </div>
   </div>
 
+  <!-- Card 2: Custo de Recomposição de Estoque Crítico -->
   <div class="storaxe-kpi-card">
     <div class="kpi-title-row">
       <span class="kpi-dot purple"></span>
-      <span>Itens com Déficit (Reposição)</span>
+      <span>Custo Estimado de Reposição</span>
     </div>
-    <div class="kpi-big-number"><%= itensCriticos.length %></div>
-    <span class="kpi-comparison-text">Materiais abaixo do estoque mínimo</span>
+    <div class="kpi-big-number" style="color: <%= metricas.custoTotalRecomposicao > 0 ? 'var(--danger-text)' : 'var(--text-main)' %>;">
+      <%= formatMoney(metricas.custoTotalRecomposicao) %>
+    </div>
+    <div>
+      <span class="kpi-badge-comparison <%= itensCriticos.length > 0 ? 'badge-negative' : 'badge-positive' %>">
+        <%= itensCriticos.length %> item(ns) com déficit
+      </span>
+      <span class="kpi-comparison-text">para recompor estoque de segurança</span>
+    </div>
   </div>
 
+  <!-- Card 3: Volume Total Movimentado -->
   <div class="storaxe-kpi-card">
     <div class="kpi-title-row">
       <span class="kpi-dot blue"></span>
-      <span>Categorias Monitoradas</span>
+      <span>Movimentação Física</span>
     </div>
-    <div class="kpi-big-number"><%= distribuicaoCategorias.length %></div>
-    <span class="kpi-comparison-text">Famílias ativas de suprimentos</span>
+    <div class="kpi-big-number"><%= Number(metricas.volumeTotalMovimentado).toLocaleString('pt-BR') %> un</div>
+    <div>
+      <span class="kpi-badge-comparison badge-neutral">
+        <i class="fa-solid fa-receipt"></i> <%= formatMoney(metricas.totalFinanceiroMovimentado) %>
+      </span>
+      <span class="kpi-comparison-text">transacionados no período</span>
+    </div>
+  </div>
+
+  <!-- Card 4: Índice de Disponibilidade -->
+  <% const indiceDisponibilidade = estatisticas.total_itens > 0 ? Math.round(((estatisticas.total_itens - itensCriticos.length) / estatisticas.total_itens) * 100) : 100; %>
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot cyan"></span>
+      <span>Disponibilidade Operacional</span>
+    </div>
+    <div class="kpi-big-number"><%= indiceDisponibilidade %>%</div>
+    <div>
+      <span class="kpi-badge-comparison <%= indiceDisponibilidade >= 85 ? 'badge-positive' : 'badge-negative' %>">
+        <%= estatisticas.total_itens - itensCriticos.length %> de <%= estatisticas.total_itens %> itens
+      </span>
+      <span class="kpi-comparison-text">com saldo regular</span>
+    </div>
   </div>
 </div>
 
-<!-- Tabela 1: Itens com Maior Giro de Consumo -->
-<div class="table-card" style="margin-bottom: 1.5rem;">
-  <div class="storaxe-card-header">
-    <div class="storaxe-card-title">Materiais Mais Requisitados (Giro de Almoxarifado)</div>
+<!-- Grid de Gráficos Analíticos (Chart.js) -->
+<div class="report-grid-charts no-print">
+  <!-- Gráfico 1: Balanço Financeiro Mensal -->
+  <div class="storaxe-card">
+    <div class="storaxe-card-header">
+      <div class="storaxe-card-title">
+        <i class="fa-solid fa-chart-column" style="color: var(--primary);"></i>
+        <span>Balanço Financeiro Mensal (Entradas vs Baixas)</span>
+      </div>
+    </div>
+    <div class="storaxe-card-body">
+      <div style="position: relative; height: 260px; width: 100%;">
+        <canvas id="graficoFinanceiroRelatorio"></canvas>
+      </div>
+    </div>
   </div>
+
+  <!-- Gráfico 2: Distribuição de Capital por Categoria -->
+  <div class="storaxe-card">
+    <div class="storaxe-card-header">
+      <div class="storaxe-card-title">
+        <i class="fa-solid fa-chart-pie" style="color: var(--teal);"></i>
+        <span>Distribuição de Capital por Categoria</span>
+      </div>
+    </div>
+    <div class="storaxe-card-body">
+      <div style="position: relative; height: 260px; width: 100%; display: flex; align-items: center; justify-content: center;">
+        <canvas id="graficoCapitalCategoria"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela 1: Relação para Cotação e Ordem de Compra (Itens Críticos) -->
+<div class="table-card" style="margin-bottom: 1.75rem;">
+  <div class="storaxe-card-header" style="background: #ffffff;">
+    <div>
+      <div class="storaxe-card-title" style="color: var(--danger-text);">
+        <i class="fa-solid fa-triangle-exclamation" style="color: var(--danger);"></i>
+        <span>Relação para Cotação e Reposição Urgente (Estoque Baixo / Déficit)</span>
+      </div>
+      <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 0.2rem;">
+        Materiais que atingiram ou romperam a margem de segurança configurada.
+      </div>
+    </div>
+    <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">
+      Custo Total: <span style="color: var(--danger-text);"><%= formatMoney(metricas.custoTotalRecomposicao) %></span>
+    </div>
+  </div>
+
   <div class="table-responsive">
-    <table class="clean-table">
+    <table class="clean-table" id="tabela-cotacao-reposicao">
       <thead>
         <tr>
-          <th>SKU</th>
-          <th>ITEM / PRODUTO</th>
+          <th>ITEM / DESCRIÇÃO</th>
           <th>CATEGORIA</th>
-          <th>VOLUME REQUISITADO</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if (maisConsumidos && maisConsumidos.length > 0) { %>
-          <% maisConsumidos.forEach(item => { %>
-            <tr>
-              <td><span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;"><%= item.sku %></span></td>
-              <td><strong style="color: var(--text-main);"><%= item.nome %></strong></td>
-              <td><span><%= item.categoria %></span></td>
-              <td>
-                <strong style="color: var(--primary);"><%= item.total_saidas %> <%= item.unidade_medida %></strong>
-              </td>
-            </tr>
-          <% }) %>
-        <% } else { %>
-          <tr>
-            <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-              Nenhum registro de consumo no período.
-            </td>
-          </tr>
-        <% } %>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Tabela 2: Relação para Cotação e Ordem de Compra -->
-<div class="table-card" style="margin-bottom: 1.5rem;">
-  <div class="storaxe-card-header">
-    <div class="storaxe-card-title">Relação de Reposição e Cotação de Fornecedores</div>
-  </div>
-  <div class="table-responsive">
-    <table class="clean-table">
-      <thead>
-        <tr>
-          <th>MATERIAL / SKU</th>
           <th>SALDO ATUAL</th>
           <th>MÍNIMO</th>
           <th>DÉFICIT SUGERIDO</th>
+          <th>PREÇO MÉDIO</th>
           <th>CUSTO ESTIMADO</th>
           <th>FORNECEDOR HOMOLOGADO</th>
+          <th class="no-print" style="text-align: right;">AÇÃO RÁPIDA</th>
         </tr>
       </thead>
       <tbody>
         <% if (itensCriticos && itensCriticos.length > 0) { %>
-          <% itensCriticos.forEach(item => { %>
-            <% const custoRecomposicao = item.deficit * item.preco_unitario; %>
+          <% itensCriticos.forEach((item, idx) => { 
+            const custoItem = item.deficit * item.preco_unitario;
+            const icons = ['🦺', '🧤', '👓', '🔧', '📦', '💻', '🔌', '⚡', '🧴', '📁'];
+            const thumbIcon = icons[idx % icons.length];
+          %>
             <tr>
               <td>
-                <strong style="color: var(--text-main);"><%= item.nome %></strong>
-                <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim);"><%= item.sku %></div>
+                <div class="product-cell">
+                  <div class="product-thumb"><%= thumbIcon %></div>
+                  <div>
+                    <div class="product-name-text"><%= item.nome %></div>
+                    <div class="product-sku-text"><%= item.sku %> • <%= item.localizacao || 'Almoxarifado' %></div>
+                  </div>
+                </div>
               </td>
-              <td style="color: <%= item.quantidade <= 0 ? 'var(--danger)' : 'var(--warning)' %>; font-weight: 700;">
-                <%= item.quantidade %> <%= item.unidade_medida %>
-              </td>
-              <td><%= item.estoque_minimo %> <%= item.unidade_medida %></td>
               <td>
-                <strong style="color: var(--primary);">+<%= item.deficit %> <%= item.unidade_medida %></strong>
+                <span class="report-table-tag"><%= item.categoria %></span>
               </td>
-              <td><%= formatMoney(custoRecomposicao) %></td>
-              <td><%= item.fornecedor_nome || 'Nenhum fornecedor registrado' %></td>
+              <td>
+                <span class="status-pill <%= item.quantidade <= 0 ? 'out-of-stock' : 'low-stock' %>">
+                  <span class="status-dot-sm"></span> <%= item.quantidade %> <%= item.unidade_medida %>
+                </span>
+              </td>
+              <td>
+                <span style="color: var(--text-muted); font-weight: 600;"><%= item.estoque_minimo %> <%= item.unidade_medida %></span>
+              </td>
+              <td>
+                <span class="deficit-badge">
+                  +<%= item.deficit %> <%= item.unidade_medida %>
+                </span>
+              </td>
+              <td><%= formatMoney(item.preco_unitario) %></td>
+              <td>
+                <strong style="color: var(--text-main); font-weight: 700;"><%= formatMoney(custoItem) %></strong>
+              </td>
+              <td>
+                <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);"><%= item.fornecedor_nome || 'Nenhum parceiro vinculado' %></div>
+                <% if (item.fornecedor_telefone || item.fornecedor_contato) { %>
+                  <div style="font-size: 0.72rem; color: var(--text-dim);">
+                    <%= item.fornecedor_contato ? `${item.fornecedor_contato} • ` : '' %><%= item.fornecedor_telefone || '' %>
+                  </div>
+                <% } %>
+              </td>
+              <td class="no-print" style="text-align: right;">
+                <a href="/movimentacoes/nova?produto_id=<%= item.id %>&tipo=ENTRADA" class="btn btn-outline btn-sm" title="Dar entrada de reposição">
+                  <i class="fa-solid fa-plus" style="color: var(--teal);"></i> Repor
+                </a>
+              </td>
             </tr>
           <% }) %>
         <% } else { %>
           <tr>
-            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-              Todos os itens estão com saldo normal acima do estoque de segurança!
+            <td colspan="9" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+              <i class="fa-solid fa-circle-check" style="font-size: 2rem; color: var(--success); display: block; margin-bottom: 0.5rem;"></i>
+              Excelente! Todos os itens do almoxarifado estão abastecidos acima da margem mínima de segurança.
             </td>
           </tr>
         <% } %>
@@ -170,5 +280,228 @@
     </table>
   </div>
 </div>
+
+<!-- Grid Inferior: Mais Requisitados & Balanço Mensal -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+  <!-- Tabela 2: Materiais de Maior Giro -->
+  <div class="table-card" style="margin-bottom: 0;">
+    <div class="storaxe-card-header">
+      <div class="storaxe-card-title">
+        <i class="fa-solid fa-arrow-trend-up" style="color: var(--primary);"></i>
+        <span>Materiais Mais Requisitados (Giro)</span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="clean-table">
+        <thead>
+          <tr>
+            <th style="width: 40px;">#</th>
+            <th>MATERIAL</th>
+            <th>CATEGORIA</th>
+            <th style="text-align: right;">VOLUME RETIRADO</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (maisConsumidos && maisConsumidos.length > 0) { %>
+            <% maisConsumidos.forEach((item, index) => { %>
+              <tr>
+                <td>
+                  <span class="ranking-badge ranking-<%= index + 1 %>"><%= index + 1 %></span>
+                </td>
+                <td>
+                  <div style="font-weight: 600; color: var(--text-main); font-size: 0.85rem;"><%= item.nome %></div>
+                  <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim);"><%= item.sku %></div>
+                </td>
+                <td>
+                  <span class="report-table-tag"><%= item.categoria %></span>
+                </td>
+                <td style="text-align: right;">
+                  <strong style="color: var(--primary); font-size: 0.9rem;"><%= item.total_saidas %></strong>
+                  <span style="font-size: 0.75rem; color: var(--text-dim);"><%= item.unidade_medida %></span>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                Nenhum consumo registrado no período.
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tabela 3: Balanço de Movimentações Consolidado -->
+  <div class="table-card" style="margin-bottom: 0;">
+    <div class="storaxe-card-header">
+      <div class="storaxe-card-title">
+        <i class="fa-solid fa-scale-balanced" style="color: var(--teal);"></i>
+        <span>Balanço Consolidado de Operações</span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="clean-table">
+        <thead>
+          <tr>
+            <th>PERÍODO</th>
+            <th>NATUREZA</th>
+            <th>REGISTROS</th>
+            <th>VOLUME</th>
+            <th style="text-align: right;">VALOR TOTAL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (resumoMensal && resumoMensal.length > 0) { %>
+            <% resumoMensal.forEach(r => { %>
+              <tr>
+                <td>
+                  <strong style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-main);"><%= r.periodo %></strong>
+                </td>
+                <td>
+                  <span class="status-pill <%= r.tipo === 'ENTRADA' ? 'in-stock' : 'low-stock' %>">
+                    <span class="status-dot-sm"></span> <%= r.tipo === 'ENTRADA' ? 'Entradas (Inbound)' : 'Baixas (Outbound)' %>
+                  </span>
+                </td>
+                <td><%= r.total_operacoes %> oper.</td>
+                <td><strong><%= r.volume_unidades %></strong> un</td>
+                <td style="text-align: right;">
+                  <strong style="color: var(--text-main); font-size: 0.88rem;"><%= formatMoney(r.valor_financeiro) %></strong>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                Sem dados consolidados para o período filtrado.
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts Analíticos e Exportação para CSV -->
+<script>
+  // 1. Exportação dos Dados da Tabela para CSV
+  function exportarRelatorioParaCSV() {
+    const tabela = document.getElementById('tabela-cotacao-reposicao');
+    if (!tabela) return;
+
+    let csv = [];
+    const rows = tabela.querySelectorAll('tr');
+
+    rows.forEach(row => {
+      const cols = row.querySelectorAll('th, td');
+      let rowData = [];
+      cols.forEach((col, idx) => {
+        // Ignora coluna de ação rápida
+        if (idx === cols.length - 1 && row.querySelector('th:last-child, td:last-child')?.classList.contains('no-print')) return;
+        let text = col.innerText.replace(/"/g, '""').trim();
+        rowData.push(`"${text}"`);
+      });
+      if (rowData.length > 0) csv.push(rowData.join(';'));
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv.join('\n'));
+    const link = document.createElement('a');
+    link.setAttribute('href', csvContent);
+    link.setAttribute('download', `relatorio_almoxarifado_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // 2. Gráficos Chart.js para o Relatório
+  document.addEventListener('DOMContentLoaded', () => {
+    // Gráfico de Balanço Financeiro
+    const resumoData = <%- resumoMensalJson %>;
+    const periodos = [...new Set(resumoData.map(r => r.periodo))];
+    const entradasValores = periodos.map(p => {
+      const r = resumoData.find(item => item.periodo === p && item.tipo === 'ENTRADA');
+      return r ? r.valor_financeiro : 0;
+    });
+    const saidasValores = periodos.map(p => {
+      const r = resumoData.find(item => item.periodo === p && item.tipo === 'SAIDA');
+      return r ? r.valor_financeiro : 0;
+    });
+
+    const ctxFin = document.getElementById('graficoFinanceiroRelatorio').getContext('2d');
+    new Chart(ctxFin, {
+      type: 'bar',
+      data: {
+        labels: periodos.length > 0 ? periodos : ['Sem dados'],
+        datasets: [
+          {
+            label: 'Entradas (Aporte R$)',
+            data: entradasValores.length > 0 ? entradasValores : [0],
+            backgroundColor: '#0d9488',
+            borderRadius: 6
+          },
+          {
+            label: 'Baixas (Consumo R$)',
+            data: saidasValores.length > 0 ? saidasValores : [0],
+            backgroundColor: '#8b5cf6',
+            borderRadius: 6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 11 } }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+          y: { 
+            beginAtZero: true, 
+            grid: { color: '#f1f5f9' }, 
+            ticks: { 
+              color: '#94a3b8',
+              callback: function(value) { return 'R$ ' + value; }
+            } 
+          }
+        }
+      }
+    });
+
+    // Gráfico de Distribuição de Capital por Categoria
+    const categoriasData = <%- distribuicaoCategoriasJson %>;
+    const catLabels = categoriasData.map(c => c.categoria);
+    const catValores = categoriasData.map(c => c.valor_total);
+
+    const ctxCap = document.getElementById('graficoCapitalCategoria').getContext('2d');
+    new Chart(ctxCap, {
+      type: 'doughnut',
+      data: {
+        labels: catLabels,
+        datasets: [{
+          data: catValores,
+          backgroundColor: ['#6366f1', '#0d9488', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899'],
+          borderColor: '#ffffff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: '#64748b', boxWidth: 10, padding: 10, font: { family: 'Plus Jakarta Sans', size: 11 } }
+          }
+        },
+        cutout: '68%'
+      }
+    });
+  });
+</script>
 
 <%- include('../layouts/footer') %>
