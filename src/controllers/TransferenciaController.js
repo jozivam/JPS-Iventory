@@ -36,15 +36,21 @@ class TransferenciaController {
       const { produto_id = '', origem_id = '', destino_id = '', modo = 'TRANSFERENCIA' } = req.query;
       const produtos = Produto.findAll();
       const almoxarifados = Almoxarifado.findAll();
+      const estoquesDisponiveis = Almoxarifado.getTodosEstoquesDisponiveis();
       const produtoPreSelecionado = produto_id ? Produto.findById(produto_id) : null;
+
+      // Se não veio origem especificada, usa a Matriz Central ou primeiro disponível
+      const central = almoxarifados.find(a => a.tipo === 'CENTRAL');
+      const origemPadrao = origem_id || (central ? central.id : (almoxarifados[0] ? almoxarifados[0].id : ''));
 
       res.render('transferencias/create', {
         title: modo === 'REQUISICAO' ? 'Requisitar Material entre Obras' : 'Transferência Direta entre Obras',
         currentPage: 'transferencias',
         produtos,
         almoxarifados,
+        estoquesDisponiveis,
         produtoPreSelecionado,
-        origemPreSelecionada: origem_id,
+        origemPreSelecionada: origemPadrao,
         destinoPreSelecionado: destino_id,
         modoPadrao: modo === 'REQUISICAO' ? 'REQUISICAO' : 'TRANSFERENCIA',
         erro: req.query.erro || null
@@ -94,6 +100,7 @@ class TransferenciaController {
       console.error('Erro ao processar transferência:', error);
       const produtos = Produto.findAll();
       const almoxarifados = Almoxarifado.findAll();
+      const estoquesDisponiveis = Almoxarifado.getTodosEstoquesDisponiveis();
       const produtoPreSelecionado = req.body.produto_id ? Produto.findById(req.body.produto_id) : null;
 
       res.render('transferencias/create', {
@@ -101,6 +108,7 @@ class TransferenciaController {
         currentPage: 'transferencias',
         produtos,
         almoxarifados,
+        estoquesDisponiveis,
         produtoPreSelecionado,
         origemPreSelecionada: req.body.almoxarifado_origem_id,
         destinoPreSelecionado: req.body.almoxarifado_destino_id,

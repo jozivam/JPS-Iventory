@@ -150,6 +150,50 @@ class Almoxarifado {
     `;
     return db.prepare(query).all(almoxarifado_id);
   }
+
+  /**
+   * Obtém itens com saldo disponível (> 0) em um almoxarifado específico
+   */
+  static getItensDisponiveis(almoxarifado_id) {
+    const query = `
+      SELECT 
+        e.almoxarifado_id,
+        e.produto_id,
+        e.quantidade AS saldo_local,
+        p.nome AS produto_nome,
+        p.sku AS produto_sku,
+        p.tag AS produto_tag,
+        p.unidade_medida AS produto_unidade,
+        p.preco_unitario
+      FROM estoques e
+      JOIN produtos p ON e.produto_id = p.id
+      WHERE e.almoxarifado_id = ? AND e.quantidade > 0
+      ORDER BY p.nome ASC
+    `;
+    return db.prepare(query).all(almoxarifado_id);
+  }
+
+  /**
+   * Obtém todos os itens com saldo disponível (> 0) agrupáveis por almoxarifado
+   */
+  static getTodosEstoquesDisponiveis() {
+    const query = `
+      SELECT 
+        e.almoxarifado_id,
+        e.produto_id,
+        e.quantidade AS saldo_local,
+        p.nome AS produto_nome,
+        p.sku AS produto_sku,
+        p.tag AS produto_tag,
+        p.unidade_medida AS produto_unidade,
+        p.preco_unitario
+      FROM estoques e
+      JOIN produtos p ON e.produto_id = p.id
+      WHERE e.quantidade > 0
+      ORDER BY p.nome ASC
+    `;
+    return db.prepare(query).all();
+  }
 }
 
 module.exports = Almoxarifado;

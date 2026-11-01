@@ -63,29 +63,11 @@
         </label>
       </div>
 
-      <div class="form-grid">
-        <!-- Item a Transferir -->
-        <div class="form-group full-width">
-          <label class="form-label" for="transf-produto-select">
-            Material / Insumo <span class="required">*</span>
-          </label>
-          <select id="transf-produto-select" name="produto_id" class="form-select" required>
-            <option value="">-- Selecione o material no catálogo --</option>
-            <% produtos.forEach(p => { %>
-              <option 
-                value="<%= p.id %>" 
-                data-estoque="<%= p.quantidade %>" 
-                data-unidade="<%= p.unidade_medida %>"
-                data-preco="<%= p.preco_unitario %>"
-                <%= (produtoPreSelecionado && produtoPreSelecionado.id === p.id) ? 'selected' : '' %>
-              >
-                [<%= p.sku %><%= p.tag ? ` | TAG: ${p.tag}` : '' %>] <%= p.nome %> (Saldo Global: <%= p.quantidade %> <%= p.unidade_medida %>)
-              </option>
-            <% }) %>
-          </select>
-        </div>
+      <!-- Dados de estoques disponíveis por almoxarifado -->
+      <script id="estoques-disponiveis-data" type="application/json"><%- JSON.stringify(estoquesDisponiveis || []) %></script>
 
-        <!-- Estoque de Origem -->
+      <div class="form-grid">
+        <!-- 1. Estoque de Origem -->
         <div class="form-group">
           <label class="form-label" for="transf-origem-select">
             Estoque de Origem <span class="required">*</span>
@@ -95,16 +77,16 @@
             <% almoxarifados.forEach(alm => { %>
               <option 
                 value="<%= alm.id %>" 
-                <%= (origemPreSelecionada && origemPreSelecionada == alm.id) ? 'selected' : (alm.tipo === 'CENTRAL' && !origemPreSelecionada ? 'selected' : '') %>
+                <%= (origemPreSelecionada && origemPreSelecionada == alm.id) ? 'selected' : '' %>
               >
                 <%= alm.nome %> (<%= alm.codigo %>)
               </option>
             <% }) %>
           </select>
-          <small style="font-size: 0.75rem; color: var(--text-dim);">Estoque de onde sairá o saldo do material.</small>
+          <small style="font-size: 0.75rem; color: var(--text-dim);">Estoque de onde sairá o material para envio.</small>
         </div>
 
-        <!-- Estoque de Destino -->
+        <!-- 2. Estoque de Destino -->
         <div class="form-group">
           <label class="form-label" for="transf-destino-select">
             Estoque de Destino <span class="required">*</span>
@@ -123,7 +105,21 @@
           <small style="font-size: 0.75rem; color: var(--text-dim);">Estoque ou canteiro que receberá a carga.</small>
         </div>
 
-        <!-- Quantidade -->
+        <!-- 3. Material / Insumo (Filtrado pelo Estoque de Origem) -->
+        <div class="form-group full-width">
+          <label class="form-label" for="transf-produto-select">
+            Material / Insumo com Saldo Disponível <span class="required">*</span>
+          </label>
+          <select id="transf-produto-select" name="produto_id" class="form-select" required>
+            <option value="">-- Selecione o Estoque de Origem primeiro --</option>
+          </select>
+          <div id="aviso-sem-estoque" style="display: none; margin-top: 0.4rem; padding: 0.6rem 0.85rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); color: var(--danger); font-size: 0.8rem;">
+            <i class="fa-solid fa-triangle-exclamation"></i> O estoque de origem selecionado não possui nenhum material com saldo positivo para envio.
+          </div>
+          <small style="font-size: 0.75rem; color: var(--text-dim);">Lista dinâmica: exibe apenas os materiais que possuem saldo em estoque no almoxarifado de origem selecionado.</small>
+        </div>
+
+        <!-- 4. Quantidade a Mover -->
         <div class="form-group">
           <label class="form-label" for="transf-quantidade">
             Quantidade a Mover <span class="required">*</span>
@@ -137,9 +133,10 @@
             value="<%= typeof dadosPreenchidos !== 'undefined' ? dadosPreenchidos.quantidade : '1' %>" 
             required
           >
+          <div id="info-saldo-origem" style="font-size: 0.75rem; margin-top: 0.35rem; color: var(--teal); font-weight: 600; min-height: 1.1rem;"></div>
         </div>
 
-        <!-- Responsável / Solicitante -->
+        <!-- 5. Responsável / Solicitante -->
         <div class="form-group">
           <label class="form-label" for="transf-responsavel">
             Responsável / Motorista / Solicitante <span class="required">*</span>
@@ -155,7 +152,7 @@
           >
         </div>
 
-        <!-- Motivo / Justificativa -->
+        <!-- 6. Motivo / Justificativa -->
         <div class="form-group full-width">
           <label class="form-label" for="transf-motivo">
             Motivo da Transferência / Justificativa de Uso <span class="required">*</span>
@@ -171,7 +168,7 @@
           >
         </div>
 
-        <!-- Documento / Guia de Remessa -->
+        <!-- 7. Guia de Remessa Interna -->
         <div class="form-group full-width">
           <label class="form-label" for="transf-documento">
             Guia de Remessa Interna / Nº de Ordem
@@ -198,14 +195,25 @@
 </div>
 
 <script>
-  // Script inline para troca de modo de envio
+  // Script para troca de modo de envio
   const radioTransf = document.getElementById('radio-modo-transf');
   const radioReq = document.getElementById('radio-modo-req');
   const cardTransf = document.getElementById('card-modo-transf');
   const cardReq = document.getElementById('card-modo-req');
   const btnTexto = document.getElementById('btn-texto-transf');
+
   const selOrigem = document.getElementById('transf-origem-select');
   const selDestino = document.getElementById('transf-destino-select');
+  const selProduto = document.getElementById('transf-produto-select');
+  const inputQtd = document.getElementById('transf-quantidade');
+  const infoSaldo = document.getElementById('info-saldo-origem');
+  const avisoSemEstoque = document.getElementById('aviso-sem-estoque');
+  const btnSubmit = document.getElementById('btn-submit-transf');
+
+  // Dados de produtos disponíveis por estoque
+  const dadosEstoquesRaw = document.getElementById('estoques-disponiveis-data');
+  const dadosEstoques = dadosEstoquesRaw ? JSON.parse(dadosEstoquesRaw.textContent || '[]') : [];
+  const produtoPreId = '<%= (produtoPreSelecionado && produtoPreSelecionado.id) || (typeof dadosPreenchidos !== "undefined" && dadosPreenchidos.produto_id) || "" %>';
 
   function atualizarModo() {
     if (radioTransf && radioTransf.checked) {
@@ -233,6 +241,103 @@
     atualizarModo();
   }
 
+  function atualizarListaProdutos() {
+    if (!selOrigem || !selProduto) return;
+    const origemId = parseInt(selOrigem.value, 10);
+    selProduto.innerHTML = '';
+    if (infoSaldo) infoSaldo.textContent = '';
+    if (inputQtd) inputQtd.removeAttribute('max');
+
+    if (!origemId) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- Selecione o Estoque de Origem primeiro --';
+      selProduto.appendChild(opt);
+      selProduto.disabled = true;
+      if (avisoSemEstoque) avisoSemEstoque.style.display = 'none';
+      if (btnSubmit) btnSubmit.disabled = false;
+      return;
+    }
+
+    // Filtra apenas itens com saldo positivo neste estoque de origem
+    const itens = dadosEstoques.filter(item => item.almoxarifado_id === origemId && item.saldo_local > 0);
+
+    if (itens.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- Nenhum material disponível com saldo neste estoque --';
+      selProduto.appendChild(opt);
+      selProduto.disabled = true;
+      if (avisoSemEstoque) avisoSemEstoque.style.display = 'block';
+      if (btnSubmit) btnSubmit.disabled = true;
+      return;
+    }
+
+    selProduto.disabled = false;
+    if (avisoSemEstoque) avisoSemEstoque.style.display = 'none';
+    if (btnSubmit) btnSubmit.disabled = false;
+
+    const optPlaceholder = document.createElement('option');
+    optPlaceholder.value = '';
+    optPlaceholder.textContent = '-- Selecione o material com saldo disponível --';
+    selProduto.appendChild(optPlaceholder);
+
+    let selecionou = false;
+    itens.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.produto_id;
+      opt.dataset.saldo = item.saldo_local;
+      opt.dataset.unidade = item.produto_unidade || 'UN';
+      const tagTexto = item.produto_tag ? ` | TAG: ${item.produto_tag}` : '';
+      opt.textContent = `[${item.produto_sku}${tagTexto}] ${item.produto_nome} (Disponível no Estoque: ${item.saldo_local} ${item.produto_unidade})`;
+      
+      if (produtoPreId && parseInt(produtoPreId, 10) === item.produto_id && !selecionou) {
+        opt.selected = true;
+        selecionou = true;
+      }
+      selProduto.appendChild(opt);
+    });
+
+    atualizarSaldoLimite();
+  }
+
+  function atualizarSaldoLimite() {
+    if (!selProduto || !inputQtd) return;
+    const selectedOpt = selProduto.options[selProduto.selectedIndex];
+    if (selectedOpt && selectedOpt.value && selectedOpt.dataset.saldo) {
+      const maxSaldo = parseInt(selectedOpt.dataset.saldo, 10);
+      const unidade = selectedOpt.dataset.unidade || 'UN';
+      inputQtd.max = maxSaldo;
+      if (infoSaldo) {
+        infoSaldo.innerHTML = `Saldo disponível no estoque de origem: <strong>${maxSaldo} ${unidade}</strong>`;
+      }
+      
+      if (parseInt(inputQtd.value, 10) > maxSaldo) {
+        inputQtd.value = maxSaldo;
+      }
+    } else {
+      inputQtd.removeAttribute('max');
+      if (infoSaldo) infoSaldo.textContent = '';
+    }
+  }
+
+  if (selOrigem) {
+    selOrigem.addEventListener('change', atualizarListaProdutos);
+  }
+  if (selProduto) {
+    selProduto.addEventListener('change', atualizarSaldoLimite);
+  }
+  if (inputQtd) {
+    inputQtd.addEventListener('input', function() {
+      const max = parseInt(inputQtd.max, 10);
+      const val = parseInt(inputQtd.value, 10);
+      if (max && val > max) {
+        inputQtd.value = max;
+        alert(`A quantidade solicitada excede o saldo disponível no estoque de origem (${max}). O valor foi ajustado.`);
+      }
+    });
+  }
+
   // Validação simples para evitar origem == destino
   document.getElementById('form-transferencia')?.addEventListener('submit', function(e) {
     if (selOrigem && selDestino && selOrigem.value && selDestino.value && selOrigem.value === selDestino.value) {
@@ -240,6 +345,9 @@
       alert('O canteiro de origem não pode ser o mesmo de destino.');
     }
   });
+
+  // Dispara a montagem inicial da lista de materiais com base no estoque de origem pré-selecionado
+  atualizarListaProdutos();
 </script>
 
 <%- include('../layouts/footer') %>
