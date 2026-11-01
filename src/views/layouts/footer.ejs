@@ -1,0 +1,36 @@
+      </div><!-- /.page-content -->
+    </main>
+  </div><!-- /.app-container -->
+
+  <!-- Modal Global de Confirmação de Exclusão -->
+  <div class="modal-overlay" id="modal-confirmar-exclusao">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 style="color: var(--danger); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-triangle-exclamation"></i> Confirmar Exclusão
+        </h3>
+        <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-confirmar-exclusao')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Tem certeza de que deseja remover <strong id="modal-excluir-item-nome">este item</strong>?</p>
+        <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem;">
+          Esta ação removerá o registro do sistema. Itens com histórico de movimentações vinculadas não poderão ser excluídos para garantir a conformidade de inventário.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="window.fecharModal('modal-confirmar-exclusao')">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-confirmar-exclusao-acao">
+          <i class="fa-solid fa-trash-can"></i> Sim, Excluir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Global -->
+  <script src="/js/main.js"></script>
+</body>
+</html>

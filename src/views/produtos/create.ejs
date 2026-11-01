@@ -1,0 +1,195 @@
+<%- include('../layouts/header') %>
+
+<div style="max-width: 860px; margin: 0 auto;">
+  <% if (typeof erro !== 'undefined' && erro) { %>
+    <div class="alert alert-danger">
+      <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+      <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  <% } %>
+
+  <div class="page-header-flex">
+    <div class="page-title-wrap">
+      <h2>Novo Produto</h2>
+      <p>Cadastre um novo item no catálogo do almoxarifado.</p>
+    </div>
+    <a href="/produtos" class="btn btn-outline btn-sm">
+      <i class="fa-solid fa-arrow-left"></i> Voltar ao Inventário
+    </a>
+  </div>
+
+  <div class="table-card" style="padding: 1.75rem;">
+    <form action="/produtos" method="POST">
+      <div class="form-grid">
+        <!-- SKU -->
+        <div class="form-group">
+          <label class="form-label" for="produto-sku-input">
+            Código SKU <span class="required">*</span>
+          </label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input 
+              type="text" 
+              id="produto-sku-input" 
+              name="sku" 
+              class="form-control" 
+              placeholder="Ex: AFZM647" 
+              value="<%= produto.sku || '' %>" 
+              required 
+              style="text-transform: uppercase;"
+            >
+            <button type="button" class="btn btn-outline btn-sm" id="btn-gerar-sku" title="Gerar código aleatório">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Gerar
+            </button>
+          </div>
+          <span class="form-help">Código identificador exclusivo do material.</span>
+        </div>
+
+        <!-- Nome / Descrição -->
+        <div class="form-group">
+          <label class="form-label" for="produto-nome-input">
+            Nome do Produto / Item <span class="required">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="produto-nome-input" 
+            name="nome" 
+            class="form-control" 
+            placeholder="Ex: Capacete de Segurança Azul" 
+            value="<%= produto.nome || '' %>" 
+            required
+          >
+        </div>
+
+        <!-- Categoria -->
+        <div class="form-group">
+          <label class="form-label" for="produto-categoria-select">
+            Categoria <span class="required">*</span>
+          </label>
+          <input 
+            list="lista-categorias" 
+            id="produto-categoria-select" 
+            name="categoria" 
+            class="form-control" 
+            placeholder="Selecione ou digite..." 
+            value="<%= produto.categoria || '' %>" 
+            required
+          >
+          <datalist id="lista-categorias">
+            <option value="Electronics">
+            <option value="Apparel">
+            <option value="Wellness">
+            <option value="Home & Living">
+            <option value="EPI / Segurança">
+            <option value="Ferramentas">
+            <option value="Escritório">
+            <option value="Elétrica e TI">
+          </datalist>
+        </div>
+
+        <!-- Unidade de Medida -->
+        <div class="form-group">
+          <label class="form-label" for="produto-unidade-select">
+            Unidade de Medida
+          </label>
+          <select id="produto-unidade-select" name="unidade_medida" class="form-select">
+            <option value="UN" <%= produto.unidade_medida === 'UN' ? 'selected' : '' %>>UN - Unidade</option>
+            <option value="CX" <%= produto.unidade_medida === 'CX' ? 'selected' : '' %>>CX - Caixa</option>
+            <option value="PAR" <%= produto.unidade_medida === 'PAR' ? 'selected' : '' %>>PAR - Par</option>
+            <option value="KG" <%= produto.unidade_medida === 'KG' ? 'selected' : '' %>>KG - Quilograma</option>
+            <option value="L" <%= produto.unidade_medida === 'L' ? 'selected' : '' %>>L - Litro</option>
+            <option value="M" <%= produto.unidade_medida === 'M' ? 'selected' : '' %>>M - Metro</option>
+            <option value="JG" <%= produto.unidade_medida === 'JG' ? 'selected' : '' %>>JG - Jogo</option>
+          </select>
+        </div>
+
+        <!-- Quantidade Inicial em Estoque -->
+        <div class="form-group">
+          <label class="form-label" for="produto-quantidade-input">
+            Quantidade Inicial
+          </label>
+          <input 
+            type="number" 
+            id="produto-quantidade-input" 
+            name="quantidade" 
+            class="form-control" 
+            min="0" 
+            value="<%= produto.quantidade !== undefined ? produto.quantidade : 0 %>"
+          >
+        </div>
+
+        <!-- Estoque Mínimo -->
+        <div class="form-group">
+          <label class="form-label" for="produto-minimo-input">
+            Estoque Mínimo de Segurança <span class="required">*</span>
+          </label>
+          <input 
+            type="number" 
+            id="produto-minimo-input" 
+            name="estoque_minimo" 
+            class="form-control" 
+            min="0" 
+            value="<%= produto.estoque_minimo !== undefined ? produto.estoque_minimo : 5 %>" 
+            required
+          >
+          <span class="form-help">Dispara o status de alerta quando atingido.</span>
+        </div>
+
+        <!-- Preço Unitário -->
+        <div class="form-group">
+          <label class="form-label" for="produto-preco-input">
+            Preço Unitário (R$)
+          </label>
+          <input 
+            type="number" 
+            id="produto-preco-input" 
+            name="preco_unitario" 
+            class="form-control" 
+            step="0.01" 
+            min="0" 
+            placeholder="0,00" 
+            value="<%= produto.preco_unitario !== undefined ? produto.preco_unitario : '0.00' %>"
+          >
+        </div>
+
+        <!-- Localização -->
+        <div class="form-group">
+          <label class="form-label" for="produto-localizacao-input">
+            Localização / Endereçamento
+          </label>
+          <input 
+            type="text" 
+            id="produto-localizacao-input" 
+            name="localizacao" 
+            class="form-control" 
+            placeholder="Ex: Prateleira A-02" 
+            value="<%= produto.localizacao || '' %>"
+          >
+        </div>
+
+        <!-- Fornecedor -->
+        <div class="form-group full-width">
+          <label class="form-label" for="produto-fornecedor-select">
+            Fornecedor Principal
+          </label>
+          <select id="produto-fornecedor-select" name="fornecedor_id" class="form-select">
+            <option value="">Nenhum fornecedor vinculado</option>
+            <% fornecedores.forEach(f => { %>
+              <option value="<%= f.id %>" <%= produto.fornecedor_id == f.id ? 'selected' : '' %>>
+                <%= f.nome %> <%= f.cnpj ? `(${f.cnpj})` : '' %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light);">
+        <a href="/produtos" class="btn btn-outline">Cancelar</a>
+        <button type="submit" class="btn btn-primary" id="btn-salvar-produto">
+          <i class="fa-solid fa-plus"></i> Salvar Produto
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

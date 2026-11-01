@@ -1,0 +1,55 @@
+<aside class="app-sidebar">
+  <!-- Brand Logo estilo Fixoria -->
+  <a href="/" class="sidebar-brand">
+    <div class="brand-icon">
+      <i class="fa-solid fa-cube"></i>
+    </div>
+    <div class="brand-text">
+      <h1>JPS Almoxarifado</h1>
+    </div>
+  </a>
+
+  <!-- Menu de Navegação -->
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">MENU PRINCIPAL</div>
+    
+    <a href="/" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'dashboard') ? 'active' : '' %>" id="nav-dashboard">
+      <i class="fa-regular fa-compass"></i>
+      <span>Visão Geral</span>
+    </a>
+
+    <a href="/produtos" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'produtos') ? 'active' : '' %>" id="nav-produtos">
+      <i class="fa-solid fa-boxes-stacked"></i>
+      <span>Inventário (Itens)</span>
+    </a>
+
+    <a href="/movimentacoes" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'movimentacoes') ? 'active' : '' %>" id="nav-movimentacoes">
+      <i class="fa-solid fa-arrow-right-arrow-left"></i>
+      <span>Movimentações</span>
+    </a>
+
+    <div class="nav-section-title">GESTÃO & SUPRIMENTOS</div>
+
+    <a href="/fornecedores" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'fornecedores') ? 'active' : '' %>" id="nav-fornecedores">
+      <i class="fa-regular fa-building"></i>
+      <span>Fornecedores</span>
+    </a>
+
+    <a href="/relatorios" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'relatorios') ? 'active' : '' %>" id="nav-relatorios">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>Relatórios & Dados</span>
+    </a>
+  </nav>
+
+  <!-- Perfil do Usuário na Base estilo Fixoria -->
+  <div class="sidebar-user">
+    <div class="user-avatar">
+      <i class="fa-solid fa-user-tie"></i>
+    </div>
+    <div class="user-info">
+      <div class="user-name">Jozivam Silva</div>
+      <div class="user-role">Gestor de Almoxarifado</div>
+    </div>
+    <i class="fa-solid fa-chevron-right" style="font-size: 0.75rem; color: var(--text-dim);"></i>
+  </div>
+</aside>

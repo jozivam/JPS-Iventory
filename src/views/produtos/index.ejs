@@ -1,0 +1,290 @@
+<%- include('../layouts/header') %>
+
+<!-- Mensagens de Alerta (Sucesso ou Erro) -->
+<% if (typeof sucesso !== 'undefined' && sucesso) { %>
+  <div class="alert alert-success">
+    <div><i class="fa-solid fa-circle-check"></i> <%= sucesso %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+  <div class="alert alert-danger">
+    <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<!-- Cabeçalho da Página (Estilo Fixoria UI) -->
+<div class="page-header-flex">
+  <div class="page-title-wrap">
+    <h2>Inventário</h2>
+  </div>
+
+  <div class="page-actions-group">
+    <a href="/relatorios" class="btn btn-outline" id="btn-importar-fixoria">
+      <i class="fa-solid fa-arrow-up-from-bracket"></i> Importar
+    </a>
+    <button type="button" class="btn btn-outline" onclick="window.print()" id="btn-exportar-fixoria">
+      <i class="fa-regular fa-file-lines"></i> Exportar
+    </a>
+    <a href="/produtos/novo" class="btn btn-primary" id="btn-add-product-fixoria">
+      <i class="fa-solid fa-plus"></i> Adicionar Produto
+    </a>
+  </div>
+</div>
+
+<!-- Card de Resumo do Inventário (Estilo Fixoria UI) -->
+<div class="fixoria-summary-card">
+  <!-- Valor Patrimonial Total -->
+  <div class="summary-asset-box">
+    <div class="summary-label">Valor Total do Inventário</div>
+    <div class="summary-asset-value"><%= formatMoney(estatisticas.valor_patrimonial) %></div>
+  </div>
+
+  <!-- Barra Segmentada Multi-Status com Legenda -->
+  <div class="summary-stock-box">
+    <div class="summary-stock-header">
+      <div class="summary-stock-count"><%= estatisticas.total_itens %></div>
+      <div class="summary-stock-sub">Produtos Cadastrados</div>
+    </div>
+
+    <% 
+      const totalSeg = Math.max(1, estatisticas.total_itens);
+      const pctIn = Math.round((estatisticas.inStockCount / totalSeg) * 100);
+      const pctLow = Math.round((estatisticas.lowStockCount / totalSeg) * 100);
+      const pctOut = Math.round((estatisticas.outOfStockCount / totalSeg) * 100);
+    %>
+
+    <!-- Barra Multi-Segmento Colorida -->
+    <div class="segmented-progress-bar">
+      <div class="segment-in" style="width: <%= pctIn %>%;" title="Em Estoque: <%= estatisticas.inStockCount %>"></div>
+      <div class="segment-low" style="width: <%= pctLow %>%;" title="Estoque Baixo: <%= estatisticas.lowStockCount %>"></div>
+      <div class="segment-out" style="width: <%= pctOut %>%;" title="Sem Estoque: <%= estatisticas.outOfStockCount %>"></div>
+    </div>
+
+    <!-- Legenda com Bolinhas Coloridas -->
+    <div class="segmented-legend">
+      <div class="legend-item">
+        <span class="legend-dot in"></span>
+        <span>Em estoque: <strong><%= estatisticas.inStockCount %></strong></span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot low"></span>
+        <span>Estoque baixo: <strong><%= estatisticas.lowStockCount %></strong></span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot out"></span>
+        <span>Sem estoque: <strong><%= estatisticas.outOfStockCount %></strong></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Barra de Filtros e Pesquisa Fixoria -->
+<div class="fixoria-filter-bar">
+  <form action="/produtos" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%;">
+    <!-- Campo de Busca com Ícone de Lupa -->
+    <div class="filter-search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input 
+        type="text" 
+        name="busca" 
+        id="quick-table-search" 
+        placeholder="Buscar..." 
+        value="<%= filtros.busca || '' %>"
+      >
+    </div>
+
+    <!-- Pílulas de Seleção Fixoria -->
+    <div class="filter-pills-group">
+      <!-- Data / Período -->
+      <div class="filter-select-pill" style="display: flex; align-items: center; gap: 0.4rem;">
+        <i class="fa-regular fa-calendar" style="color: var(--text-dim);"></i>
+        <span>12 Out - 28 Out 2026</span>
+        <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem; color: var(--text-dim);"></i>
+      </div>
+
+      <!-- Filtro Categoria -->
+      <select name="categoria" class="filter-select-pill" onchange="this.form.submit()">
+        <option value="">Todas as Categorias</option>
+        <% categorias.forEach(cat => { %>
+          <option value="<%= cat %>" <%= filtros.categoria === cat ? 'selected' : '' %>><%= cat %></option>
+        <% }) %>
+      </select>
+
+      <!-- Filtro Status -->
+      <select name="status" class="filter-select-pill" onchange="this.form.submit()">
+        <option value="">Status do Estoque</option>
+        <option value="NORMAL" <%= filtros.status === 'NORMAL' ? 'selected' : '' %>>Em Estoque</option>
+        <option value="BAIXO" <%= filtros.status === 'BAIXO' ? 'selected' : '' %>>Estoque Baixo</option>
+        <option value="CRITICO" <%= filtros.status === 'CRITICO' ? 'selected' : '' %>>Sem Estoque</option>
+      </select>
+
+      <button type="submit" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-sliders"></i> Filtrar
+      </button>
+
+      <% if (filtros.busca || filtros.categoria || filtros.status) { %>
+        <a href="/produtos" class="btn btn-outline btn-sm" title="Limpar Filtros">
+          <i class="fa-solid fa-rotate-left"></i>
+        </a>
+      <% } %>
+    </div>
+  </form>
+</div>
+
+<!-- Tabela Clean de Produtos (Estilo Fixoria UI) -->
+<div class="table-card">
+  <div class="table-responsive">
+    <table class="clean-table">
+      <thead>
+        <tr>
+          <th style="width: 40px;">
+            <input type="checkbox" id="select-all-products" style="cursor: pointer;">
+          </th>
+          <th>Nome do Produto</th>
+          <th>Categoria</th>
+          <th>SKU</th>
+          <th>Entradas</th>
+          <th>Estoque</th>
+          <th>Status <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem;"></i></th>
+          <th>Preço</th>
+          <th style="text-align: right;">Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (produtos && produtos.length > 0) { %>
+          <% produtos.forEach((p, idx) => { 
+            const icons = ['📦', '🦺', '🧤', '👓', '🔧', '💻', '🔌', '⚡', '🧴', '📁'];
+            const thumbIcon = icons[idx % icons.length];
+          %>
+            <tr>
+              <!-- Checkbox -->
+              <td>
+                <input type="checkbox" class="product-checkbox" style="cursor: pointer;">
+              </td>
+
+              <!-- Product Name com Thumbnail Fixoria -->
+              <td>
+                <div class="product-cell">
+                  <div class="product-thumb"><%= thumbIcon %></div>
+                  <div>
+                    <div class="product-name-text"><%= p.nome %></div>
+                    <div class="product-sku-text"><%= p.localizacao || 'Almoxarifado' %></div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Category -->
+              <td>
+                <span style="color: var(--text-body); font-weight: 500;"><%= p.categoria %></span>
+              </td>
+
+              <!-- SKU -->
+              <td>
+                <span style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-body); font-weight: 600;">
+                  <%= p.sku %>
+                </span>
+              </td>
+
+              <!-- Incoming (Entradas / Reposição) -->
+              <td>
+                <span style="font-weight: 500; color: var(--text-muted);"><%= p.estoque_minimo * 2 %></span>
+              </td>
+
+              <!-- Stock (Saldo Físico) -->
+              <td>
+                <strong style="color: var(--text-main); font-size: 0.92rem;"><%= p.quantidade %></strong>
+                <span style="font-size: 0.75rem; color: var(--text-dim);"><%= p.unidade_medida %></span>
+              </td>
+
+              <!-- Status Pill Fixoria -->
+              <td>
+                <% if (p.status_estoque === 'NORMAL') { %>
+                  <span class="status-pill in-stock">
+                    <span class="status-dot-sm"></span> Em estoque
+                  </span>
+                <% } else if (p.status_estoque === 'BAIXO') { %>
+                  <span class="status-pill low-stock">
+                    <span class="status-dot-sm"></span> Estoque baixo
+                  </span>
+                <% } else { %>
+                  <span class="status-pill out-of-stock">
+                    <span class="status-dot-sm"></span> Sem estoque
+                  </span>
+                <% } %>
+              </td>
+
+              <!-- Price -->
+              <td>
+                <strong style="font-weight: 600; color: var(--text-main);"><%= formatMoney(p.preco_unitario) %></strong>
+              </td>
+
+              <!-- Action (...) -->
+              <td style="text-align: right; white-space: nowrap;">
+                <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <!-- Atalho Rápido de Baixa -->
+                  <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Dar Baixa">
+                    <i class="fa-solid fa-arrow-down" style="color: var(--primary);"></i>
+                  </a>
+                  <!-- Atalho Rápido de Entrada -->
+                  <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=ENTRADA" class="action-more-btn" title="Nova Entrada">
+                    <i class="fa-solid fa-arrow-up" style="color: var(--teal);"></i>
+                  </a>
+                  <!-- Editar -->
+                  <a href="/produtos/<%= p.id %>/editar" class="action-more-btn" title="Editar">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                  </a>
+                  <!-- Excluir -->
+                  <form id="form-delete-prod-<%= p.id %>" action="/produtos/<%= p.id %>/excluir" method="POST" style="display: inline;">
+                    <button type="button" class="action-more-btn" title="Excluir" onclick="window.confirmarExclusao('form-delete-prod-<%= p.id %>', '<%= p.nome %>')">
+                      <i class="fa-solid fa-trash-can" style="color: var(--danger);"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="9" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+              Nenhum produto encontrado com os filtros selecionados.
+              <div style="margin-top: 1rem;">
+                <a href="/produtos/novo" class="btn btn-primary btn-sm">Adicionar Novo Produto</a>
+              </div>
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Rodapé de Paginação Fixoria -->
+  <div class="pagination-footer">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <span>Resultado 1-<%= produtos.length %> de <%= produtos.length %></span>
+      <select class="filter-select-pill" style="padding: 0.2rem 0.5rem; font-size: 0.78rem;">
+        <option>10</option>
+        <option>25</option>
+        <option>50</option>
+      </select>
+    </div>
+
+    <div class="pagination-controls">
+      <a href="#" class="page-btn">
+        <i class="fa-solid fa-chevron-left" style="font-size: 0.7rem;"></i> Anterior
+      </a>
+      <a href="#" class="page-btn active">1</a>
+      <a href="#" class="page-btn">2</a>
+      <a href="#" class="page-btn">3</a>
+      <span style="padding: 0 0.35rem; color: var(--text-dim);">...</span>
+      <a href="#" class="page-btn">12</a>
+      <a href="#" class="page-btn">
+        Próximo <i class="fa-solid fa-chevron-right" style="font-size: 0.7rem;"></i>
+      </a>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

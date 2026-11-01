@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || 'Almoxarifado' %></title>
+  
+  <!-- Fontes do Google -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Ícones Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Estilos Customizados do Design Fixoria / Storaxe -->
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Biblioteca de Gráficos Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar de Navegação Lateral -->
+    <%- include('./sidebar') %>
+
+    <!-- Área de Conteúdo Principal -->
+    <main class="app-main">
+      <!-- Topbar Estilo Fixoria / Storaxe -->
+      <header class="topbar">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <button id="btn-toggle-sidebar" class="btn-topbar-icon d-md-none" aria-label="Abrir Menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          
+          <div class="topbar-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <form action="/produtos" method="GET" style="margin: 0;">
+              <input type="text" name="busca" placeholder="Buscar produtos, SKU ou código..." value="<%= (typeof filtros !== 'undefined' && filtros.busca) ? filtros.busca : '' %>">
+            </form>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <a href="/movimentacoes" class="btn-topbar-icon" title="Mensagens e Movimentações">
+            <i class="fa-regular fa-envelope"></i>
+          </a>
+          <a href="/produtos?status=BAIXO" class="btn-topbar-icon" title="Alertas de Estoque Crítico">
+            <i class="fa-regular fa-bell"></i>
+            <span class="topbar-badge-dot"></span>
+          </a>
+        </div>
+      </header>
+      
+      <div class="page-content">

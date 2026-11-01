@@ -1,0 +1,174 @@
+<%- include('../layouts/header') %>
+
+<div class="page-header-flex no-print">
+  <div class="page-title-wrap">
+    <h2>Relatórios & Auditoria</h2>
+    <p>Consolidado gerencial de giro de estoque, reposição e balanço financeiro.</p>
+  </div>
+
+  <div class="page-actions-group">
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+      <i class="fa-solid fa-print"></i> Imprimir / Exportar PDF
+    </button>
+  </div>
+</div>
+
+<!-- Barra de Filtros de Período -->
+<div class="fixoria-filter-bar no-print">
+  <form action="/relatorios" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%;">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Ano:</span>
+      <input type="number" name="ano" class="filter-select-pill" style="width: 100px;" value="<%= filtros.ano %>" min="2020" max="2035">
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Mês:</span>
+      <select name="mes" class="filter-select-pill">
+        <option value="">Ano Inteiro</option>
+        <option value="1" <%= filtros.mes == '1' ? 'selected' : '' %>>Janeiro</option>
+        <option value="2" <%= filtros.mes == '2' ? 'selected' : '' %>>Fevereiro</option>
+        <option value="3" <%= filtros.mes == '3' ? 'selected' : '' %>>Março</option>
+        <option value="4" <%= filtros.mes == '4' ? 'selected' : '' %>>Abril</option>
+        <option value="5" <%= filtros.mes == '5' ? 'selected' : '' %>>Maio</option>
+        <option value="6" <%= filtros.mes == '6' ? 'selected' : '' %>>Junho</option>
+        <option value="7" <%= filtros.mes == '7' ? 'selected' : '' %>>Julho</option>
+        <option value="8" <%= filtros.mes == '8' ? 'selected' : '' %>>Agosto</option>
+        <option value="9" <%= filtros.mes == '9' ? 'selected' : '' %>>Setembro</option>
+        <option value="10" <%= filtros.mes == '10' ? 'selected' : '' %>>Outubro</option>
+        <option value="11" <%= filtros.mes == '11' ? 'selected' : '' %>>Novembro</option>
+        <option value="12" <%= filtros.mes == '12' ? 'selected' : '' %>>Dezembro</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-outline btn-sm">
+      <i class="fa-solid fa-filter"></i> Atualizar Relatório
+    </button>
+  </form>
+</div>
+
+<!-- Cabeçalho de Impressão -->
+<div style="display: none;" class="print-only">
+  <h2>JPS Almoxarifado - Relatório Gerencial</h2>
+  <p>Emissão: <%= new Date().toLocaleDateString('pt-BR') %> às <%= new Date().toLocaleTimeString('pt-BR') %></p>
+  <hr style="margin: 1rem 0; border: 1px solid #ddd;">
+</div>
+
+<!-- 3 KPI Cards Estilo Storaxe -->
+<div class="storaxe-kpi-grid">
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot teal"></span>
+      <span>Capital Imobilizado em Estoque</span>
+    </div>
+    <div class="kpi-big-number"><%= formatMoney(estatisticas.valor_patrimonial) %></div>
+    <span class="kpi-comparison-text">Custo total dos materiais estocados</span>
+  </div>
+
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot purple"></span>
+      <span>Itens com Déficit (Reposição)</span>
+    </div>
+    <div class="kpi-big-number"><%= itensCriticos.length %></div>
+    <span class="kpi-comparison-text">Materiais abaixo do estoque mínimo</span>
+  </div>
+
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot blue"></span>
+      <span>Categorias Monitoradas</span>
+    </div>
+    <div class="kpi-big-number"><%= distribuicaoCategorias.length %></div>
+    <span class="kpi-comparison-text">Famílias ativas de suprimentos</span>
+  </div>
+</div>
+
+<!-- Tabela 1: Itens com Maior Giro de Consumo -->
+<div class="table-card" style="margin-bottom: 1.5rem;">
+  <div class="storaxe-card-header">
+    <div class="storaxe-card-title">Materiais Mais Requisitados (Giro de Almoxarifado)</div>
+  </div>
+  <div class="table-responsive">
+    <table class="clean-table">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>ITEM / PRODUTO</th>
+          <th>CATEGORIA</th>
+          <th>VOLUME REQUISITADO</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (maisConsumidos && maisConsumidos.length > 0) { %>
+          <% maisConsumidos.forEach(item => { %>
+            <tr>
+              <td><span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;"><%= item.sku %></span></td>
+              <td><strong style="color: var(--text-main);"><%= item.nome %></strong></td>
+              <td><span><%= item.categoria %></span></td>
+              <td>
+                <strong style="color: var(--primary);"><%= item.total_saidas %> <%= item.unidade_medida %></strong>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              Nenhum registro de consumo no período.
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Tabela 2: Relação para Cotação e Ordem de Compra -->
+<div class="table-card" style="margin-bottom: 1.5rem;">
+  <div class="storaxe-card-header">
+    <div class="storaxe-card-title">Relação de Reposição e Cotação de Fornecedores</div>
+  </div>
+  <div class="table-responsive">
+    <table class="clean-table">
+      <thead>
+        <tr>
+          <th>MATERIAL / SKU</th>
+          <th>SALDO ATUAL</th>
+          <th>MÍNIMO</th>
+          <th>DÉFICIT SUGERIDO</th>
+          <th>CUSTO ESTIMADO</th>
+          <th>FORNECEDOR HOMOLOGADO</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (itensCriticos && itensCriticos.length > 0) { %>
+          <% itensCriticos.forEach(item => { %>
+            <% const custoRecomposicao = item.deficit * item.preco_unitario; %>
+            <tr>
+              <td>
+                <strong style="color: var(--text-main);"><%= item.nome %></strong>
+                <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim);"><%= item.sku %></div>
+              </td>
+              <td style="color: <%= item.quantidade <= 0 ? 'var(--danger)' : 'var(--warning)' %>; font-weight: 700;">
+                <%= item.quantidade %> <%= item.unidade_medida %>
+              </td>
+              <td><%= item.estoque_minimo %> <%= item.unidade_medida %></td>
+              <td>
+                <strong style="color: var(--primary);">+<%= item.deficit %> <%= item.unidade_medida %></strong>
+              </td>
+              <td><%= formatMoney(custoRecomposicao) %></td>
+              <td><%= item.fornecedor_nome || 'Nenhum fornecedor registrado' %></td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              Todos os itens estão com saldo normal acima do estoque de segurança!
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>
