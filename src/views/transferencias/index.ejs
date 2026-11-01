@@ -34,8 +34,8 @@
 
 <!-- Storaxe KPI Cards de Transferência -->
 <%
-  const reqPendentesCount = requisicoes ? requisicoes.filter(r => r.status === 'PENDENTE').length : 0;
-  const reqAtendidasCount = requisicoes ? requisicoes.filter(r => r.status === 'ATENDIDA').length : 0;
+  const reqPendentesCount = requisicoes ? requisicoes.filter(r => r.status === 'PENDENTE' || r.status === 'APROVADA').length : 0;
+  const reqAtendidasCount = requisicoes ? requisicoes.filter(r => r.status === 'ATENDIDA' || r.status === 'FINALIZADA').length : 0;
   const transfCount = transferencias ? transferencias.length : 0;
 %>
 <div class="storaxe-kpi-grid">
@@ -109,8 +109,8 @@
             <tr>
               <td><span style="font-size: 0.82rem; font-weight: 600;"><%= formatDate(r.criado_em) %></span></td>
               <td><strong style="color: var(--text-main); font-size: 0.85rem;"><%= r.solicitante %></strong></td>
-              <td><span style="color: var(--text-body); font-weight: 500;"><%= r.almoxarifado_origem_nome %></span></td>
-              <td><strong style="color: var(--text-main); font-weight: 600;"><%= r.almoxarifado_destino_nome %></strong></td>
+              <td><span style="color: var(--text-body); font-weight: 500;"><%= r.almoxarifado_origem_nome || r.origem_nome || 'Almoxarifado Central' %></span></td>
+              <td><strong style="color: var(--text-main); font-weight: 600;"><%= r.almoxarifado_destino_nome || r.destino_nome || 'Canteiro de Obras' %></strong></td>
               <td>
                 <a href="/produtos/<%= r.produto_id %>" style="color: inherit; text-decoration: none; font-weight: 600;">
                   <%= r.produto_nome %>
@@ -125,14 +125,16 @@
               <td>
                 <% if (r.status === 'PENDENTE') { %>
                   <span class="status-pill low-stock"><span class="status-dot-sm"></span> Pendente</span>
-                <% } else if (r.status === 'ATENDIDA') { %>
+                <% } else if (r.status === 'APROVADA') { %>
+                  <span class="status-pill in-stock" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.25);"><span class="status-dot-sm" style="background: #0284c7;"></span> Aprovada</span>
+                <% } else if (r.status === 'ATENDIDA' || r.status === 'FINALIZADA') { %>
                   <span class="status-pill in-stock"><span class="status-dot-sm"></span> Atendida</span>
                 <% } else { %>
                   <span class="status-pill out-of-stock"><span class="status-dot-sm"></span> Cancelada</span>
                 <% } %>
               </td>
               <td style="text-align: right; white-space: nowrap;">
-                <% if (r.status === 'PENDENTE') { %>
+                <% if (r.status === 'PENDENTE' || r.status === 'APROVADA') { %>
                   <div style="display: inline-flex; gap: 0.35rem;">
                     <form action="/requisicoes/<%= r.id %>/atender" method="POST" style="display: inline;">
                       <input type="hidden" name="responsavel" value="Almoxarife Responsável">
@@ -146,6 +148,8 @@
                       </button>
                     </form>
                   </div>
+                <% } else if (r.status === 'CANCELADA') { %>
+                  <span style="font-size: 0.78rem; color: var(--danger); font-style: italic;">Cancelada</span>
                 <% } else { %>
                   <span style="font-size: 0.78rem; color: var(--text-dim); font-style: italic;">Concluída</span>
                 <% } %>

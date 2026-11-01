@@ -14,13 +14,17 @@ class Requisicao {
         p.tag AS produto_tag,
         p.unidade_medida AS produto_unidade,
         ao.nome AS origem_nome,
+        ao.nome AS almoxarifado_origem_nome,
         ao.codigo AS origem_codigo,
+        ao.codigo AS almoxarifado_origem_codigo,
         ad.nome AS destino_nome,
-        ad.codigo AS destino_codigo
+        ad.nome AS almoxarifado_destino_nome,
+        ad.codigo AS destino_codigo,
+        ad.codigo AS almoxarifado_destino_codigo
       FROM requisicoes_obras r
-      JOIN produtos p ON r.produto_id = p.id
-      JOIN almoxarifados ao ON r.almoxarifado_origem_id = ao.id
-      JOIN almoxarifados ad ON r.almoxarifado_destino_id = ad.id
+      LEFT JOIN produtos p ON r.produto_id = p.id
+      LEFT JOIN almoxarifados ao ON r.almoxarifado_origem_id = ao.id
+      LEFT JOIN almoxarifados ad ON r.almoxarifado_destino_id = ad.id
       WHERE 1=1
     `;
 
@@ -53,13 +57,17 @@ class Requisicao {
         p.tag AS produto_tag,
         p.unidade_medida AS produto_unidade,
         ao.nome AS origem_nome,
+        ao.nome AS almoxarifado_origem_nome,
         ao.codigo AS origem_codigo,
+        ao.codigo AS almoxarifado_origem_codigo,
         ad.nome AS destino_nome,
-        ad.codigo AS destino_codigo
+        ad.nome AS almoxarifado_destino_nome,
+        ad.codigo AS destino_codigo,
+        ad.codigo AS almoxarifado_destino_codigo
       FROM requisicoes_obras r
-      JOIN produtos p ON r.produto_id = p.id
-      JOIN almoxarifados ao ON r.almoxarifado_origem_id = ao.id
-      JOIN almoxarifados ad ON r.almoxarifado_destino_id = ad.id
+      LEFT JOIN produtos p ON r.produto_id = p.id
+      LEFT JOIN almoxarifados ao ON r.almoxarifado_origem_id = ao.id
+      LEFT JOIN almoxarifados ad ON r.almoxarifado_destino_id = ad.id
       WHERE r.id = ?
     `;
     return db.prepare(query).get(id);

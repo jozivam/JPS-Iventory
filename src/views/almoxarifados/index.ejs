@@ -185,10 +185,10 @@
                 <strong style="color: var(--text-main); font-size: 0.85rem;"><%= req.solicitante %></strong>
               </td>
               <td>
-                <strong style="font-weight: 600; color: var(--text-main);"><%= req.almoxarifado_destino_nome %></strong>
+                <strong style="font-weight: 600; color: var(--text-main);"><%= req.almoxarifado_destino_nome || req.destino_nome || 'Canteiro de Obras' %></strong>
               </td>
               <td>
-                <span style="color: var(--text-body);"><%= req.almoxarifado_origem_nome %></span>
+                <span style="color: var(--text-body);"><%= req.almoxarifado_origem_nome || req.origem_nome || 'Almoxarifado Central' %></span>
               </td>
               <td>
                 <div style="font-weight: 600; color: var(--text-main);"><%= req.produto_nome %></div>

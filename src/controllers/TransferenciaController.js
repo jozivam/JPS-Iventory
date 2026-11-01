@@ -69,7 +69,7 @@ class TransferenciaController {
           almoxarifado_destino_id,
           produto_id,
           quantidade,
-          solicitante: responsavel,
+          solicitante: responsavel || req.body.solicitante || 'Almoxarife Solicitante',
           motivo,
           observacoes
         });
