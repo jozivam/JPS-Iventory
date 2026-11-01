@@ -36,9 +36,11 @@
 
 <!-- Card de Resumo do Inventário (Estilo Fixoria UI) -->
 <div class="fixoria-summary-card">
-  <!-- Valor Patrimonial Total -->
+  <!-- Valor Patrimonial Total (Global ou Filtrado por Obra) -->
   <div class="summary-asset-box">
-    <div class="summary-label">Valor Total do Inventário</div>
+    <div class="summary-label">
+      <%= typeof almoxarifadoAtual !== 'undefined' && almoxarifadoAtual ? `Valor do Inventário (${almoxarifadoAtual.nome})` : 'Valor Total do Inventário' %>
+    </div>
     <div class="summary-asset-value"><%= formatMoney(estatisticas.valor_patrimonial) %></div>
   </div>
 
@@ -46,7 +48,9 @@
   <div class="summary-stock-box">
     <div class="summary-stock-header">
       <div class="summary-stock-count"><%= estatisticas.total_itens %></div>
-      <div class="summary-stock-sub">Produtos Cadastrados</div>
+      <div class="summary-stock-sub">
+        <%= typeof almoxarifadoAtual !== 'undefined' && almoxarifadoAtual ? 'Itens Alocados Nesta Obra' : 'Produtos Cadastrados' %>
+      </div>
     </div>
 
     <% 
@@ -91,7 +95,7 @@
         type="text" 
         name="busca" 
         id="quick-table-search" 
-        placeholder="Buscar..." 
+        placeholder="Buscar material, código ou localização..." 
         value="<%= filtros.busca || '' %>"
       >
     </div>
@@ -145,9 +149,6 @@
     <table class="clean-table">
       <thead>
         <tr>
-          <th style="width: 40px;">
-            <input type="checkbox" id="select-all-products" style="cursor: pointer;">
-          </th>
           <th>Nome do Produto</th>
           <th>Categoria</th>
           <th>SKU / TAG</th>
@@ -160,26 +161,15 @@
       </thead>
       <tbody>
         <% if (produtos && produtos.length > 0) { %>
-          <% produtos.forEach((p, idx) => { 
-            const icons = ['📦', '🦺', '🧤', '👓', '🔧', '💻', '🔌', '⚡', '🧴', '📁'];
-            const thumbIcon = icons[idx % icons.length];
-          %>
+          <% produtos.forEach((p) => { %>
             <tr>
-              <!-- Checkbox -->
+              <!-- Product Name Limpo (Sem Thumbnails, Clicável para Ficha Completa) -->
               <td>
-                <input type="checkbox" class="product-checkbox" style="cursor: pointer;">
-              </td>
-
-              <!-- Product Name com Thumbnail Fixoria (Clicável para Ficha Completa) -->
-              <td>
-                <a href="/produtos/<%= p.id %>" class="product-cell" style="text-decoration: none; color: inherit;" title="Clique para abrir a Ficha Completa de <%= p.nome %>">
-                  <div class="product-thumb"><%= thumbIcon %></div>
-                  <div>
-                    <div class="product-name-text" style="transition: color 0.15s ease;"><%= p.nome %></div>
-                    <div class="product-sku-text">
-                      <%= p.localizacao || 'Almoxarifado' %> 
-                      <span style="color: var(--primary); font-size: 0.72rem; margin-left: 0.25rem;">• Ver ficha ➔</span>
-                    </div>
+                <a href="/produtos/<%= p.id %>" class="product-cell-clean" style="text-decoration: none; color: inherit; display: block;" title="Clique para abrir a Ficha Completa de <%= p.nome %>">
+                  <div class="product-name-text" style="font-weight: 600; color: var(--text-main); font-size: 0.92rem; transition: color 0.15s ease;"><%= p.nome %></div>
+                  <div class="product-sku-text" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                    <%= p.localizacao || 'Almoxarifado' %> 
+                    <span style="color: var(--primary); font-size: 0.72rem; margin-left: 0.35rem; font-weight: 500;">• Ver ficha ➔</span>
                   </div>
                 </a>
               </td>
@@ -269,7 +259,7 @@
           <% }) %>
         <% } else { %>
           <tr>
-            <td colspan="9" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+            <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
               Nenhum produto encontrado com os filtros selecionados.
               <div style="margin-top: 1rem;">
                 <a href="/produtos/novo" class="btn btn-primary btn-sm">Adicionar Novo Produto</a>

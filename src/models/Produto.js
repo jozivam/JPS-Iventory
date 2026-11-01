@@ -313,9 +313,26 @@ class Produto {
   }
 
   /**
-   * Obtém métricas gerais de estoque para o Dashboard
+   * Obtém métricas gerais de estoque (Global ou Filtrado por Canteiro de Obras / Almoxarifado)
    */
-  static getEstatisticas() {
+  static getEstatisticas(almoxarifado_id = null) {
+    if (almoxarifado_id) {
+      const almId = parseInt(almoxarifado_id, 10);
+      const stats = db.prepare(`
+        SELECT 
+          COUNT(DISTINCT p.id) AS total_itens,
+          COALESCE(SUM(COALESCE(e.quantidade, 0)), 0) AS total_unidades,
+          COALESCE(SUM(COALESCE(e.quantidade, 0) * p.preco_unitario), 0) AS valor_patrimonial,
+          COALESCE(SUM(CASE WHEN COALESCE(e.quantidade, 0) <= 0 THEN 1 ELSE 0 END), 0) AS total_zerados,
+          COALESCE(SUM(CASE WHEN COALESCE(e.quantidade, 0) > 0 AND COALESCE(e.quantidade, 0) <= p.estoque_minimo THEN 1 ELSE 0 END), 0) AS total_baixos
+        FROM produtos p
+        LEFT JOIN estoques e ON p.id = e.produto_id AND e.almoxarifado_id = ?
+      `).get(almId);
+
+      stats.total_em_alerta = stats.total_zerados + stats.total_baixos;
+      return stats;
+    }
+
     const stats = db.prepare(`
       SELECT 
         COUNT(*) AS total_itens,

@@ -183,12 +183,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 7. Toggle do menu lateral em telas menores
+  // 7. Toggle do menu lateral em telas menores (Mobile & Tablet)
   const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
   const sidebar = document.querySelector('.app-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+
+  function fecharSidebar() {
+    sidebar?.classList.remove('open');
+    backdrop?.classList.remove('active');
+    document.body.classList.remove('sidebar-locked');
+  }
+
+  function toggleSidebar() {
+    const isOpen = sidebar?.classList.toggle('open');
+    if (isOpen) {
+      backdrop?.classList.add('active');
+      document.body.classList.add('sidebar-locked');
+    } else {
+      backdrop?.classList.remove('active');
+      document.body.classList.remove('sidebar-locked');
+    }
+  }
+
   if (btnToggleSidebar && sidebar) {
-    btnToggleSidebar.addEventListener('click', () => {
-      sidebar.classList.toggle('open');
+    btnToggleSidebar.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSidebar();
     });
   }
+
+  backdrop?.addEventListener('click', fecharSidebar);
+
+  // Fecha sidebar ao redimensionar para desktop
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 992) {
+      fecharSidebar();
+    }
+  });
 });

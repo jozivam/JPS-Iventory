@@ -11,8 +11,9 @@ class ProdutoController {
       const { busca = '', categoria = '', status = '', ordenarPor = 'nome_asc', almoxarifado_id = '' } = req.query;
       const produtos = Produto.findAll({ busca, categoria, status, ordenarPor, almoxarifado_id });
       const categorias = Produto.getCategorias();
-      const estatisticas = Produto.getEstatisticas();
       const almoxarifados = Almoxarifado.findAll();
+      const estatisticas = Produto.getEstatisticas(almoxarifado_id);
+      const almoxarifadoAtual = almoxarifado_id ? almoxarifados.find(a => a.id == almoxarifado_id) : null;
 
       // Estatísticas segmentadas para a barra Fixoria
       const inStockCount = Math.max(0, estatisticas.total_itens - estatisticas.total_em_alerta);
@@ -25,6 +26,7 @@ class ProdutoController {
         produtos,
         categorias,
         almoxarifados,
+        almoxarifadoAtual,
         estatisticas: {
           ...estatisticas,
           inStockCount,
