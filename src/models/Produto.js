@@ -346,6 +346,21 @@ class Produto {
     stats.total_em_alerta = stats.total_zerados + stats.total_baixos;
     return stats;
   }
+
+  /**
+   * Lista apenas produtos que possuem saldo disponível (> 0) em pelo menos um almoxarifado
+   * Usado para evitar listas gigantescas e itens sem estoque em transferências
+   */
+  static findComEstoqueDisponivel() {
+    const query = `
+      SELECT DISTINCT p.*
+      FROM produtos p
+      JOIN estoques e ON p.id = e.produto_id
+      WHERE e.quantidade > 0
+      ORDER BY p.nome ASC
+    `;
+    return db.prepare(query).all();
+  }
 }
 
 module.exports = Produto;

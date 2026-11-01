@@ -34,7 +34,7 @@ class TransferenciaController {
   static async create(req, res) {
     try {
       const { produto_id = '', origem_id = '', destino_id = '', modo = 'TRANSFERENCIA' } = req.query;
-      const produtos = Produto.findAll();
+      const produtos = Produto.findComEstoqueDisponivel();
       const almoxarifados = Almoxarifado.findAll();
       const estoquesDisponiveis = Almoxarifado.getTodosEstoquesDisponiveis();
       const produtoPreSelecionado = produto_id ? Produto.findById(produto_id) : null;
@@ -98,7 +98,7 @@ class TransferenciaController {
       }
     } catch (error) {
       console.error('Erro ao processar transferência:', error);
-      const produtos = Produto.findAll();
+      const produtos = Produto.findComEstoqueDisponivel();
       const almoxarifados = Almoxarifado.findAll();
       const estoquesDisponiveis = Almoxarifado.getTodosEstoquesDisponiveis();
       const produtoPreSelecionado = req.body.produto_id ? Produto.findById(req.body.produto_id) : null;

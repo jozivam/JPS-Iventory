@@ -63,33 +63,46 @@
         </label>
       </div>
 
-      <!-- Dados de estoques disponíveis por almoxarifado -->
+      <!-- Dados em JSON para filtragem reativa instantânea -->
       <script id="estoques-disponiveis-data" type="application/json"><%- JSON.stringify(estoquesDisponiveis || []) %></script>
+      <script id="todos-almoxarifados-data" type="application/json"><%- JSON.stringify(almoxarifados || []) %></script>
 
       <div class="form-grid">
-        <!-- 1. Estoque de Origem -->
-        <div class="form-group">
-          <label class="form-label" for="transf-origem-select">
-            Estoque de Origem <span class="required">*</span>
+        <!-- 1. Material / Insumo (Primeiro campo selecionado) -->
+        <div class="form-group full-width">
+          <label class="form-label" for="transf-produto-select">
+            Material / Insumo <span class="required">*</span>
           </label>
-          <select id="transf-origem-select" name="almoxarifado_origem_id" class="form-select" required>
-            <option value="">-- Selecione o Almoxarifado de Origem --</option>
-            <% almoxarifados.forEach(alm => { %>
+          <select id="transf-produto-select" name="produto_id" class="form-select" required>
+            <option value="">-- Selecione o material que deseja movimentar --</option>
+            <% produtos.forEach(p => { %>
               <option 
-                value="<%= alm.id %>" 
-                <%= (origemPreSelecionada && origemPreSelecionada == alm.id) ? 'selected' : '' %>
+                value="<%= p.id %>" 
+                data-unidade="<%= p.unidade_medida %>"
+                <%= (produtoPreSelecionado && produtoPreSelecionado.id === p.id) ? 'selected' : '' %>
               >
-                <%= alm.nome %> (<%= alm.codigo %>)
+                [<%= p.sku %><%= p.tag ? ` | TAG: ${p.tag}` : '' %>] <%= p.nome %>
               </option>
             <% }) %>
           </select>
-          <small style="font-size: 0.75rem; color: var(--text-dim);">Estoque de onde sairá o material para envio.</small>
+          <small style="font-size: 0.75rem; color: var(--text-dim);">Ao selecionar o material, o sistema listará apenas os estoques que realmente possuem saldo disponível deste item.</small>
         </div>
 
-        <!-- 2. Estoque de Destino -->
+        <!-- 2. Estoque de Origem (Filtrado pelo Material) -->
+        <div class="form-group">
+          <label class="form-label" for="transf-origem-select">
+            Estoque de Origem (Quem Fornece) <span class="required">*</span>
+          </label>
+          <select id="transf-origem-select" name="almoxarifado_origem_id" class="form-select" required>
+            <option value="">-- Selecione o Material primeiro --</option>
+          </select>
+          <small style="font-size: 0.75rem; color: var(--text-dim);" id="origem-help-text">Apenas os estoques que contêm este material em saldo são exibidos.</small>
+        </div>
+
+        <!-- 3. Estoque de Destino (Quem Recebe) -->
         <div class="form-group">
           <label class="form-label" for="transf-destino-select">
-            Estoque de Destino <span class="required">*</span>
+            Estoque de Destino (Quem Recebe) <span class="required">*</span>
           </label>
           <select id="transf-destino-select" name="almoxarifado_destino_id" class="form-select" required>
             <option value="">-- Selecione o Almoxarifado de Destino --</option>
@@ -102,21 +115,7 @@
               </option>
             <% }) %>
           </select>
-          <small style="font-size: 0.75rem; color: var(--text-dim);">Estoque ou canteiro que receberá a carga.</small>
-        </div>
-
-        <!-- 3. Material / Insumo (Filtrado pelo Estoque de Origem) -->
-        <div class="form-group full-width">
-          <label class="form-label" for="transf-produto-select">
-            Material / Insumo com Saldo Disponível <span class="required">*</span>
-          </label>
-          <select id="transf-produto-select" name="produto_id" class="form-select" required>
-            <option value="">-- Selecione o Estoque de Origem primeiro --</option>
-          </select>
-          <div id="aviso-sem-estoque" style="display: none; margin-top: 0.4rem; padding: 0.6rem 0.85rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); color: var(--danger); font-size: 0.8rem;">
-            <i class="fa-solid fa-triangle-exclamation"></i> O estoque de origem selecionado não possui nenhum material com saldo positivo para envio.
-          </div>
-          <small style="font-size: 0.75rem; color: var(--text-dim);">Lista dinâmica: exibe apenas os materiais que possuem saldo em estoque no almoxarifado de origem selecionado.</small>
+          <small style="font-size: 0.75rem; color: var(--text-dim);">Canteiro ou almoxarifado que receberá os materiais.</small>
         </div>
 
         <!-- 4. Quantidade a Mover -->
@@ -195,25 +194,29 @@
 </div>
 
 <script>
-  // Script para troca de modo de envio
+  // Script para alternância de modo
   const radioTransf = document.getElementById('radio-modo-transf');
   const radioReq = document.getElementById('radio-modo-req');
   const cardTransf = document.getElementById('card-modo-transf');
   const cardReq = document.getElementById('card-modo-req');
   const btnTexto = document.getElementById('btn-texto-transf');
 
+  const selProduto = document.getElementById('transf-produto-select');
   const selOrigem = document.getElementById('transf-origem-select');
   const selDestino = document.getElementById('transf-destino-select');
-  const selProduto = document.getElementById('transf-produto-select');
   const inputQtd = document.getElementById('transf-quantidade');
   const infoSaldo = document.getElementById('info-saldo-origem');
-  const avisoSemEstoque = document.getElementById('aviso-sem-estoque');
   const btnSubmit = document.getElementById('btn-submit-transf');
 
-  // Dados de produtos disponíveis por estoque
+  // Dados carregados do servidor
   const dadosEstoquesRaw = document.getElementById('estoques-disponiveis-data');
   const dadosEstoques = dadosEstoquesRaw ? JSON.parse(dadosEstoquesRaw.textContent || '[]') : [];
-  const produtoPreId = '<%= (produtoPreSelecionado && produtoPreSelecionado.id) || (typeof dadosPreenchidos !== "undefined" && dadosPreenchidos.produto_id) || "" %>';
+
+  const todosAlmoxarifadosRaw = document.getElementById('todos-almoxarifados-data');
+  const todosAlmoxarifados = todosAlmoxarifadosRaw ? JSON.parse(todosAlmoxarifadosRaw.textContent || '[]') : [];
+
+  const origemPreId = '<%= (origemPreSelecionada) || (typeof dadosPreenchidos !== "undefined" && dadosPreenchidos.almoxarifado_origem_id) || "" %>';
+  const destinoPreId = '<%= (destinoPreSelecionado) || (typeof dadosPreenchidos !== "undefined" && dadosPreenchidos.almoxarifado_destino_id) || "" %>';
 
   function atualizarModo() {
     if (radioTransf && radioTransf.checked) {
@@ -241,77 +244,80 @@
     atualizarModo();
   }
 
-  function atualizarListaProdutos() {
-    if (!selOrigem || !selProduto) return;
-    const origemId = parseInt(selOrigem.value, 10);
-    selProduto.innerHTML = '';
+  // Atualiza os estoques de origem exibindo APENAS os locais que contêm o material selecionado
+  function atualizarEstoquesOrigem() {
+    if (!selProduto || !selOrigem) return;
+    const produtoId = parseInt(selProduto.value, 10);
+    selOrigem.innerHTML = '';
     if (infoSaldo) infoSaldo.textContent = '';
     if (inputQtd) inputQtd.removeAttribute('max');
 
-    if (!origemId) {
+    if (!produtoId) {
       const opt = document.createElement('option');
       opt.value = '';
-      opt.textContent = '-- Selecione o Estoque de Origem primeiro --';
-      selProduto.appendChild(opt);
-      selProduto.disabled = true;
-      if (avisoSemEstoque) avisoSemEstoque.style.display = 'none';
-      if (btnSubmit) btnSubmit.disabled = false;
+      opt.textContent = '-- Selecione o Material primeiro --';
+      selOrigem.appendChild(opt);
+      selOrigem.disabled = true;
+      atualizarDestinos();
       return;
     }
 
-    // Filtra apenas itens com saldo positivo neste estoque de origem
-    const itens = dadosEstoques.filter(item => item.almoxarifado_id === origemId && item.saldo_local > 0);
+    // Filtra APENAS os estoques que possuem este material com saldo > 0
+    const estoquesDoProduto = dadosEstoques.filter(item => item.produto_id === produtoId && item.saldo_local > 0);
 
-    if (itens.length === 0) {
+    if (estoquesDoProduto.length === 0) {
       const opt = document.createElement('option');
       opt.value = '';
-      opt.textContent = '-- Nenhum material disponível com saldo neste estoque --';
-      selProduto.appendChild(opt);
-      selProduto.disabled = true;
-      if (avisoSemEstoque) avisoSemEstoque.style.display = 'block';
+      opt.textContent = '-- Nenhum estoque possui saldo deste material --';
+      selOrigem.appendChild(opt);
+      selOrigem.disabled = true;
       if (btnSubmit) btnSubmit.disabled = true;
+      atualizarDestinos();
       return;
     }
 
-    selProduto.disabled = false;
-    if (avisoSemEstoque) avisoSemEstoque.style.display = 'none';
+    selOrigem.disabled = false;
     if (btnSubmit) btnSubmit.disabled = false;
 
-    const optPlaceholder = document.createElement('option');
-    optPlaceholder.value = '';
-    optPlaceholder.textContent = '-- Selecione o material com saldo disponível --';
-    selProduto.appendChild(optPlaceholder);
+    // Se houver mais de um estoque disponível, adiciona placeholder
+    if (estoquesDoProduto.length > 1) {
+      const optPlaceholder = document.createElement('option');
+      optPlaceholder.value = '';
+      optPlaceholder.textContent = '-- Selecione o Estoque que tem o produto --';
+      selOrigem.appendChild(optPlaceholder);
+    }
 
-    let selecionou = false;
-    itens.forEach(item => {
+    let selecionouOrigem = false;
+    estoquesDoProduto.forEach(item => {
       const opt = document.createElement('option');
-      opt.value = item.produto_id;
+      opt.value = item.almoxarifado_id;
       opt.dataset.saldo = item.saldo_local;
       opt.dataset.unidade = item.produto_unidade || 'UN';
-      const tagTexto = item.produto_tag ? ` | TAG: ${item.produto_tag}` : '';
-      opt.textContent = `[${item.produto_sku}${tagTexto}] ${item.produto_nome} (Disponível no Estoque: ${item.saldo_local} ${item.produto_unidade})`;
-      
-      if (produtoPreId && parseInt(produtoPreId, 10) === item.produto_id && !selecionou) {
+      opt.textContent = `${item.almoxarifado_nome} (${item.almoxarifado_codigo}) — Disponível: ${item.saldo_local} ${item.produto_unidade}`;
+
+      // Se só houver 1 estoque com o produto, ou se bater com a pré-seleção, seleciona
+      if (estoquesDoProduto.length === 1 || (origemPreId && parseInt(origemPreId, 10) === item.almoxarifado_id)) {
         opt.selected = true;
-        selecionou = true;
+        selecionouOrigem = true;
       }
-      selProduto.appendChild(opt);
+      selOrigem.appendChild(opt);
     });
 
     atualizarSaldoLimite();
+    atualizarDestinos();
   }
 
+  // Atualiza limite de quantidade de acordo com o estoque de origem selecionado
   function atualizarSaldoLimite() {
-    if (!selProduto || !inputQtd) return;
-    const selectedOpt = selProduto.options[selProduto.selectedIndex];
+    if (!selOrigem || !inputQtd) return;
+    const selectedOpt = selOrigem.options[selOrigem.selectedIndex];
     if (selectedOpt && selectedOpt.value && selectedOpt.dataset.saldo) {
       const maxSaldo = parseInt(selectedOpt.dataset.saldo, 10);
       const unidade = selectedOpt.dataset.unidade || 'UN';
       inputQtd.max = maxSaldo;
       if (infoSaldo) {
-        infoSaldo.innerHTML = `Saldo disponível no estoque de origem: <strong>${maxSaldo} ${unidade}</strong>`;
+        infoSaldo.innerHTML = `Saldo disponível no estoque selecionado: <strong>${maxSaldo} ${unidade}</strong>`;
       }
-      
       if (parseInt(inputQtd.value, 10) > maxSaldo) {
         inputQtd.value = maxSaldo;
       }
@@ -321,11 +327,42 @@
     }
   }
 
-  if (selOrigem) {
-    selOrigem.addEventListener('change', atualizarListaProdutos);
+  // Atualiza a lista de destinos excluindo a origem selecionada
+  function atualizarDestinos() {
+    if (!selDestino) return;
+    const origemId = selOrigem && selOrigem.value ? parseInt(selOrigem.value, 10) : 0;
+    const destinoAtual = selDestino.value ? parseInt(selDestino.value, 10) : 0;
+
+    selDestino.innerHTML = '';
+    const optPlaceholder = document.createElement('option');
+    optPlaceholder.value = '';
+    optPlaceholder.textContent = '-- Selecione o Almoxarifado de Destino --';
+    selDestino.appendChild(optPlaceholder);
+
+    todosAlmoxarifados.forEach(alm => {
+      // Não permite enviar para o mesmo almoxarifado que é a origem
+      if (alm.id !== origemId) {
+        const opt = document.createElement('option');
+        opt.value = alm.id;
+        opt.textContent = `${alm.nome} (${alm.codigo})`;
+        if (destinoAtual && destinoAtual === alm.id) {
+          opt.selected = true;
+        } else if (destinoPreId && parseInt(destinoPreId, 10) === alm.id) {
+          opt.selected = true;
+        }
+        selDestino.appendChild(opt);
+      }
+    });
   }
+
   if (selProduto) {
-    selProduto.addEventListener('change', atualizarSaldoLimite);
+    selProduto.addEventListener('change', atualizarEstoquesOrigem);
+  }
+  if (selOrigem) {
+    selOrigem.addEventListener('change', () => {
+      atualizarSaldoLimite();
+      atualizarDestinos();
+    });
   }
   if (inputQtd) {
     inputQtd.addEventListener('input', function() {
@@ -333,21 +370,21 @@
       const val = parseInt(inputQtd.value, 10);
       if (max && val > max) {
         inputQtd.value = max;
-        alert(`A quantidade solicitada excede o saldo disponível no estoque de origem (${max}). O valor foi ajustado.`);
+        alert(`A quantidade solicitada excede o saldo disponível no estoque selecionado (${max}).`);
       }
     });
   }
 
-  // Validação simples para evitar origem == destino
+  // Validação para impedir envio se origem == destino
   document.getElementById('form-transferencia')?.addEventListener('submit', function(e) {
     if (selOrigem && selDestino && selOrigem.value && selDestino.value && selOrigem.value === selDestino.value) {
       e.preventDefault();
-      alert('O canteiro de origem não pode ser o mesmo de destino.');
+      alert('O estoque de origem não pode ser o mesmo de destino.');
     }
   });
 
-  // Dispara a montagem inicial da lista de materiais com base no estoque de origem pré-selecionado
-  atualizarListaProdutos();
+  // Executa inicialização no carregamento
+  atualizarEstoquesOrigem();
 </script>
 
 <%- include('../layouts/footer') %>

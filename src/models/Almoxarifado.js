@@ -180,6 +180,9 @@ class Almoxarifado {
     const query = `
       SELECT 
         e.almoxarifado_id,
+        a.nome AS almoxarifado_nome,
+        a.codigo AS almoxarifado_codigo,
+        a.tipo AS almoxarifado_tipo,
         e.produto_id,
         e.quantidade AS saldo_local,
         p.nome AS produto_nome,
@@ -189,8 +192,9 @@ class Almoxarifado {
         p.preco_unitario
       FROM estoques e
       JOIN produtos p ON e.produto_id = p.id
+      JOIN almoxarifados a ON e.almoxarifado_id = a.id
       WHERE e.quantidade > 0
-      ORDER BY p.nome ASC
+      ORDER BY a.nome ASC, p.nome ASC
     `;
     return db.prepare(query).all();
   }
