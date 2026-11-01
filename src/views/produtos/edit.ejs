@@ -111,16 +111,36 @@
           </select>
         </div>
 
-        <!-- Saldo Físico Atual -->
-        <div class="form-group">
-          <label class="form-label">Saldo em Estoque</label>
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1rem; background: var(--bg-surface); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-            <strong style="font-size: 1.05rem; color: var(--text-main);">
-              <%= produto.quantidade %> <%= produto.unidade_medida %>
-            </strong>
-            <a href="/movimentacoes/nova?produto_id=<%= produto.id %>" class="btn btn-outline btn-sm" style="font-size: 0.75rem;">
-              <i class="fa-solid fa-arrow-right-arrow-left"></i> Movimentar
-            </a>
+        <!-- Distribuição por Almoxarifados / Canteiros -->
+        <div class="form-group full-width">
+          <label class="form-label">Distribuição pelos Almoxarifados & Canteiros de Obras</label>
+          <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem 1.15rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Saldo Físico Total:</span>
+                <strong style="font-size: 1.1rem; color: var(--text-main); margin-left: 0.35rem;">
+                  <%= produto.quantidade %> <%= produto.unidade_medida %>
+                </strong>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <a href="/transferencias/nova?produto_id=<%= produto.id %>" class="btn btn-outline btn-sm" style="font-size: 0.75rem;">
+                  <i class="fa-solid fa-arrow-right-arrow-left"></i> Transferir entre Obras
+                </a>
+                <a href="/produtos/<%= produto.id %>" class="btn btn-primary btn-sm" style="font-size: 0.75rem;">
+                  <i class="fa-solid fa-id-card"></i> Ficha Completa
+                </a>
+              </div>
+            </div>
+            <% if (produto.estoquesObras && produto.estoquesObras.length > 0) { %>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                <% produto.estoquesObras.forEach(est => { %>
+                  <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem; font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
+                    <span><%= est.almoxarifado_tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <strong><%= est.almoxarifado_nome %>:</strong></span>
+                    <strong style="color: <%= est.quantidade > 0 ? 'var(--teal)' : 'var(--text-dim)' %>;"><%= est.quantidade %> <%= produto.unidade_medida %></strong>
+                  </div>
+                <% }) %>
+              </div>
+            <% } %>
           </div>
         </div>
 

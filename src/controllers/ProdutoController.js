@@ -98,7 +98,7 @@ class ProdutoController {
    */
   static async store(req, res) {
     try {
-      const { sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id } = req.body;
+      const { sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id, almoxarifado_id } = req.body;
 
       const novoProdutoId = Produto.create({
         sku,
@@ -110,7 +110,8 @@ class ProdutoController {
         estoque_minimo,
         preco_unitario,
         localizacao,
-        fornecedor_id
+        fornecedor_id,
+        almoxarifado_id
       });
 
       const nomeItem = nome ? nome.trim() : (tag ? `Item [${tag}]` : 'Novo produto');
@@ -139,7 +140,7 @@ class ProdutoController {
   static async edit(req, res) {
     try {
       const { id } = req.params;
-      const produto = Produto.findById(id);
+      const produto = Produto.findByIdWithEstoques(id);
 
       if (!produto) {
         return res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
@@ -147,6 +148,7 @@ class ProdutoController {
 
       const fornecedores = Fornecedor.findAll();
       const categorias = Produto.getCategorias();
+      const almoxarifados = Almoxarifado.findAll();
 
       res.render('produtos/edit', {
         title: `Editar ${produto.nome}`,
@@ -154,6 +156,7 @@ class ProdutoController {
         produto,
         fornecedores,
         categorias,
+        almoxarifados,
         erro: req.query.erro || null
       });
     } catch (error) {

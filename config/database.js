@@ -135,7 +135,7 @@ function syncEstoques() {
 
   const produtos = db.prepare('SELECT * FROM produtos').all();
   const checkEstoque = db.prepare('SELECT id, quantidade FROM estoques WHERE produto_id = ? AND almoxarifado_id = ?');
-  const insertEstoque = db.prepare('INSERT INTO estoques (produto_id, almoxarifado_id, quantidade, localizacao) VALUES (?, ?, ?, ?)');
+  const insertEstoque = db.prepare('INSERT OR IGNORE INTO estoques (produto_id, almoxarifado_id, quantidade, localizacao) VALUES (?, ?, ?, ?)');
   const updateEstoque = db.prepare('UPDATE estoques SET quantidade = ? WHERE id = ?');
 
   for (const p of produtos) {

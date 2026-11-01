@@ -130,6 +130,42 @@
             min="0" 
             value="<%= produto.quantidade !== undefined ? produto.quantidade : 0 %>"
           >
+          <span class="form-help">Saldo que entrará no almoxarifado selecionado abaixo.</span>
+        </div>
+
+        <!-- Almoxarifado / Canteiro de Entrada Inicial -->
+        <div class="form-group">
+          <label class="form-label" for="produto-almoxarifado-select">
+            Almoxarifado / Canteiro Inicial
+          </label>
+          <select id="produto-almoxarifado-select" name="almoxarifado_id" class="form-select" style="font-weight: 600; color: var(--primary);">
+            <% if (typeof almoxarifados !== 'undefined' && almoxarifados.length > 0) { %>
+              <% almoxarifados.forEach(alm => { %>
+                <option value="<%= alm.id %>" <%= (produto.almoxarifado_id == alm.id || (!produto.almoxarifado_id && alm.tipo === 'CENTRAL')) ? 'selected' : '' %>>
+                  <%= alm.tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <%= alm.nome %> (<%= alm.codigo %>)
+                </option>
+              <% }) %>
+            <% } else { %>
+              <option value="1">Almoxarifado Central (Matriz)</option>
+            <% } %>
+          </select>
+          <span class="form-help">Canteiro de obras ou depósito onde o item será alocado.</span>
+        </div>
+
+        <!-- Localização -->
+        <div class="form-group">
+          <label class="form-label" for="produto-localizacao-input">
+            Localização / Endereçamento
+          </label>
+          <input 
+            type="text" 
+            id="produto-localizacao-input" 
+            name="localizacao" 
+            class="form-control" 
+            placeholder="Ex: Prateleira A-02 ou Bancada B-05" 
+            value="<%= produto.localizacao || '' %>"
+          >
+          <span class="form-help">Posição física no almoxarifado/canteiro.</span>
         </div>
 
         <!-- Estoque Mínimo -->
@@ -162,21 +198,6 @@
             min="0" 
             placeholder="0,00" 
             value="<%= produto.preco_unitario !== undefined ? produto.preco_unitario : '0.00' %>"
-          >
-        </div>
-
-        <!-- Localização -->
-        <div class="form-group">
-          <label class="form-label" for="produto-localizacao-input">
-            Localização / Endereçamento
-          </label>
-          <input 
-            type="text" 
-            id="produto-localizacao-input" 
-            name="localizacao" 
-            class="form-control" 
-            placeholder="Ex: Prateleira A-02" 
-            value="<%= produto.localizacao || '' %>"
           >
         </div>
 

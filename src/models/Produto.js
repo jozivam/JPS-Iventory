@@ -165,12 +165,13 @@ class Produto {
   }
 
   /**
-   * Cria um novo produto no almoxarifado (Campos opcionais e flexíveis)
+   * Cria um novo produto no almoxarifado (Campos opcionais e flexíveis, com alocação no canteiro/almoxarifado escolhido)
    */
-  static create({ sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id }) {
+  static create({ sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id, almoxarifado_id }) {
     let finalSku = sku ? sku.trim().toUpperCase() : null;
     let finalTag = tag ? tag.trim().toUpperCase() : null;
     let finalNome = nome ? nome.trim() : null;
+    const qtdInicial = parseInt(quantidade, 10) || 0;
 
     // Se SKU não foi preenchido, gera um código automático (pode utilizar a tag como base)
     if (!finalSku) {
@@ -192,25 +193,54 @@ class Produto {
       finalNome = finalTag ? `Item [${finalTag}]` : `Item ${finalSku}`;
     }
 
-    const stmt = db.prepare(`
-      INSERT INTO produtos (sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    // Determina o almoxarifado de destino inicial
+    let targetAlmoxId = almoxarifado_id ? parseInt(almoxarifado_id, 10) : null;
+    if (!targetAlmoxId) {
+      const central = db.prepare("SELECT id FROM almoxarifados WHERE tipo = 'CENTRAL' LIMIT 1").get();
+      targetAlmoxId = central ? central.id : 1;
+    }
 
-    const result = stmt.run(
-      finalSku,
-      finalTag,
-      finalNome,
-      categoria ? categoria.trim() : 'Geral',
-      unidade_medida || 'UN',
-      parseInt(quantidade, 10) || 0,
-      estoque_minimo !== undefined && estoque_minimo !== '' ? parseInt(estoque_minimo, 10) : 0,
-      preco_unitario !== undefined && preco_unitario !== '' ? parseFloat(preco_unitario) : 0.0,
-      localizacao ? localizacao.trim() : null,
-      fornecedor_id ? parseInt(fornecedor_id, 10) : null
-    );
+    const criarProdutoTransacao = db.transaction(() => {
+      const stmt = db.prepare(`
+        INSERT INTO produtos (sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
 
-    return result.lastInsertRowid;
+      const result = stmt.run(
+        finalSku,
+        finalTag,
+        finalNome,
+        categoria ? categoria.trim() : 'Geral',
+        unidade_medida || 'UN',
+        qtdInicial,
+        estoque_minimo !== undefined && estoque_minimo !== '' ? parseInt(estoque_minimo, 10) : 0,
+        preco_unitario !== undefined && preco_unitario !== '' ? parseFloat(preco_unitario) : 0.0,
+        localizacao ? localizacao.trim() : null,
+        fornecedor_id ? parseInt(fornecedor_id, 10) : null
+      );
+
+      const novoProdutoId = result.lastInsertRowid;
+
+      // Aloca o saldo inicial na tabela relacional de estoques para o canteiro/almoxarifado selecionado
+      db.prepare(`
+        INSERT INTO estoques (produto_id, almoxarifado_id, quantidade, localizacao)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(produto_id, almoxarifado_id)
+        DO UPDATE SET quantidade = quantidade + ?, atualizado_em = (datetime('now', 'localtime'))
+      `).run(novoProdutoId, targetAlmoxId, qtdInicial, localizacao ? localizacao.trim() : null, qtdInicial);
+
+      // Se entrou com saldo inicial > 0, cria o registro inicial no histórico de movimentações
+      if (qtdInicial > 0) {
+        db.prepare(`
+          INSERT INTO movimentacoes (produto_id, tipo, quantidade, motivo, responsavel, documento_ref, almoxarifado_origem_id, almoxarifado_destino_id)
+          VALUES (?, 'ENTRADA', ?, 'Saldo Inicial de Cadastro', 'Cadastro de Catálogo', 'CADASTRO-INICIAL', NULL, ?)
+        `).run(novoProdutoId, qtdInicial, targetAlmoxId);
+      }
+
+      return novoProdutoId;
+    });
+
+    return criarProdutoTransacao();
   }
 
   /**
