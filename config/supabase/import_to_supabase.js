@@ -11,16 +11,19 @@ const { pgPool, testConnection } = require('../supabase');
 async function executarMigracao() {
   console.log('--- MIGRAÇÃO DE BANCO DE DADOS: JPS ALMOXARIFADO -> SUPABASE ---');
 
-  if (!process.env.DATABASE_URL) {
-    console.error('\n[ATENÇÃO] A variável DATABASE_URL não está configurada no seu arquivo .env!');
-    console.log('Para obter a DATABASE_URL:');
-    console.log('1. Acesse https://supabase.com/dashboard');
-    console.log('2. Entre no seu projeto -> Project Settings -> Database');
-    console.log('3. Copie a Connection String (Modo URI) e cole no .env:');
-    console.log('   DATABASE_URL="postgres://postgres.[ref]:[senha]@aws-0-[regiao].pooler.supabase.com:6543/postgres?pgbouncer=true"\n');
-    console.log('Alternativamente, você pode copiar os arquivos SQL e colar direto no SQL Editor do Supabase:');
-    console.log(' - config/supabase/schema_supabase.sql (Estrutura das Tabelas)');
-    console.log(' - config/supabase/dados_supabase.sql (Seus dados atuais)');
+  const dbUrl = process.env.DATABASE_URL || '';
+
+  if (!dbUrl || dbUrl.includes('[YOUR-PASSWORD]') || dbUrl.includes('[SUA-SENHA-AQUI]')) {
+    console.error('\n[ATENÇÃO] A sua senha do banco de dados ainda não foi inserida na DATABASE_URL!');
+    console.log('\nNo seu arquivo .env, substitua [SUA-SENHA-AQUI] pela senha que você criou para o projeto Supabase:');
+    console.log('Exemplo: DATABASE_URL=postgresql://postgres:SuaSenhaReal123@db.nhomnkckccszanrqpnki.supabase.co:5432/postgres\n');
+    console.log('💡 DICA: Se você não lembra a senha criada no Supabase, você pode:');
+    console.log(' 1. No Supabase, clicar no ícone de Engrenagem (Project Settings) -> Database -> "Reset Database Password".');
+    console.log(' OU');
+    console.log(' 2. Subir sem precisar de senha pelo navegador usando o SQL Editor do Supabase em 2 cliques:');
+    console.log('    - Abra o SQL Editor no painel do Supabase');
+    console.log('    - Cole o conteúdo de config/supabase/schema_supabase.sql e clique em RUN');
+    console.log('    - Cole o conteúdo de config/supabase/dados_supabase.sql e clique em RUN');
     process.exit(1);
   }
 
