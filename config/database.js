@@ -103,6 +103,38 @@ function initDatabase() {
   try { db.exec(`ALTER TABLE movimentacoes ADD COLUMN almoxarifado_origem_id INTEGER REFERENCES almoxarifados(id);`); } catch (e) {}
   try { db.exec(`ALTER TABLE movimentacoes ADD COLUMN almoxarifado_destino_id INTEGER REFERENCES almoxarifados(id);`); } catch (e) {}
 
+  // Migração segura para tabela movimentacoes se contiver a restrição antiga CHECK ('ENTRADA', 'SAIDA')
+  try {
+    const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='movimentacoes'").get();
+    if (tableInfo && tableInfo.sql.includes("CHECK(tipo IN ('ENTRADA', 'SAIDA'))")) {
+      db.pragma('foreign_keys = OFF');
+      db.exec(`
+        CREATE TABLE movimentacoes_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          produto_id INTEGER NOT NULL,
+          tipo TEXT NOT NULL CHECK(tipo IN ('ENTRADA', 'SAIDA', 'TRANSFERENCIA')),
+          quantidade INTEGER NOT NULL,
+          motivo TEXT NOT NULL,
+          responsavel TEXT NOT NULL,
+          documento_ref TEXT,
+          almoxarifado_origem_id INTEGER,
+          almoxarifado_destino_id INTEGER,
+          criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
+          FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE,
+          FOREIGN KEY (almoxarifado_origem_id) REFERENCES almoxarifados(id) ON DELETE SET NULL,
+          FOREIGN KEY (almoxarifado_destino_id) REFERENCES almoxarifados(id) ON DELETE SET NULL
+        );
+
+        INSERT INTO movimentacoes_new (id, produto_id, tipo, quantidade, motivo, responsavel, documento_ref, almoxarifado_origem_id, almoxarifado_destino_id, criado_em)
+        SELECT id, produto_id, tipo, quantidade, motivo, responsavel, documento_ref, almoxarifado_origem_id, almoxarifado_destino_id, criado_em FROM movimentacoes;
+
+        DROP TABLE movimentacoes;
+        ALTER TABLE movimentacoes_new RENAME TO movimentacoes;
+      `);
+      db.pragma('foreign_keys = ON');
+    }
+  } catch (e) {}
+
   // Inserir almoxarifados padrão se a tabela estiver vazia
   const almoxCount = db.prepare('SELECT COUNT(*) AS total FROM almoxarifados').get().total;
   if (almoxCount === 0) {

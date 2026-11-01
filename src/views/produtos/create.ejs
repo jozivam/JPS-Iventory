@@ -142,7 +142,7 @@
             <% if (typeof almoxarifados !== 'undefined' && almoxarifados.length > 0) { %>
               <% almoxarifados.forEach(alm => { %>
                 <option value="<%= alm.id %>" <%= (produto.almoxarifado_id == alm.id || (!produto.almoxarifado_id && alm.tipo === 'CENTRAL')) ? 'selected' : '' %>>
-                  <%= alm.tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <%= alm.nome %> (<%= alm.codigo %>)
+                  <%= alm.nome %> (<%= alm.codigo %>)
                 </option>
               <% }) %>
             <% } else { %>

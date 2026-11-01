@@ -99,7 +99,7 @@
                 value="<%= alm.id %>" 
                 <%= (typeof almoxarifadoPreSelecionado !== 'undefined' && almoxarifadoPreSelecionado == alm.id) ? 'selected' : '' %>
               >
-                <%= alm.tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <%= alm.nome %> (<%= alm.codigo %>) - <%= alm.responsavel || 'Sem responsável' %>
+                <%= alm.nome %> (<%= alm.codigo %>) - <%= alm.responsavel || 'Sem responsável' %>
               </option>
             <% }) %>
           </select>

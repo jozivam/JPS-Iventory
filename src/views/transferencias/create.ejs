@@ -85,42 +85,42 @@
           </select>
         </div>
 
-        <!-- Canteiro de Origem (Quem Fornece) -->
+        <!-- Estoque de Origem -->
         <div class="form-group">
           <label class="form-label" for="transf-origem-select">
-            Almoxarifado de Origem (Fornecedor) <span class="required">*</span>
+            Estoque de Origem <span class="required">*</span>
           </label>
           <select id="transf-origem-select" name="almoxarifado_origem_id" class="form-select" required>
-            <option value="">-- Selecione a Origem --</option>
+            <option value="">-- Selecione o Almoxarifado de Origem --</option>
             <% almoxarifados.forEach(alm => { %>
               <option 
                 value="<%= alm.id %>" 
                 <%= (origemPreSelecionada && origemPreSelecionada == alm.id) ? 'selected' : (alm.tipo === 'CENTRAL' && !origemPreSelecionada ? 'selected' : '') %>
               >
-                <%= alm.tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <%= alm.nome %> (<%= alm.codigo %>)
+                <%= alm.nome %> (<%= alm.codigo %>)
               </option>
             <% }) %>
           </select>
-          <small style="font-size: 0.75rem; color: var(--text-dim);">De onde sairá o saldo do material.</small>
+          <small style="font-size: 0.75rem; color: var(--text-dim);">Estoque de onde sairá o saldo do material.</small>
         </div>
 
-        <!-- Canteiro de Destino (Quem Recebe) -->
+        <!-- Estoque de Destino -->
         <div class="form-group">
           <label class="form-label" for="transf-destino-select">
-            Almoxarifado de Destino (Receptor) <span class="required">*</span>
+            Estoque de Destino <span class="required">*</span>
           </label>
           <select id="transf-destino-select" name="almoxarifado_destino_id" class="form-select" required>
-            <option value="">-- Selecione o Destino --</option>
+            <option value="">-- Selecione o Almoxarifado de Destino --</option>
             <% almoxarifados.forEach(alm => { %>
               <option 
                 value="<%= alm.id %>" 
                 <%= (destinoPreSelecionado && destinoPreSelecionado == alm.id) ? 'selected' : '' %>
               >
-                <%= alm.tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <%= alm.nome %> (<%= alm.codigo %>)
+                <%= alm.nome %> (<%= alm.codigo %>)
               </option>
             <% }) %>
           </select>
-          <small style="font-size: 0.75rem; color: var(--text-dim);">Canteiro de obras que receberá o material.</small>
+          <small style="font-size: 0.75rem; color: var(--text-dim);">Estoque ou canteiro que receberá a carga.</small>
         </div>
 
         <!-- Quantidade -->

@@ -104,11 +104,11 @@
     <div class="filter-pills-group">
       <!-- Filtro Almoxarifado / Canteiro de Obras -->
       <select name="almoxarifado_id" class="filter-select-pill" onchange="this.form.submit()" style="font-weight: 600; color: var(--primary);">
-        <option value="">🏢 Todos os Almoxarifados (Global)</option>
+        <option value="">Todos os Almoxarifados (Global)</option>
         <% if (typeof almoxarifados !== 'undefined' && almoxarifados) { %>
           <% almoxarifados.forEach(alm => { %>
             <option value="<%= alm.id %>" <%= filtros.almoxarifado_id == alm.id ? 'selected' : '' %>>
-              <%= alm.tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <%= alm.nome %> (<%= alm.codigo %>)
+              <%= alm.nome %> (<%= alm.codigo %>)
             </option>
           <% }) %>
         <% } %>

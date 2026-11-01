@@ -80,11 +80,11 @@
 <div class="table-card" style="margin-bottom: 2rem;">
   <div class="storaxe-card-header">
     <div class="storaxe-card-title">
-      <i class="fa-solid fa-hand-holding-hand" style="color: var(--warning);"></i>
-      <span>Solicitações de Materiais entre Canteiros (Requisições)</span>
+      <i class="fa-solid fa-list-check" style="color: var(--primary);"></i>
+      <span>Requisições de Materiais</span>
     </div>
     <a href="/transferencias/nova?modo=REQUISICAO" class="btn btn-outline btn-sm">
-      <i class="fa-solid fa-plus"></i> Abrir Nova Requisição
+      <i class="fa-solid fa-plus"></i> Abrir Requisição
     </a>
   </div>
 
@@ -94,8 +94,8 @@
         <tr>
           <th>DATA</th>
           <th>SOLICITANTE</th>
-          <th>OBRA QUE RECEBE (DESTINO)</th>
-          <th>OBRA QUE FORNECE (ORIGEM)</th>
+          <th>ESTOQUE ORIGEM</th>
+          <th>ESTOQUE DESTINO</th>
           <th>MATERIAL</th>
           <th>QTD</th>
           <th>MOTIVO</th>
@@ -109,8 +109,8 @@
             <tr>
               <td><span style="font-size: 0.82rem; font-weight: 600;"><%= formatDate(r.criado_em) %></span></td>
               <td><strong style="color: var(--text-main); font-size: 0.85rem;"><%= r.solicitante %></strong></td>
-              <td><strong style="color: var(--primary);">🏗️ <%= r.almoxarifado_destino_nome %></strong></td>
-              <td><span style="color: var(--text-body);">🏢 <%= r.almoxarifado_origem_nome %></span></td>
+              <td><span style="color: var(--text-body); font-weight: 500;"><%= r.almoxarifado_origem_nome %></span></td>
+              <td><strong style="color: var(--text-main); font-weight: 600;"><%= r.almoxarifado_destino_nome %></strong></td>
               <td>
                 <a href="/produtos/<%= r.produto_id %>" style="color: inherit; text-decoration: none; font-weight: 600;">
                   <%= r.produto_nome %>
@@ -135,8 +135,9 @@
                 <% if (r.status === 'PENDENTE') { %>
                   <div style="display: inline-flex; gap: 0.35rem;">
                     <form action="/requisicoes/<%= r.id %>/atender" method="POST" style="display: inline;">
-                      <button type="submit" class="btn btn-primary btn-sm" title="Aprovar transferência e despachar carga">
-                        <i class="fa-solid fa-check"></i> Atender
+                      <input type="hidden" name="responsavel" value="Almoxarife Responsável">
+                      <button type="submit" class="btn btn-primary btn-sm" title="Aprovar transferência e despachar material">
+                        <i class="fa-solid fa-check"></i> Atender Requisição
                       </button>
                     </form>
                     <form action="/requisicoes/<%= r.id %>/cancelar" method="POST" style="display: inline;">
@@ -146,7 +147,7 @@
                     </form>
                   </div>
                 <% } else { %>
-                  <span style="font-size: 0.78rem; color: var(--text-dim); font-style: italic;">Finalizada</span>
+                  <span style="font-size: 0.78rem; color: var(--text-dim); font-style: italic;">Concluída</span>
                 <% } %>
               </td>
             </tr>
@@ -167,8 +168,8 @@
 <div class="table-card">
   <div class="storaxe-card-header">
     <div class="storaxe-card-title">
-      <i class="fa-solid fa-truck-ramp-box" style="color: var(--primary);"></i>
-      <span>Histórico de Transferências Inter-Obras Realizadas</span>
+      <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i>
+      <span>Histórico de Transferências entre Estoques</span>
     </div>
   </div>
 
@@ -178,7 +179,7 @@
         <tr>
           <th>DATA & HORA</th>
           <th>GUIA / REF</th>
-          <th>ORIGEM ➔ DESTINO</th>
+          <th>ESTOQUE ORIGEM ➔ DESTINO</th>
           <th>MATERIAL</th>
           <th>QUANTIDADE</th>
           <th>VALOR ESTIMADO</th>
@@ -193,7 +194,7 @@
               <td><span style="font-size: 0.82rem; font-weight: 600;"><%= formatDate(t.criado_em) %></span></td>
               <td>
                 <span style="font-family: var(--font-mono); font-size: 0.78rem; background: var(--bg-surface); padding: 0.15rem 0.45rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                  <%= t.documento_ref || 'TRANSF-OBRA' %>
+                  <%= t.documento_ref || 'TRANSF' %>
                 </span>
               </td>
               <td>
@@ -208,7 +209,7 @@
                 <span class="report-table-tag"><%= t.produto_sku %></span>
               </td>
               <td>
-                <strong style="color: var(--primary); font-size: 0.95rem;">⇄ <%= t.quantidade %></strong>
+                <strong style="color: var(--primary); font-size: 0.95rem;"><%= t.quantidade %></strong>
                 <small style="color: var(--text-dim);"><%= t.produto_unidade %></small>
               </td>
               <td>

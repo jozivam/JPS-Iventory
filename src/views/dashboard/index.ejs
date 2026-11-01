@@ -114,17 +114,14 @@
     <div class="storaxe-card-body">
       <div class="stock-alert-list">
         <% if (itensCriticos && itensCriticos.length > 0) { %>
-          <% itensCriticos.slice(0, 5).forEach((item, index) => { 
-            const emojis = ['🦺', '🧤', '👓', '🔧', '📦', '⚡'];
-            const emoji = emojis[index % emojis.length];
+          <% itensCriticos.slice(0, 5).forEach((item) => { 
             const pct = item.estoque_minimo > 0 ? Math.min(100, Math.round((item.quantidade / item.estoque_minimo) * 100)) : 0;
           %>
             <div class="stock-alert-item">
               <div class="alert-item-info">
-                <div class="alert-icon-wrap"><%= emoji %></div>
                 <div>
                   <div class="alert-item-name"><%= item.nome %></div>
-                  <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);"><%= item.sku %></div>
+                  <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);"><%= item.sku %><%= item.tag ? ` • TAG: ${item.tag}` : '' %></div>
                 </div>
               </div>
               <div class="alert-item-bar-wrap">

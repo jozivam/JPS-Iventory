@@ -218,19 +218,14 @@
       </thead>
       <tbody>
         <% if (itensCriticos && itensCriticos.length > 0) { %>
-          <% itensCriticos.forEach((item, idx) => { 
+          <% itensCriticos.forEach((item) => { 
             const custoItem = item.deficit * item.preco_unitario;
-            const icons = ['🦺', '🧤', '👓', '🔧', '📦', '💻', '🔌', '⚡', '🧴', '📁'];
-            const thumbIcon = icons[idx % icons.length];
           %>
             <tr>
               <td>
-                <div class="product-cell">
-                  <div class="product-thumb"><%= thumbIcon %></div>
-                  <div>
-                    <div class="product-name-text"><%= item.nome %></div>
-                    <div class="product-sku-text"><%= item.sku %> • <%= item.localizacao || 'Almoxarifado' %></div>
-                  </div>
+                <div>
+                  <div class="product-name-text"><%= item.nome %></div>
+                  <div class="product-sku-text"><%= item.sku %><%= item.tag ? ` • TAG: ${item.tag}` : '' %> • <%= item.localizacao || 'Almoxarifado' %></div>
                 </div>
               </td>
               <td>

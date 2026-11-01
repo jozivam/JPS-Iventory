@@ -135,7 +135,7 @@
               <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
                 <% produto.estoquesObras.forEach(est => { %>
                   <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem; font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
-                    <span><%= est.almoxarifado_tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <strong><%= est.almoxarifado_nome %>:</strong></span>
+                    <span><strong><%= est.almoxarifado_nome %>:</strong></span>
                     <strong style="color: <%= est.quantidade > 0 ? 'var(--teal)' : 'var(--text-dim)' %>;"><%= est.quantidade %> <%= produto.unidade_medida %></strong>
                   </div>
                 <% }) %>

@@ -152,7 +152,7 @@
 <div class="table-card">
   <div class="storaxe-card-header">
     <div class="storaxe-card-title">
-      <i class="fa-solid fa-hand-holding-hand" style="color: var(--warning);"></i>
+      <i class="fa-solid fa-list-check" style="color: var(--primary);"></i>
       <span>Requisições de Materiais Aguardando Envio</span>
     </div>
     <a href="/transferencias" class="btn btn-outline btn-sm">
@@ -166,9 +166,9 @@
         <tr>
           <th>DATA</th>
           <th>SOLICITANTE</th>
-          <th>OBRA SOLICITANTE</th>
-          <th>FORNECIDO POR</th>
-          <th>MATERIAL SOLICITADO</th>
+          <th>ESTOQUE DESTINO</th>
+          <th>ESTOQUE ORIGEM</th>
+          <th>MATERIAL</th>
           <th>QUANTIDADE</th>
           <th>STATUS</th>
           <th style="text-align: right;">AÇÃO</th>
@@ -185,10 +185,10 @@
                 <strong style="color: var(--text-main); font-size: 0.85rem;"><%= req.solicitante %></strong>
               </td>
               <td>
-                <span style="font-weight: 600; color: var(--primary);">🏗️ <%= req.almoxarifado_destino_nome %></span>
+                <strong style="font-weight: 600; color: var(--text-main);"><%= req.almoxarifado_destino_nome %></strong>
               </td>
               <td>
-                <span style="color: var(--text-body);">🏢 <%= req.almoxarifado_origem_nome %></span>
+                <span style="color: var(--text-body);"><%= req.almoxarifado_origem_nome %></span>
               </td>
               <td>
                 <div style="font-weight: 600; color: var(--text-main);"><%= req.produto_nome %></div>
@@ -205,7 +205,7 @@
                 <form action="/requisicoes/<%= req.id %>/atender" method="POST" style="display: inline;">
                   <input type="hidden" name="responsavel" value="Almoxarife Geral">
                   <button type="submit" class="btn btn-primary btn-sm" title="Aprovar e transferir material imediatamente">
-                    <i class="fa-solid fa-truck-ramp-box"></i> Atender & Despachar
+                    <i class="fa-solid fa-check"></i> Atender Requisição
                   </button>
                 </form>
               </td>

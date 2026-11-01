@@ -117,10 +117,10 @@ class TransferenciaController {
   static async atender(req, res) {
     try {
       const { id } = req.params;
-      const { responsavel = 'Almoxarife Central' } = req.body;
+      const responsavel = (req.body && req.body.responsavel) ? req.body.responsavel : 'Almoxarife Responsável';
 
       Requisicao.atender(id, responsavel);
-      res.redirect('/transferencias?sucesso=' + encodeURIComponent('Requisição atendida! O saldo do material foi transferido para a obra solicitante.'));
+      res.redirect('/transferencias?sucesso=' + encodeURIComponent('Requisição atendida! O saldo do material foi transferido com sucesso.'));
     } catch (error) {
       console.error('Erro ao atender requisição:', error);
       res.redirect('/transferencias?erro=' + encodeURIComponent(error.message));

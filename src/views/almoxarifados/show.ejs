@@ -129,16 +129,13 @@
       </thead>
       <tbody>
         <% if (estoqueLocal && estoqueLocal.length > 0) { %>
-          <% estoqueLocal.forEach((item, idx) => { 
-            const icons = ['📦', '🦺', '🧤', '👓', '🔧', '💻', '🔌', '⚡', '🧴', '📁'];
-            const thumbIcon = icons[idx % icons.length];
+          <% estoqueLocal.forEach((item) => { 
             const isBaixo = item.quantidade <= item.estoque_minimo;
             const isZerado = item.quantidade === 0;
           %>
             <tr>
               <td>
-                <a href="/produtos/<%= item.id %>" class="product-cell" style="text-decoration: none; color: inherit;" title="Abrir Ficha Completa">
-                  <div class="product-thumb"><%= thumbIcon %></div>
+                <a href="/produtos/<%= item.id %>" style="text-decoration: none; color: inherit;" title="Abrir Ficha Completa">
                   <div>
                     <div class="product-name-text"><%= item.nome %></div>
                     <div class="product-sku-text">Preço unit: <%= formatMoney(item.preco_unitario) %></div>
