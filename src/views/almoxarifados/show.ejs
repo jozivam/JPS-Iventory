@@ -1,0 +1,266 @@
+<%- include('../layouts/header') %>
+
+<!-- Mensagens de Alerta (Sucesso ou Erro) -->
+<% if (typeof sucesso !== 'undefined' && sucesso) { %>
+  <div class="alert alert-success">
+    <div><i class="fa-solid fa-circle-check"></i> <%= sucesso %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+  <div class="alert alert-danger">
+    <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<!-- Cabeçalho do Canteiro de Obras -->
+<div class="page-header-flex">
+  <div class="page-title-wrap">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+      <a href="/almoxarifados" class="btn btn-outline btn-sm" title="Voltar para Lista de Canteiros">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <h2><%= almoxarifado.nome %></h2>
+      <span class="report-table-tag" style="font-size: 0.85rem;"><%= almoxarifado.codigo %></span>
+      <span class="status-pill <%= almoxarifado.status === 'ATIVO' ? 'in-stock' : 'out-of-stock' %>">
+        <span class="status-dot-sm"></span> <%= almoxarifado.status %>
+      </span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: var(--text-muted); flex-wrap: wrap;">
+      <span>Tipo: <strong style="color: var(--text-main);"><%= almoxarifado.tipo === 'CENTRAL' ? 'Matriz / Depósito Central' : 'Canteiro de Obras' %></strong></span>
+      <span>• Responsável: <strong><%= almoxarifado.responsavel || 'Não designado' %></strong></span>
+      <span>• Endereço: <strong><%= almoxarifado.endereco || 'Endereço não informado' %></strong></span>
+      <% if (almoxarifado.telefone) { %>
+        <span>• Contato: <strong><%= almoxarifado.telefone %></strong></span>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="page-actions-group">
+    <!-- Requisitar material para este canteiro -->
+    <a href="/transferencias/nova?destino_id=<%= almoxarifado.id %>&modo=REQUISICAO" class="btn btn-outline" id="btn-requisitar-obra">
+      <i class="fa-solid fa-hand-holding-hand" style="color: var(--warning);"></i> Requisitar Material
+    </a>
+    <!-- Transferir de outra obra para este canteiro -->
+    <a href="/transferencias/nova?destino_id=<%= almoxarifado.id %>" class="btn btn-primary" id="btn-transferir-para-obra">
+      <i class="fa-solid fa-truck-ramp-box"></i> Enviar Carga para Obra
+    </a>
+  </div>
+</div>
+
+<!-- 4 Cards de Métricas da Obra -->
+<%
+  let totalItens = estoqueLocal.length;
+  let totalPecas = 0;
+  let valorTotalObra = 0;
+  let itensBaixos = 0;
+
+  estoqueLocal.forEach(item => {
+    totalPecas += Number(item.quantidade || 0);
+    valorTotalObra += Number(item.valor_total || 0);
+    if (item.quantidade <= item.estoque_minimo) itensBaixos++;
+  });
+%>
+<div class="storaxe-kpi-grid">
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot teal"></span>
+      <span>Total de Materiais em Canteiro</span>
+    </div>
+    <div class="kpi-big-number"><%= totalItens %> <small style="font-size: 0.85rem; color: var(--text-muted);">linhas de itens</small></div>
+    <span class="kpi-comparison-text">Variedade de suprimentos no local</span>
+  </div>
+
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot purple"></span>
+      <span>Patrimônio no Canteiro</span>
+    </div>
+    <div class="kpi-big-number"><%= formatMoney(valorTotalObra) %></div>
+    <span class="kpi-comparison-text">Saldo financeiro em uso na obra</span>
+  </div>
+
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot blue"></span>
+      <span>Volume Físico Total</span>
+    </div>
+    <div class="kpi-big-number"><%= totalPecas %> <small style="font-size: 0.85rem; color: var(--text-muted);">unidades/peças</small></div>
+    <span class="kpi-comparison-text">Estoque físico acumulado</span>
+  </div>
+
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot <%= itensBaixos > 0 ? 'yellow' : 'cyan' %>"></span>
+      <span>Alertas de Reposição</span>
+    </div>
+    <div class="kpi-big-number"><%= itensBaixos %> <small style="font-size: 0.85rem; color: var(--text-muted);">em baixa</small></div>
+    <span class="kpi-comparison-text"><%= itensBaixos > 0 ? 'Necessitam requisição' : 'Estoque regular' %></span>
+  </div>
+</div>
+
+<!-- TABELA DE INVENTÁRIO DO CANTEIRO DE OBRAS -->
+<div class="table-card" style="margin-bottom: 2rem;">
+  <div class="storaxe-card-header">
+    <div class="storaxe-card-title">
+      <i class="fa-solid fa-boxes-stacked" style="color: var(--primary);"></i>
+      <span>Inventário Físico Deste Canteiro</span>
+    </div>
+    <a href="/transferencias/nova?origem_id=<%= almoxarifado.id %>" class="btn btn-outline btn-sm">
+      <i class="fa-solid fa-arrow-right-arrow-left"></i> Transferir Material Deste Canteiro
+    </a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="clean-table">
+      <thead>
+        <tr>
+          <th>MATERIAL / INSUMO</th>
+          <th>CATEGORIA</th>
+          <th>SKU / TAG</th>
+          <th>LOCAL NO CANTEIRO</th>
+          <th>SALDO DISPONÍVEL</th>
+          <th>VALOR ALOCADO</th>
+          <th>STATUS</th>
+          <th style="text-align: right;">AÇÕES</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (estoqueLocal && estoqueLocal.length > 0) { %>
+          <% estoqueLocal.forEach((item, idx) => { 
+            const icons = ['📦', '🦺', '🧤', '👓', '🔧', '💻', '🔌', '⚡', '🧴', '📁'];
+            const thumbIcon = icons[idx % icons.length];
+            const isBaixo = item.quantidade <= item.estoque_minimo;
+            const isZerado = item.quantidade === 0;
+          %>
+            <tr>
+              <td>
+                <a href="/produtos/<%= item.id %>" class="product-cell" style="text-decoration: none; color: inherit;" title="Abrir Ficha Completa">
+                  <div class="product-thumb"><%= thumbIcon %></div>
+                  <div>
+                    <div class="product-name-text"><%= item.nome %></div>
+                    <div class="product-sku-text">Preço unit: <%= formatMoney(item.preco_unitario) %></div>
+                  </div>
+                </a>
+              </td>
+              <td>
+                <span style="color: var(--text-body); font-weight: 500;"><%= item.categoria %></span>
+              </td>
+              <td>
+                <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;"><%= item.sku %></span>
+                <% if (item.tag) { %>
+                  <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--primary); font-weight: 600;">
+                    <i class="fa-solid fa-tag"></i> <%= item.tag %>
+                  </div>
+                <% } %>
+              </td>
+              <td>
+                <span style="font-size: 0.82rem; color: var(--text-muted);"><%= item.localizacao || 'Almoxarifado da Obra' %></span>
+              </td>
+              <td>
+                <strong style="font-size: 1rem; color: <%= isZerado ? 'var(--danger-text)' : 'var(--text-main)' %>;">
+                  <%= item.quantidade %>
+                </strong>
+                <span style="font-size: 0.75rem; color: var(--text-dim);"><%= item.unidade_medida %></span>
+              </td>
+              <td>
+                <strong style="color: var(--text-main); font-size: 0.85rem;"><%= formatMoney(item.valor_total) %></strong>
+              </td>
+              <td>
+                <% if (isZerado) { %>
+                  <span class="status-pill out-of-stock"><span class="status-dot-sm"></span> Sem estoque</span>
+                <% } else if (isBaixo) { %>
+                  <span class="status-pill low-stock"><span class="status-dot-sm"></span> Estoque baixo</span>
+                <% } else { %>
+                  <span class="status-pill in-stock"><span class="status-dot-sm"></span> Regular</span>
+                <% } %>
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                  <!-- Ver Ficha do Produto -->
+                  <a href="/produtos/<%= item.id %>" class="action-more-btn" title="Ficha Completa">
+                    <i class="fa-solid fa-id-card" style="color: var(--primary);"></i>
+                  </a>
+                  <!-- Baixa no canteiro -->
+                  <a href="/movimentacoes/nova?produto_id=<%= item.id %>&tipo=SAIDA&almoxarifado_id=<%= almoxarifado.id %>" class="action-more-btn" title="Consumir na obra">
+                    <i class="fa-solid fa-arrow-down" style="color: var(--danger);"></i>
+                  </a>
+                  <!-- Transferir para outra obra -->
+                  <a href="/transferencias/nova?produto_id=<%= item.id %>&origem_id=<%= almoxarifado.id %>" class="action-more-btn" title="Transferir deste canteiro">
+                    <i class="fa-solid fa-arrow-right-arrow-left" style="color: var(--purple);"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+              Nenhum material alocado neste canteiro ainda.
+              <div style="margin-top: 0.75rem;">
+                <a href="/transferencias/nova?destino_id=<%= almoxarifado.id %>" class="btn btn-primary btn-sm">
+                  Enviar Carga para este Canteiro
+                </a>
+              </div>
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- HISTÓRICO DE REQUISIÇÕES DA OBRA -->
+<div class="table-card">
+  <div class="storaxe-card-header">
+    <div class="storaxe-card-title">
+      <i class="fa-solid fa-clipboard-list" style="color: var(--teal);"></i>
+      <span>Requisições e Remessas Desta Obra</span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="clean-table">
+      <thead>
+        <tr>
+          <th>DATA</th>
+          <th>SOLICITANTE</th>
+          <th>ORIGEM ➔ DESTINO</th>
+          <th>MATERIAL</th>
+          <th>QUANTIDADE</th>
+          <th>MOTIVO</th>
+          <th>STATUS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (requisicoes && requisicoes.length > 0) { %>
+          <% requisicoes.forEach(r => { %>
+            <tr>
+              <td><span style="font-size: 0.82rem; font-weight: 600;"><%= formatDate(r.criado_em) %></span></td>
+              <td><strong style="color: var(--text-main); font-size: 0.85rem;"><%= r.solicitante %></strong></td>
+              <td><span style="font-size: 0.82rem;"><%= r.almoxarifado_origem_nome %> ➔ <%= r.almoxarifado_destino_nome %></span></td>
+              <td><strong><%= r.produto_nome %></strong></td>
+              <td><strong style="color: var(--teal);"><%= r.quantidade %></strong> <small style="color: var(--text-dim);"><%= r.produto_unidade %></small></td>
+              <td><span style="font-size: 0.82rem;"><%= r.motivo %></span></td>
+              <td>
+                <span class="status-pill <%= r.status === 'ATENDIDA' ? 'in-stock' : (r.status === 'PENDENTE' ? 'low-stock' : 'out-of-stock') %>">
+                  <span class="status-dot-sm"></span> <%= r.status %>
+                </span>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              Nenhuma requisição registrada para este canteiro.
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

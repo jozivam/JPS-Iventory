@@ -75,6 +75,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const infoEstoqueBox = document.getElementById('mov-info-estoque');
   const btnSubmeterMov = document.getElementById('btn-submeter-mov');
   const avisoSaldoInsuficiente = document.getElementById('aviso-saldo-insuficiente');
+  const selectAlmox = document.getElementById('mov-almoxarifado-select');
+  const hiddenOrigemId = document.getElementById('hidden-origem-id');
+  const hiddenDestinoId = document.getElementById('hidden-destino-id');
+  const labelAlmoxTexto = document.getElementById('label-almoxarifado-texto');
+
+  function sincronizarAlmoxarifado() {
+    if (!selectAlmox) return;
+    const val = selectAlmox.value;
+    const ehEntrada = radioEntrada && radioEntrada.checked;
+
+    if (ehEntrada) {
+      if (hiddenDestinoId) hiddenDestinoId.value = val;
+      if (hiddenOrigemId) hiddenOrigemId.value = '';
+      if (labelAlmoxTexto) labelAlmoxTexto.textContent = 'Almoxarifado / Canteiro de Destino (Recebimento)';
+    } else {
+      if (hiddenOrigemId) hiddenOrigemId.value = val;
+      if (hiddenDestinoId) hiddenDestinoId.value = '';
+      if (labelAlmoxTexto) labelAlmoxTexto.textContent = 'Almoxarifado / Canteiro de Origem (Baixa de Consumo)';
+    }
+  }
 
   function atualizarCardsTipo() {
     if (radioEntrada && radioEntrada.checked) {
@@ -84,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cardSaida?.classList.add('selected-out');
       cardEntrada?.classList.remove('selected-in');
     }
+    sincronizarAlmoxarifado();
     verificarSaldoEstoque();
   }
 
@@ -139,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     radioEntrada.addEventListener('change', atualizarCardsTipo);
     radioSaida.addEventListener('change', atualizarCardsTipo);
+    selectAlmox?.addEventListener('change', sincronizarAlmoxarifado);
     selectProduto?.addEventListener('change', verificarSaldoEstoque);
     qtdInput?.addEventListener('input', verificarSaldoEstoque);
 

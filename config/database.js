@@ -22,6 +22,18 @@ function initDatabase() {
       criado_em DATETIME DEFAULT (datetime('now', 'localtime'))
     );
 
+    CREATE TABLE IF NOT EXISTS almoxarifados (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT UNIQUE NOT NULL,
+      nome TEXT NOT NULL,
+      tipo TEXT DEFAULT 'OBRA',
+      endereco TEXT,
+      responsavel TEXT,
+      telefone TEXT,
+      status TEXT DEFAULT 'ATIVO',
+      criado_em DATETIME DEFAULT (datetime('now', 'localtime'))
+    );
+
     CREATE TABLE IF NOT EXISTS produtos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sku TEXT UNIQUE,
@@ -39,74 +51,144 @@ function initDatabase() {
       FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS estoques (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      produto_id INTEGER NOT NULL,
+      almoxarifado_id INTEGER NOT NULL,
+      quantidade INTEGER NOT NULL DEFAULT 0,
+      localizacao TEXT,
+      atualizado_em DATETIME DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE,
+      FOREIGN KEY (almoxarifado_id) REFERENCES almoxarifados(id) ON DELETE CASCADE,
+      UNIQUE(produto_id, almoxarifado_id)
+    );
+
     CREATE TABLE IF NOT EXISTS movimentacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       produto_id INTEGER NOT NULL,
-      tipo TEXT NOT NULL CHECK(tipo IN ('ENTRADA', 'SAIDA')),
+      tipo TEXT NOT NULL,
       quantidade INTEGER NOT NULL,
       motivo TEXT NOT NULL,
       responsavel TEXT NOT NULL,
       documento_ref TEXT,
+      almoxarifado_origem_id INTEGER,
+      almoxarifado_destino_id INTEGER,
       criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
-      FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE
+      FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE,
+      FOREIGN KEY (almoxarifado_origem_id) REFERENCES almoxarifados(id) ON DELETE SET NULL,
+      FOREIGN KEY (almoxarifado_destino_id) REFERENCES almoxarifados(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS requisicoes_obras (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT UNIQUE,
+      almoxarifado_origem_id INTEGER NOT NULL,
+      almoxarifado_destino_id INTEGER NOT NULL,
+      produto_id INTEGER NOT NULL,
+      quantidade INTEGER NOT NULL,
+      solicitante TEXT NOT NULL,
+      motivo TEXT,
+      status TEXT DEFAULT 'PENDENTE',
+      observacoes TEXT,
+      criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
+      atualizado_em DATETIME DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (almoxarifado_origem_id) REFERENCES almoxarifados(id),
+      FOREIGN KEY (almoxarifado_destino_id) REFERENCES almoxarifados(id),
+      FOREIGN KEY (produto_id) REFERENCES produtos(id)
     );
   `);
 
-  // Migração segura para bases existentes adicionando a coluna tag se não existir
-  try {
-    db.exec(`ALTER TABLE produtos ADD COLUMN tag TEXT;`);
-  } catch (e) {
-    // Coluna já existe
+  // Migrações seguras de colunas caso o banco já existisse
+  try { db.exec(`ALTER TABLE produtos ADD COLUMN tag TEXT;`); } catch (e) {}
+  try { db.exec(`ALTER TABLE movimentacoes ADD COLUMN almoxarifado_origem_id INTEGER REFERENCES almoxarifados(id);`); } catch (e) {}
+  try { db.exec(`ALTER TABLE movimentacoes ADD COLUMN almoxarifado_destino_id INTEGER REFERENCES almoxarifados(id);`); } catch (e) {}
+
+  // Inserir almoxarifados padrão se a tabela estiver vazia
+  const almoxCount = db.prepare('SELECT COUNT(*) AS total FROM almoxarifados').get().total;
+  if (almoxCount === 0) {
+    seedAlmoxarifados();
   }
 
-  // Inserir dados de demonstração realistas se o banco estiver vazio
-  const fornecedorCount = db.prepare('SELECT COUNT(*) AS total FROM fornecedores').get().total;
-  if (fornecedorCount === 0) {
-    seedDatabase();
-  }
+  // Sincronizar estoques para cada produto nos almoxarifados
+  syncEstoques();
 }
 
-function seedDatabase() {
-  const insertFornecedor = db.prepare(`
-    INSERT INTO fornecedores (nome, cnpj, email, telefone, contato)
-    VALUES (?, ?, ?, ?, ?)
+function seedAlmoxarifados() {
+  const insertAlmox = db.prepare(`
+    INSERT INTO almoxarifados (codigo, nome, tipo, endereco, responsavel, telefone, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const f1 = insertFornecedor.run('3M Equipamentos de Proteção', '00.000.000/0001-91', 'contato@3m-epi.com.br', '(11) 3456-7890', 'Roberto Silva').lastInsertRowid;
-  const f2 = insertFornecedor.run('Tramontina Ferramentas Pro', '11.111.111/0001-82', 'vendas@tramontina-pro.com', '(54) 3455-1000', 'Ana Paula').lastInsertRowid;
-  const f3 = insertFornecedor.run('Kalunga Papelaria e Suprimentos', '22.222.222/0001-73', 'corporativo@kalunga.com.br', '(11) 3346-9900', 'Carlos Mendes').lastInsertRowid;
-  const f4 = insertFornecedor.run('Schneider Eletric Distribuidora', '33.333.333/0001-64', 'suporte@schneider-dist.com', '(19) 3876-4321', 'Juliana Costa').lastInsertRowid;
+  const a1 = insertAlmox.run('ALM-CENTRAL', 'Almoxarifado Central (Matriz)', 'CENTRAL', 'Av. das Indústrias, 1000 - Galpão 3', 'Eng. Roberto Albuquerque', '(11) 3456-1100', 'ATIVO').lastInsertRowid;
+  const a2 = insertAlmox.run('OBRA-AURORA', 'Obra Residencial Aurora (Torres A e B)', 'OBRA', 'Rua das Palmeiras, 450 - Bairro Jardim', 'Mestre Valter Silva', '(11) 98765-1001', 'ATIVO').lastInsertRowid;
+  const a3 = insertAlmox.run('OBRA-NORTE', 'Obra Viaduto & Acesso Norte', 'OBRA', 'Rodovia dos Bandeirantes, KM 42', 'Engª Juliana Costa', '(19) 99887-2002', 'ATIVO').lastInsertRowid;
+  const a4 = insertAlmox.run('OBRA-ADM', 'Reforma Centro Administrativo', 'OBRA', 'Rua São Paulo, 120 - Centro', 'Téc. Carlos Mendes', '(11) 97654-3003', 'ATIVO').lastInsertRowid;
+}
 
-  const insertProduto = db.prepare(`
-    INSERT INTO produtos (sku, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+function syncEstoques() {
+  const central = db.prepare("SELECT id FROM almoxarifados WHERE codigo = 'ALM-CENTRAL'").get();
+  const aurora = db.prepare("SELECT id FROM almoxarifados WHERE codigo = 'OBRA-AURORA'").get();
+  const norte = db.prepare("SELECT id FROM almoxarifados WHERE codigo = 'OBRA-NORTE'").get();
+  const adm = db.prepare("SELECT id FROM almoxarifados WHERE codigo = 'OBRA-ADM'").get();
 
-  const p1 = insertProduto.run('EPI-CAP-001', 'Capacete de Segurança com Jugular Azul', 'EPI / Segurança', 'UN', 18, 10, 32.50, 'Prateleira A-01', f1).lastInsertRowid;
-  const p2 = insertProduto.run('EPI-LUV-002', 'Luva de Vaqueta Mista Tamanho G', 'EPI / Segurança', 'PAR', 4, 15, 18.90, 'Prateleira A-02', f1).lastInsertRowid; // Estoque crítico!
-  const p3 = insertProduto.run('EPI-OCU-003', 'Óculos de Proteção Antirrisco Incolor', 'EPI / Segurança', 'UN', 25, 12, 14.00, 'Prateleira A-03', f1).lastInsertRowid;
-  const p4 = insertProduto.run('FER-CHV-010', 'Jogo de Chaves de Fenda e Phillips 6 Peças', 'Ferramentas', 'JG', 8, 5, 68.00, 'Bancada B-04', f2).lastInsertRowid;
-  const p5 = insertProduto.run('FER-ALC-011', 'Alicate Universal 8 Polegadas Isolado 1000V', 'Ferramentas', 'UN', 3, 6, 45.20, 'Bancada B-05', f2).lastInsertRowid; // Estoque baixo!
-  const p6 = insertProduto.run('MAT-PAP-020', 'Papel Sulfite A4 75g Caixa com 10 Resmas', 'Escritório', 'CX', 12, 5, 235.00, 'Almox Central C-1', f3).lastInsertRowid;
-  const p7 = insertProduto.run('ELE-CAB-030', 'Cabo de Rede UTP Cat6 100% Cobre (Bobina 305m)', 'Elétrica e TI', 'CX', 2, 3, 490.00, 'Depósito D-02', f4).lastInsertRowid; // Estoque baixo!
-  const p8 = insertProduto.run('ELE-DIS-031', 'Disjuntor Bipolar Din 32A Curva C', 'Elétrica e TI', 'UN', 30, 10, 28.75, 'Gaveteiro E-08', f4).lastInsertRowid;
-  const p9 = insertProduto.run('LIM-ALC-040', 'Álcool Isopropílico 99.8% Frasco 1 Litro', 'Manutenção / Química', 'FR', 9, 6, 26.00, 'Armário Químico Q-1', f3).lastInsertRowid;
-  const p10 = insertProduto.run('EPI-PRO-005', 'Protetor Auricular Tipo Plug Silicone 16dB', 'EPI / Segurança', 'PAR', 50, 20, 3.80, 'Gaveteiro A-04', f1).lastInsertRowid;
+  if (!central) return;
 
-  const insertMov = db.prepare(`
-    INSERT INTO movimentacoes (produto_id, tipo, quantidade, motivo, responsavel, documento_ref, criado_em)
-    VALUES (?, ?, ?, ?, ?, ?, datetime('now', ?))
-  `);
+  const produtos = db.prepare('SELECT * FROM produtos').all();
+  const checkEstoque = db.prepare('SELECT id, quantidade FROM estoques WHERE produto_id = ? AND almoxarifado_id = ?');
+  const insertEstoque = db.prepare('INSERT INTO estoques (produto_id, almoxarifado_id, quantidade, localizacao) VALUES (?, ?, ?, ?)');
+  const updateEstoque = db.prepare('UPDATE estoques SET quantidade = ? WHERE id = ?');
 
-  insertMov.run(p1, 'ENTRADA', 20, 'Compra para reposição periódica', 'Almoxarife Marcos', 'NF 10452', '-4 days');
-  insertMov.run(p1, 'SAIDA', 2, 'Entrega para equipe de Obras e Instalação', 'João Pereira (Técnico)', 'REQ-2026-088', '-3 days');
-  insertMov.run(p2, 'SAIDA', 11, 'Retirada em lote setor de Montagem', 'Lucas Silveira', 'REQ-2026-092', '-2 days');
-  insertMov.run(p4, 'ENTRADA', 10, 'Aporte de ferramentas novas', 'Gerência Fabril', 'NF 10488', '-2 days');
-  insertMov.run(p4, 'SAIDA', 2, 'Distribuição oficina mecânica', 'Mestre Valter', 'REQ-2026-095', '-1 days');
-  insertMov.run(p5, 'SAIDA', 3, 'Manutenção preventiva painéis', 'Carlos Elétrica', 'REQ-2026-101', '-1 days');
-  insertMov.run(p7, 'ENTRADA', 5, 'Aquisição projeto infraestrutura TI', 'Supervisor Paulo', 'NF 10512', '-1 days');
-  insertMov.run(p7, 'SAIDA', 3, 'Cabeamento novas salas Bloco B', 'Técnico Daniel', 'REQ-2026-105', 'now');
-  insertMov.run(p3, 'SAIDA', 5, 'Atendimento novos colaboradores', 'RH / DP', 'REQ-2026-108', 'now');
+  for (const p of produtos) {
+    // Verifica se já tem registro no almoxarifado central
+    const estCentral = checkEstoque.get(p.id, central.id);
+    if (!estCentral) {
+      // Distribui estoque de demonstração de forma realista entre as obras
+      const qtdTotal = p.quantidade || 0;
+      const qtdCentral = Math.max(0, Math.floor(qtdTotal * 0.6));
+      const qtdAurora = Math.max(0, Math.floor(qtdTotal * 0.25));
+      const qtdNorte = Math.max(0, qtdTotal - qtdCentral - qtdAurora);
+
+      insertEstoque.run(p.id, central.id, qtdCentral, p.localizacao || 'Galpão Central');
+      if (aurora) insertEstoque.run(p.id, aurora.id, qtdAurora, 'Contêiner Obra 1');
+      if (norte) insertEstoque.run(p.id, norte.id, qtdNorte, 'Depósito Frente de Serviço');
+      if (adm) insertEstoque.run(p.id, adm.id, 0, 'Almox Auxiliar');
+    }
+  }
+
+  // Cria requisições de exemplo para canteiros de obras se estiver vazio
+  const reqCount = db.prepare('SELECT COUNT(*) AS total FROM requisicoes_obras').get().total;
+  if (reqCount === 0 && aurora && central && produtos.length > 0) {
+    const insertReq = db.prepare(`
+      INSERT INTO requisicoes_obras (codigo, almoxarifado_origem_id, almoxarifado_destino_id, produto_id, quantidade, solicitante, motivo, status, observacoes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    insertReq.run(
+      'REQ-OBRA-001',
+      central.id,
+      aurora.id,
+      produtos[0].id,
+      5,
+      'Mestre Valter Silva',
+      'Reforço de EPI para novas contratações na Torre B',
+      'PENDENTE',
+      'Urgente para início da concretagem na sexta-feira'
+    );
+
+    if (produtos.length > 1 && norte) {
+      insertReq.run(
+        'REQ-OBRA-002',
+        central.id,
+        norte.id,
+        produtos[1].id,
+        6,
+        'Engª Juliana Costa',
+        'Reposição de ferramentas e luvas de proteção',
+        'APROVADA',
+        'Separado no Almox Central aguardando transporte'
+      );
+    }
+  }
 }
 
 // Inicializar tabelas e seeds

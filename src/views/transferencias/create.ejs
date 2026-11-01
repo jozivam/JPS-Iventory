@@ -1,0 +1,245 @@
+<%- include('../layouts/header') %>
+
+<div style="max-width: 860px; margin: 0 auto;">
+  <% if (typeof erro !== 'undefined' && erro) { %>
+    <div class="alert alert-danger">
+      <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+      <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  <% } %>
+
+  <div class="page-header-flex">
+    <div class="page-title-wrap">
+      <h2>Nova Movimentação Inter-Obras</h2>
+      <p>Transfira insumos diretamente entre canteiros ou emita uma requisição para autorização.</p>
+    </div>
+    <a href="/transferencias" class="btn btn-outline btn-sm">
+      <i class="fa-solid fa-arrow-left"></i> Voltar às Transferências
+    </a>
+  </div>
+
+  <div class="table-card" style="padding: 1.75rem;">
+    <form action="/transferencias" method="POST" id="form-transferencia">
+      <!-- Seletor de Modo (Transferência Direta vs Requisição) -->
+      <label class="form-label" style="margin-bottom: 0.75rem; display: block;">
+        Tipo de Fluxo Logístico <span class="required">*</span>
+      </label>
+
+      <div class="movement-type-selector">
+        <!-- TRANSFERÊNCIA DIRETA -->
+        <label class="type-option-card <%= modoPadrao === 'TRANSFERENCIA' ? 'selected-in' : '' %>" id="card-modo-transf" style="cursor: pointer;">
+          <input 
+            type="radio" 
+            name="modo" 
+            value="TRANSFERENCIA" 
+            id="radio-modo-transf" 
+            <%= modoPadrao === 'TRANSFERENCIA' ? 'checked' : '' %>
+          >
+          <div class="type-icon" style="color: var(--primary);">
+            <i class="fa-solid fa-truck-ramp-box"></i>
+          </div>
+          <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Transferência Direta</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
+            O material já está sendo carregado ou transportado imediatamente entre canteiros.
+          </div>
+        </label>
+
+        <!-- REQUISIÇÃO DE MATERIAL -->
+        <label class="type-option-card <%= modoPadrao === 'REQUISICAO' ? 'selected-out' : '' %>" id="card-modo-req" style="cursor: pointer;">
+          <input 
+            type="radio" 
+            name="modo" 
+            value="REQUISICAO" 
+            id="radio-modo-req" 
+            <%= modoPadrao === 'REQUISICAO' ? 'checked' : '' %>
+          >
+          <div class="type-icon" style="color: var(--warning);">
+            <i class="fa-solid fa-hand-holding-hand"></i>
+          </div>
+          <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Requisição de Obra</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
+            Solicitação formal de materiais para aprovação e despacho pelo almoxarifado de origem.
+          </div>
+        </label>
+      </div>
+
+      <div class="form-grid">
+        <!-- Item a Transferir -->
+        <div class="form-group full-width">
+          <label class="form-label" for="transf-produto-select">
+            Material / Insumo <span class="required">*</span>
+          </label>
+          <select id="transf-produto-select" name="produto_id" class="form-select" required>
+            <option value="">-- Selecione o material no catálogo --</option>
+            <% produtos.forEach(p => { %>
+              <option 
+                value="<%= p.id %>" 
+                data-estoque="<%= p.quantidade %>" 
+                data-unidade="<%= p.unidade_medida %>"
+                data-preco="<%= p.preco_unitario %>"
+                <%= (produtoPreSelecionado && produtoPreSelecionado.id === p.id) ? 'selected' : '' %>
+              >
+                [<%= p.sku %><%= p.tag ? ` | TAG: ${p.tag}` : '' %>] <%= p.nome %> (Saldo Global: <%= p.quantidade %> <%= p.unidade_medida %>)
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- Canteiro de Origem (Quem Fornece) -->
+        <div class="form-group">
+          <label class="form-label" for="transf-origem-select">
+            Almoxarifado de Origem (Fornecedor) <span class="required">*</span>
+          </label>
+          <select id="transf-origem-select" name="almoxarifado_origem_id" class="form-select" required>
+            <option value="">-- Selecione a Origem --</option>
+            <% almoxarifados.forEach(alm => { %>
+              <option 
+                value="<%= alm.id %>" 
+                <%= (origemPreSelecionada && origemPreSelecionada == alm.id) ? 'selected' : (alm.tipo === 'CENTRAL' && !origemPreSelecionada ? 'selected' : '') %>
+              >
+                <%= alm.tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <%= alm.nome %> (<%= alm.codigo %>)
+              </option>
+            <% }) %>
+          </select>
+          <small style="font-size: 0.75rem; color: var(--text-dim);">De onde sairá o saldo do material.</small>
+        </div>
+
+        <!-- Canteiro de Destino (Quem Recebe) -->
+        <div class="form-group">
+          <label class="form-label" for="transf-destino-select">
+            Almoxarifado de Destino (Receptor) <span class="required">*</span>
+          </label>
+          <select id="transf-destino-select" name="almoxarifado_destino_id" class="form-select" required>
+            <option value="">-- Selecione o Destino --</option>
+            <% almoxarifados.forEach(alm => { %>
+              <option 
+                value="<%= alm.id %>" 
+                <%= (destinoPreSelecionado && destinoPreSelecionado == alm.id) ? 'selected' : '' %>
+              >
+                <%= alm.tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <%= alm.nome %> (<%= alm.codigo %>)
+              </option>
+            <% }) %>
+          </select>
+          <small style="font-size: 0.75rem; color: var(--text-dim);">Canteiro de obras que receberá o material.</small>
+        </div>
+
+        <!-- Quantidade -->
+        <div class="form-group">
+          <label class="form-label" for="transf-quantidade">
+            Quantidade a Mover <span class="required">*</span>
+          </label>
+          <input 
+            type="number" 
+            id="transf-quantidade" 
+            name="quantidade" 
+            class="form-control" 
+            min="1" 
+            value="<%= typeof dadosPreenchidos !== 'undefined' ? dadosPreenchidos.quantidade : '1' %>" 
+            required
+          >
+        </div>
+
+        <!-- Responsável / Solicitante -->
+        <div class="form-group">
+          <label class="form-label" for="transf-responsavel">
+            Responsável / Motorista / Solicitante <span class="required">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="transf-responsavel" 
+            name="responsavel" 
+            class="form-control" 
+            placeholder="Ex: Carlos Almoxarife / Transportador" 
+            value="<%= typeof dadosPreenchidos !== 'undefined' ? dadosPreenchidos.responsavel : '' %>" 
+            required
+          >
+        </div>
+
+        <!-- Motivo / Justificativa -->
+        <div class="form-group full-width">
+          <label class="form-label" for="transf-motivo">
+            Motivo da Transferência / Justificativa de Uso <span class="required">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="transf-motivo" 
+            name="motivo" 
+            class="form-control" 
+            placeholder="Ex: Suprimento emergencial para concretagem da laje 2" 
+            value="<%= typeof dadosPreenchidos !== 'undefined' ? dadosPreenchidos.motivo : '' %>" 
+            required
+          >
+        </div>
+
+        <!-- Documento / Guia de Remessa -->
+        <div class="form-group full-width">
+          <label class="form-label" for="transf-documento">
+            Guia de Remessa Interna / Nº de Ordem
+          </label>
+          <input 
+            type="text" 
+            id="transf-documento" 
+            name="documento_ref" 
+            class="form-control" 
+            placeholder="Ex: GUIA-TRANSF-2026-08" 
+            value="<%= typeof dadosPreenchidos !== 'undefined' ? dadosPreenchidos.documento_ref : '' %>"
+          >
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light);">
+        <a href="/transferencias" class="btn btn-outline">Cancelar</a>
+        <button type="submit" class="btn btn-primary" id="btn-submit-transf">
+          <i class="fa-solid fa-check"></i> <span id="btn-texto-transf">Confirmar Transferência</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Script inline para troca de modo de envio
+  const radioTransf = document.getElementById('radio-modo-transf');
+  const radioReq = document.getElementById('radio-modo-req');
+  const cardTransf = document.getElementById('card-modo-transf');
+  const cardReq = document.getElementById('card-modo-req');
+  const btnTexto = document.getElementById('btn-texto-transf');
+  const selOrigem = document.getElementById('transf-origem-select');
+  const selDestino = document.getElementById('transf-destino-select');
+
+  function atualizarModo() {
+    if (radioTransf && radioTransf.checked) {
+      cardTransf.classList.add('selected-in');
+      cardReq.classList.remove('selected-out');
+      if (btnTexto) btnTexto.textContent = 'Confirmar Transferência Imediata';
+    } else if (radioReq && radioReq.checked) {
+      cardReq.classList.add('selected-out');
+      cardTransf.classList.remove('selected-in');
+      if (btnTexto) btnTexto.textContent = 'Enviar Requisição para Aprovação';
+    }
+  }
+
+  if (cardTransf && cardReq) {
+    cardTransf.addEventListener('click', () => {
+      radioTransf.checked = true;
+      atualizarModo();
+    });
+    cardReq.addEventListener('click', () => {
+      radioReq.checked = true;
+      atualizarModo();
+    });
+    radioTransf.addEventListener('change', atualizarModo);
+    radioReq.addEventListener('change', atualizarModo);
+    atualizarModo();
+  }
+
+  // Validação simples para evitar origem == destino
+  document.getElementById('form-transferencia')?.addEventListener('submit', function(e) {
+    if (selOrigem && selDestino && selOrigem.value && selDestino.value && selOrigem.value === selDestino.value) {
+      e.preventDefault();
+      alert('O canteiro de origem não pode ser o mesmo de destino.');
+    }
+  });
+</script>
+
+<%- include('../layouts/footer') %>

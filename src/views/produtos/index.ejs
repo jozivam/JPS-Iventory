@@ -98,12 +98,17 @@
 
     <!-- Pílulas de Seleção Fixoria -->
     <div class="filter-pills-group">
-      <!-- Data / Período -->
-      <div class="filter-select-pill" style="display: flex; align-items: center; gap: 0.4rem;">
-        <i class="fa-regular fa-calendar" style="color: var(--text-dim);"></i>
-        <span>12 Out - 28 Out 2026</span>
-        <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem; color: var(--text-dim);"></i>
-      </div>
+      <!-- Filtro Almoxarifado / Canteiro de Obras -->
+      <select name="almoxarifado_id" class="filter-select-pill" onchange="this.form.submit()" style="font-weight: 600; color: var(--primary);">
+        <option value="">🏢 Todos os Almoxarifados (Global)</option>
+        <% if (typeof almoxarifados !== 'undefined' && almoxarifados) { %>
+          <% almoxarifados.forEach(alm => { %>
+            <option value="<%= alm.id %>" <%= filtros.almoxarifado_id == alm.id ? 'selected' : '' %>>
+              <%= alm.tipo === 'CENTRAL' ? '🏢' : '🏗️' %> <%= alm.nome %> (<%= alm.codigo %>)
+            </option>
+          <% }) %>
+        <% } %>
+      </select>
 
       <!-- Filtro Categoria -->
       <select name="categoria" class="filter-select-pill" onchange="this.form.submit()">
@@ -125,7 +130,7 @@
         <i class="fa-solid fa-sliders"></i> Filtrar
       </button>
 
-      <% if (filtros.busca || filtros.categoria || filtros.status) { %>
+      <% if (filtros.busca || filtros.categoria || filtros.status || filtros.almoxarifado_id) { %>
         <a href="/produtos" class="btn btn-outline btn-sm" title="Limpar Filtros">
           <i class="fa-solid fa-rotate-left"></i>
         </a>
@@ -145,7 +150,7 @@
           </th>
           <th>Nome do Produto</th>
           <th>Categoria</th>
-          <th>SKU</th>
+          <th>SKU / TAG</th>
           <th>Entradas</th>
           <th>Estoque</th>
           <th>Status <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem;"></i></th>
@@ -165,15 +170,18 @@
                 <input type="checkbox" class="product-checkbox" style="cursor: pointer;">
               </td>
 
-              <!-- Product Name com Thumbnail Fixoria -->
+              <!-- Product Name com Thumbnail Fixoria (Clicável para Ficha Completa) -->
               <td>
-                <div class="product-cell">
+                <a href="/produtos/<%= p.id %>" class="product-cell" style="text-decoration: none; color: inherit;" title="Clique para abrir a Ficha Completa de <%= p.nome %>">
                   <div class="product-thumb"><%= thumbIcon %></div>
                   <div>
-                    <div class="product-name-text"><%= p.nome %></div>
-                    <div class="product-sku-text"><%= p.localizacao || 'Almoxarifado' %></div>
+                    <div class="product-name-text" style="transition: color 0.15s ease;"><%= p.nome %></div>
+                    <div class="product-sku-text">
+                      <%= p.localizacao || 'Almoxarifado' %> 
+                      <span style="color: var(--primary); font-size: 0.72rem; margin-left: 0.25rem;">• Ver ficha ➔</span>
+                    </div>
                   </div>
-                </div>
+                </a>
               </td>
 
               <!-- Category -->
@@ -229,13 +237,21 @@
               <!-- Action (...) -->
               <td style="text-align: right; white-space: nowrap;">
                 <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <!-- Ver Ficha Completa -->
+                  <a href="/produtos/<%= p.id %>" class="action-more-btn" title="Ver Ficha Completa">
+                    <i class="fa-solid fa-id-card" style="color: var(--primary);"></i>
+                  </a>
                   <!-- Atalho Rápido de Baixa -->
                   <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Dar Baixa">
-                    <i class="fa-solid fa-arrow-down" style="color: var(--primary);"></i>
+                    <i class="fa-solid fa-arrow-down" style="color: var(--danger);"></i>
                   </a>
                   <!-- Atalho Rápido de Entrada -->
                   <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=ENTRADA" class="action-more-btn" title="Nova Entrada">
                     <i class="fa-solid fa-arrow-up" style="color: var(--teal);"></i>
+                  </a>
+                  <!-- Transferência entre Obras -->
+                  <a href="/transferencias/nova?produto_id=<%= p.id %>" class="action-more-btn" title="Transferir entre Obras">
+                    <i class="fa-solid fa-arrow-right-arrow-left" style="color: var(--purple);"></i>
                   </a>
                   <!-- Editar -->
                   <a href="/produtos/<%= p.id %>/editar" class="action-more-btn" title="Editar">

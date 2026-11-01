@@ -4,23 +4,28 @@ class Produto {
   /**
    * Lista todos os produtos com filtros opcionais e status de estoque calculado
    */
-  static findAll({ busca = '', categoria = '', status = '', ordenarPor = 'nome_asc' } = {}) {
+  static findAll({ busca = '', categoria = '', status = '', ordenarPor = 'nome_asc', almoxarifado_id = '' } = {}) {
     let query = `
       SELECT 
         p.*,
         f.nome AS fornecedor_nome,
-        (p.quantidade * p.preco_unitario) AS valor_total_estoque,
+        ${almoxarifado_id ? 'COALESCE(e.quantidade, 0)' : 'p.quantidade'} AS quantidade_exibida,
+        (${almoxarifado_id ? 'COALESCE(e.quantidade, 0)' : 'p.quantidade'} * p.preco_unitario) AS valor_total_estoque,
         CASE
-          WHEN p.quantidade <= 0 THEN 'CRITICO'
-          WHEN p.quantidade <= p.estoque_minimo THEN 'BAIXO'
+          WHEN ${almoxarifado_id ? 'COALESCE(e.quantidade, 0)' : 'p.quantidade'} <= 0 THEN 'CRITICO'
+          WHEN ${almoxarifado_id ? 'COALESCE(e.quantidade, 0)' : 'p.quantidade'} <= p.estoque_minimo THEN 'BAIXO'
           ELSE 'NORMAL'
         END AS status_estoque
       FROM produtos p
       LEFT JOIN fornecedores f ON p.fornecedor_id = f.id
+      ${almoxarifado_id ? 'LEFT JOIN estoques e ON p.id = e.produto_id AND e.almoxarifado_id = ?' : ''}
       WHERE 1=1
     `;
 
     const params = [];
+    if (almoxarifado_id) {
+      params.push(parseInt(almoxarifado_id, 10));
+    }
 
     if (busca) {
       query += ` AND (p.nome LIKE ? OR p.sku LIKE ? OR p.tag LIKE ? OR p.localizacao LIKE ?)`;
@@ -34,11 +39,11 @@ class Produto {
     }
 
     if (status === 'CRITICO') {
-      query += ` AND p.quantidade <= 0`;
+      query += ` AND ${almoxarifado_id ? 'COALESCE(e.quantidade, 0)' : 'p.quantidade'} <= 0`;
     } else if (status === 'BAIXO') {
-      query += ` AND p.quantidade > 0 AND p.quantidade <= p.estoque_minimo`;
+      query += ` AND ${almoxarifado_id ? 'COALESCE(e.quantidade, 0)' : 'p.quantidade'} > 0 AND ${almoxarifado_id ? 'COALESCE(e.quantidade, 0)' : 'p.quantidade'} <= p.estoque_minimo`;
     } else if (status === 'NORMAL') {
-      query += ` AND p.quantidade > p.estoque_minimo`;
+      query += ` AND ${almoxarifado_id ? 'COALESCE(e.quantidade, 0)' : 'p.quantidade'} > p.estoque_minimo`;
     }
 
     switch (ordenarPor) {
@@ -46,10 +51,10 @@ class Produto {
         query += ` ORDER BY p.nome DESC`;
         break;
       case 'qtd_asc':
-        query += ` ORDER BY p.quantidade ASC`;
+        query += ` ORDER BY quantidade_exibida ASC`;
         break;
       case 'qtd_desc':
-        query += ` ORDER BY p.quantidade DESC`;
+        query += ` ORDER BY quantidade_exibida DESC`;
         break;
       case 'valor_desc':
         query += ` ORDER BY valor_total_estoque DESC`;
@@ -59,6 +64,51 @@ class Produto {
     }
 
     return db.prepare(query).all(...params);
+  }
+
+  /**
+   * Busca a ficha completa do produto com estoques por canteiro de obras e histórico
+   */
+  static findByIdWithEstoques(id) {
+    const produto = this.findById(id);
+    if (!produto) return null;
+
+    // Distribuição de estoque em cada almoxarifado / canteiro de obra
+    const estoquesObras = db.prepare(`
+      SELECT 
+        a.id AS almoxarifado_id,
+        a.codigo AS almoxarifado_codigo,
+        a.nome AS almoxarifado_nome,
+        a.tipo AS almoxarifado_tipo,
+        a.responsavel AS almoxarifado_responsavel,
+        COALESCE(e.quantidade, 0) AS quantidade,
+        e.localizacao
+      FROM almoxarifados a
+      LEFT JOIN estoques e ON a.id = e.almoxarifado_id AND e.produto_id = ?
+      ORDER BY CASE WHEN a.tipo = 'CENTRAL' THEN 0 ELSE 1 END, a.nome ASC
+    `).all(id);
+
+    // Histórico de movimentações deste produto específico
+    const historicoMovimentacoes = db.prepare(`
+      SELECT 
+        m.*,
+        ao.nome AS almoxarifado_origem_nome,
+        ao.codigo AS almoxarifado_origem_codigo,
+        ad.nome AS almoxarifado_destino_nome,
+        ad.codigo AS almoxarifado_destino_codigo
+      FROM movimentacoes m
+      LEFT JOIN almoxarifados ao ON m.almoxarifado_origem_id = ao.id
+      LEFT JOIN almoxarifados ad ON m.almoxarifado_destino_id = ad.id
+      WHERE m.produto_id = ?
+      ORDER BY m.criado_em DESC, m.id DESC
+      LIMIT 25
+    `).all(id);
+
+    return {
+      ...produto,
+      estoquesObras,
+      historicoMovimentacoes
+    };
   }
 
   /**

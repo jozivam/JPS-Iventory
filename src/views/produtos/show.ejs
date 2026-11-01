@@ -1,0 +1,276 @@
+<%- include('../layouts/header') %>
+
+<% if (typeof sucesso !== 'undefined' && sucesso) { %>
+  <div class="alert alert-success">
+    <div><i class="fa-solid fa-circle-check"></i> <%= sucesso %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+  <div class="alert alert-danger">
+    <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<!-- Cabeçalho da Ficha do Produto com Ações Rápidas -->
+<div class="page-header-flex">
+  <div class="page-title-wrap">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+      <a href="/produtos" class="btn btn-outline btn-sm" title="Voltar ao Catálogo">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <h2><%= produto.nome %></h2>
+      <% if (produto.status_estoque === 'NORMAL') { %>
+        <span class="status-pill in-stock"><span class="status-dot-sm"></span> Em estoque</span>
+      <% } else if (produto.status_estoque === 'BAIXO') { %>
+        <span class="status-pill low-stock"><span class="status-dot-sm"></span> Estoque baixo</span>
+      <% } else { %>
+        <span class="status-pill out-of-stock"><span class="status-dot-sm"></span> Sem estoque</span>
+      <% } %>
+    </div>
+    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: var(--text-muted); flex-wrap: wrap;">
+      <span>SKU: <strong style="font-family: var(--font-mono); color: var(--text-main);"><%= produto.sku %></strong></span>
+      <% if (produto.tag) { %>
+        <span>• TAG: <strong style="font-family: var(--font-mono); color: var(--primary);"><%= produto.tag %></strong></span>
+      <% } %>
+      <span>• Categoria: <strong style="color: var(--text-main);"><%= produto.categoria %></strong></span>
+      <span>• Localização Central: <strong><%= produto.localizacao || 'Não especificada' %></strong></span>
+    </div>
+  </div>
+
+  <!-- Grupo de Ações Rápidas da Ficha do Produto -->
+  <div class="page-actions-group">
+    <!-- Dar Baixa / Saída -->
+    <a href="/movimentacoes/nova?produto_id=<%= produto.id %>&tipo=SAIDA" class="btn btn-outline" id="btn-ficha-baixa">
+      <i class="fa-solid fa-arrow-up" style="color: var(--danger);"></i> Dar Baixa / Consumo
+    </a>
+    <!-- Dar Entrada / NF -->
+    <a href="/movimentacoes/nova?produto_id=<%= produto.id %>&tipo=ENTRADA" class="btn btn-outline" id="btn-ficha-entrada">
+      <i class="fa-solid fa-arrow-down" style="color: var(--teal);"></i> Entrada (NF)
+    </a>
+    <!-- Transferir entre Obras -->
+    <a href="/transferencias/nova?produto_id=<%= produto.id %>" class="btn btn-outline" id="btn-ficha-transferir">
+      <i class="fa-solid fa-arrow-right-arrow-left" style="color: var(--primary);"></i> Transferir entre Obras
+    </a>
+    <!-- Editar Cadastro -->
+    <a href="/produtos/<%= produto.id %>/editar" class="btn btn-primary" id="btn-ficha-editar">
+      <i class="fa-solid fa-pen-to-square"></i> Editar Produto
+    </a>
+  </div>
+</div>
+
+<!-- 4 Cards de Métricas do Produto (Storaxe Style) -->
+<div class="storaxe-kpi-grid">
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot teal"></span>
+      <span>Estoque Físico Total</span>
+    </div>
+    <div class="kpi-big-number"><%= produto.quantidade %> <small style="font-size: 0.9rem; color: var(--text-muted);"><%= produto.unidade_medida %></small></div>
+    <span class="kpi-comparison-text">Somatório de todas as obras</span>
+  </div>
+
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot purple"></span>
+      <span>Valor Patrimonial Investido</span>
+    </div>
+    <div class="kpi-big-number"><%= formatMoney(produto.valor_total_estoque) %></div>
+    <span class="kpi-comparison-text">Preço unitário: <%= formatMoney(produto.preco_unitario) %></span>
+  </div>
+
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot blue"></span>
+      <span>Estoque Mínimo de Segurança</span>
+    </div>
+    <div class="kpi-big-number"><%= produto.estoque_minimo %> <small style="font-size: 0.9rem; color: var(--text-muted);"><%= produto.unidade_medida %></small></div>
+    <span class="kpi-comparison-text">Ponto de reposição automática</span>
+  </div>
+
+  <div class="storaxe-kpi-card">
+    <div class="kpi-title-row">
+      <span class="kpi-dot cyan"></span>
+      <span>Fornecedor Homologado</span>
+    </div>
+    <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+      <%= produto.fornecedor_nome || 'Nenhum fornecedor vinculado' %>
+    </div>
+    <span class="kpi-comparison-text"><%= produto.fornecedor_telefone || 'Sem telefone registrado' %></span>
+  </div>
+</div>
+
+<!-- TABELA 1: DISTRIBUIÇÃO DO ESTOQUE POR CANTEIRO DE OBRAS / ALMOXARIFADO -->
+<div class="table-card" style="margin-bottom: 1.75rem;">
+  <div class="storaxe-card-header">
+    <div class="storaxe-card-title">
+      <i class="fa-solid fa-helmet-safety" style="color: var(--primary);"></i>
+      <span>Distribuição por Canteiro de Obras & Almoxarifados</span>
+    </div>
+    <a href="/transferencias/nova?produto_id=<%= produto.id %>" class="btn btn-outline btn-sm">
+      <i class="fa-solid fa-arrow-right-arrow-left"></i> Nova Transferência
+    </a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="clean-table">
+      <thead>
+        <tr>
+          <th>CANTEIRO / ALMOXARIFADO</th>
+          <th>TIPO</th>
+          <th>RESPONSÁVEL NO LOCAL</th>
+          <th>ENDEREÇO / LOCALIZAÇÃO</th>
+          <th>SALDO NA OBRA</th>
+          <th>VALOR ALOCADO</th>
+          <th style="text-align: right;">AÇÕES</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (produto.estoquesObras && produto.estoquesObras.length > 0) { %>
+          <% produto.estoquesObras.forEach(est => { %>
+            <tr>
+              <td>
+                <div style="font-weight: 700; color: var(--text-main);"><%= est.almoxarifado_nome %></div>
+                <span class="report-table-tag"><%= est.almoxarifado_codigo %></span>
+              </td>
+              <td>
+                <span class="status-pill <%= est.almoxarifado_tipo === 'CENTRAL' ? 'in-stock' : 'low-stock' %>">
+                  <%= est.almoxarifado_tipo === 'CENTRAL' ? 'Matriz / Central' : 'Canteiro de Obras' %>
+                </span>
+              </td>
+              <td>
+                <span style="font-size: 0.85rem;"><%= est.almoxarifado_responsavel || 'Não informado' %></span>
+              </td>
+              <td>
+                <span style="font-size: 0.82rem; color: var(--text-muted);"><%= est.localizacao || 'Almoxarifado da Obra' %></span>
+              </td>
+              <td>
+                <strong style="font-size: 1rem; color: <%= est.quantidade > 0 ? 'var(--text-main)' : 'var(--danger-text)' %>;">
+                  <%= est.quantidade %>
+                </strong>
+                <span style="font-size: 0.75rem; color: var(--text-dim);"><%= produto.unidade_medida %></span>
+              </td>
+              <td>
+                <strong style="font-size: 0.85rem; color: var(--text-main);">
+                  <%= formatMoney(est.quantidade * produto.preco_unitario) %>
+                </strong>
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <div style="display: inline-flex; gap: 0.35rem;">
+                  <!-- Transferir a partir desta obra -->
+                  <a href="/transferencias/nova?produto_id=<%= produto.id %>&origem_id=<%= est.almoxarifado_id %>" class="btn btn-outline btn-sm" title="Transferir a partir desta obra">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i> Transferir
+                  </a>
+                  <!-- Dar baixa nesta obra -->
+                  <a href="/movimentacoes/nova?produto_id=<%= produto.id %>&tipo=SAIDA" class="btn btn-outline btn-sm" title="Dar baixa consumindo nesta obra">
+                    <i class="fa-solid fa-arrow-up" style="color: var(--danger);"></i> Baixa
+                  </a>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              Nenhum canteiro com estoque alocado.
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TABELA 2: HISTÓRICO DE MOVIMENTAÇÕES DESTE PRODUTO -->
+<div class="table-card">
+  <div class="storaxe-card-header">
+    <div class="storaxe-card-title">
+      <i class="fa-solid fa-clock-rotate-left" style="color: var(--teal);"></i>
+      <span>Histórico de Movimentações & Rastreabilidade</span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="clean-table">
+      <thead>
+        <tr>
+          <th>DATA & HORA</th>
+          <th>OPERAÇÃO</th>
+          <th>ORIGEM ➔ DESTINO</th>
+          <th>QUANTIDADE</th>
+          <th>RESPONSÁVEL</th>
+          <th>MOTIVO / JUSTIFICATIVA</th>
+          <th>DOCUMENTO / GUIA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (produto.historicoMovimentacoes && produto.historicoMovimentacoes.length > 0) { %>
+          <% produto.historicoMovimentacoes.forEach(m => { %>
+            <tr>
+              <td>
+                <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-main);"><%= formatDate(m.criado_em) %></span>
+              </td>
+              <td>
+                <% if (m.tipo === 'ENTRADA') { %>
+                  <span class="status-pill in-stock">
+                    <span class="status-dot-sm"></span> Entrada (NF)
+                  </span>
+                <% } else if (m.tipo === 'SAIDA') { %>
+                  <span class="status-pill out-of-stock">
+                    <span class="status-dot-sm"></span> Baixa / Consumo
+                  </span>
+                <% } else { %>
+                  <span class="status-pill" style="background: var(--purple-bg); color: var(--purple);">
+                    <i class="fa-solid fa-arrow-right-arrow-left" style="font-size: 0.65rem;"></i> Transferência
+                  </span>
+                <% } %>
+              </td>
+              <td>
+                <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-main);">
+                  <% if (m.tipo === 'TRANSFERENCIA') { %>
+                    <%= m.almoxarifado_origem_nome || 'Central' %> ➔ <%= m.almoxarifado_destino_nome || 'Obra' %>
+                  <% } else if (m.tipo === 'ENTRADA') { %>
+                    Fornecedor ➔ <%= m.almoxarifado_destino_nome || 'Almoxarifado' %>
+                  <% } else { %>
+                    <%= m.almoxarifado_origem_nome || 'Almoxarifado' %> ➔ Consumo em Obra
+                  <% } %>
+                </div>
+              </td>
+              <td>
+                <strong style="color: <%= m.tipo === 'ENTRADA' ? 'var(--teal)' : (m.tipo === 'SAIDA' ? 'var(--danger-text)' : 'var(--primary)') %>;">
+                  <%= m.tipo === 'ENTRADA' ? '+' : (m.tipo === 'SAIDA' ? '-' : '⇄') %><%= m.quantidade %>
+                </strong>
+                <small style="color: var(--text-muted);"><%= produto.unidade_medida %></small>
+              </td>
+              <td>
+                <span style="font-size: 0.82rem; color: var(--text-body);"><%= m.responsavel %></span>
+              </td>
+              <td>
+                <span style="font-size: 0.82rem;"><%= m.motivo %></span>
+              </td>
+              <td>
+                <% if (m.documento_ref) { %>
+                  <span style="font-family: var(--font-mono); font-size: 0.75rem; background: var(--bg-surface); padding: 0.15rem 0.45rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <%= m.documento_ref %>
+                  </span>
+                <% } else { %>
+                  <span style="color: var(--text-dim);">-</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+              Nenhuma movimentação registrada para este item ainda.
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

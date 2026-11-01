@@ -1,16 +1,18 @@
 const Produto = require('../models/Produto');
 const Fornecedor = require('../models/Fornecedor');
+const Almoxarifado = require('../models/Almoxarifado');
 
 class ProdutoController {
   /**
-   * Lista todos os produtos com filtros e status de estoque (Estilo Fixoria UI)
+   * Lista todos os produtos com filtros e suporte a multi-almoxarifado
    */
   static async index(req, res) {
     try {
-      const { busca = '', categoria = '', status = '', ordenarPor = 'nome_asc' } = req.query;
-      const produtos = Produto.findAll({ busca, categoria, status, ordenarPor });
+      const { busca = '', categoria = '', status = '', ordenarPor = 'nome_asc', almoxarifado_id = '' } = req.query;
+      const produtos = Produto.findAll({ busca, categoria, status, ordenarPor, almoxarifado_id });
       const categorias = Produto.getCategorias();
       const estatisticas = Produto.getEstatisticas();
+      const almoxarifados = Almoxarifado.findAll();
 
       // Estatísticas segmentadas para a barra Fixoria
       const inStockCount = Math.max(0, estatisticas.total_itens - estatisticas.total_em_alerta);
@@ -22,13 +24,14 @@ class ProdutoController {
         currentPage: 'produtos',
         produtos,
         categorias,
+        almoxarifados,
         estatisticas: {
           ...estatisticas,
           inStockCount,
           lowStockCount,
           outOfStockCount
         },
-        filtros: { busca, categoria, status, ordenarPor },
+        filtros: { busca, categoria, status, ordenarPor, almoxarifado_id },
         sucesso: req.query.sucesso || null,
         erro: req.query.erro || null
       });
@@ -39,18 +42,48 @@ class ProdutoController {
   }
 
   /**
+   * Ficha Completa do Produto (Exibe dados, estoques por obra e ações rápidas)
+   */
+  static async show(req, res) {
+    try {
+      const { id } = req.params;
+      const produto = Produto.findByIdWithEstoques(id);
+
+      if (!produto) {
+        return res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
+      }
+
+      const almoxarifados = Almoxarifado.findAll();
+
+      res.render('produtos/show', {
+        title: `Ficha: ${produto.nome}`,
+        currentPage: 'produtos',
+        produto,
+        almoxarifados,
+        sucesso: req.query.sucesso || null,
+        erro: req.query.erro || null
+      });
+    } catch (error) {
+      console.error('Erro ao abrir ficha do produto:', error);
+      res.redirect('/produtos?erro=' + encodeURIComponent(error.message));
+    }
+  }
+
+  /**
    * Formulário de novo produto
    */
   static async create(req, res) {
     try {
       const fornecedores = Fornecedor.findAll();
       const categorias = Produto.getCategorias();
+      const almoxarifados = Almoxarifado.findAll();
 
       res.render('produtos/create', {
         title: 'Adicionar Produto (Add Product)',
         currentPage: 'produtos',
         fornecedores,
         categorias,
+        almoxarifados,
         produto: {},
         erro: req.query.erro || null
       });
@@ -61,7 +94,7 @@ class ProdutoController {
   }
 
   /**
-   * Processa o cadastro de um novo produto
+   * Processa o cadastro de um novo produto (Flexível com campos opcionais)
    */
   static async store(req, res) {
     try {
@@ -81,17 +114,19 @@ class ProdutoController {
       });
 
       const nomeItem = nome ? nome.trim() : (tag ? `Item [${tag}]` : 'Novo produto');
-      res.redirect('/produtos?sucesso=' + encodeURIComponent(`"${nomeItem}" salvo com sucesso no inventário!`));
+      res.redirect(`/produtos/${novoProdutoId}?sucesso=` + encodeURIComponent(`"${nomeItem}" salvo com sucesso! Ficha completa gerada.`));
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
       const fornecedores = Fornecedor.findAll();
       const categorias = Produto.getCategorias();
+      const almoxarifados = Almoxarifado.findAll();
 
       res.render('produtos/create', {
         title: 'Adicionar Produto',
         currentPage: 'produtos',
         fornecedores,
         categorias,
+        almoxarifados,
         produto: req.body,
         erro: error.message
       });
@@ -148,7 +183,7 @@ class ProdutoController {
       });
 
       const nomeItem = nome ? nome.trim() : 'Produto';
-      res.redirect('/produtos?sucesso=' + encodeURIComponent(`"${nomeItem}" atualizado com sucesso!`));
+      res.redirect(`/produtos/${id}?sucesso=` + encodeURIComponent(`"${nomeItem}" atualizado com sucesso!`));
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
       const fornecedores = Fornecedor.findAll();
@@ -167,13 +202,13 @@ class ProdutoController {
   }
 
   /**
-   * Exclui um produto (com validação de integridade)
+   * Exclui um produto (com validação de rastreabilidade)
    */
   static async delete(req, res) {
     try {
       const { id } = req.params;
       Produto.delete(id);
-      res.redirect('/produtos?sucesso=' + encodeURIComponent('Item removido com sucesso.'));
+      res.redirect('/produtos?sucesso=' + encodeURIComponent('Item removido com sucesso do catálogo.'));
     } catch (error) {
       console.error('Erro ao remover produto:', error);
       res.redirect('/produtos?erro=' + encodeURIComponent(error.message));
