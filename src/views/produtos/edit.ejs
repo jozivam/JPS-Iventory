@@ -1,6 +1,6 @@
 <%- include('../layouts/header') %>
 
-<div style="max-width: 800px; margin: 0 auto;">
+<div style="max-width: 900px; margin: 0 auto; padding-bottom: 2rem;">
   <% if (typeof erro !== 'undefined' && erro) { %>
     <div class="alert alert-danger">
       <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
@@ -19,140 +19,268 @@
   </div>
 
   <div class="table-card" style="padding: 1.75rem;">
-    <form action="/produtos/<%= produto.id %>/editar" method="POST">
-      <div class="form-grid">
-        <!-- SKU -->
-        <div class="form-group">
-          <label class="form-label" for="produto-sku-input">
-            Código SKU
-          </label>
-          <input 
-            type="text" 
-            id="produto-sku-input" 
-            name="sku" 
-            class="form-control" 
-            value="<%= produto.sku || '' %>" 
-            style="text-transform: uppercase;"
-          >
-          <span class="form-help">Identificador único do produto.</span>
-        </div>
+    <form action="/produtos/<%= produto.id %>/editar" method="POST" id="form-editar-produto">
+      
+      <!-- SEÇÃO 1: INFORMAÇÕES BÁSICAS -->
+      <div style="margin-bottom: 1.75rem;">
+        <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-box-open" style="color: var(--primary);"></i> Dados Principais
+        </h3>
 
-        <!-- Categoria -->
-        <div class="form-group">
-          <label class="form-label" for="produto-categoria-select">
-            Categoria
-          </label>
-          <input 
-            list="lista-categorias" 
-            id="produto-categoria-select" 
-            name="categoria" 
-            class="form-control" 
-            value="<%= produto.categoria || '' %>"
-          >
-          <datalist id="lista-categorias">
-            <option value="Ferramentas">
-            <option value="EPI / Segurança">
-            <option value="Elétrica e TI">
-            <option value="Hidráulica">
-            <option value="Pintura e Acabamento">
-            <option value="Suprimentos Gerais">
-          </datalist>
-        </div>
+        <div class="form-grid">
+          <!-- SKU -->
+          <div class="form-group">
+            <label class="form-label" for="produto-sku-input">
+              Código SKU
+            </label>
+            <input 
+              type="text" 
+              id="produto-sku-input" 
+              name="sku" 
+              class="form-control" 
+              value="<%= produto.sku || '' %>" 
+              style="text-transform: uppercase;"
+            >
+            <span class="form-help">Identificador único do produto.</span>
+          </div>
 
-        <!-- Nome / Descrição -->
-        <div class="form-group full-width">
-          <label class="form-label" for="produto-nome-input">
-            Nome do Produto / Descrição <span class="required">*</span>
-          </label>
-          <input 
-            type="text" 
-            id="produto-nome-input" 
-            name="nome" 
-            class="form-control" 
-            value="<%= produto.nome || '' %>"
-            required
-          >
-        </div>
+          <!-- Categoria -->
+          <div class="form-group">
+            <label class="form-label" for="produto-categoria-select">
+              Categoria
+            </label>
+            <select id="produto-categoria-select" name="categoria" class="form-select">
+              <% categorias.forEach(cat => { %>
+                <option value="<%= cat %>" <%= (produto.categoria === cat || (!produto.categoria && cat === 'Outros')) ? 'selected' : '' %>>
+                  <%= cat %>
+                </option>
+              <% }) %>
+            </select>
+            <div id="campo-outra-categoria" style="display: none; margin-top: 0.5rem;">
+              <input 
+                type="text" 
+                id="categoria-personalizada" 
+                name="categoria_personalizada" 
+                class="form-control" 
+                placeholder="Especifique a categoria..."
+                value="<%= (!categorias.includes(produto.categoria) && produto.categoria !== 'Outros') ? produto.categoria : '' %>"
+              >
+            </div>
+          </div>
 
-        <!-- Unidade de Medida -->
-        <div class="form-group">
-          <label class="form-label" for="produto-unidade-select">
-            Unidade de Medida
-          </label>
-          <select id="produto-unidade-select" name="unidade_medida" class="form-select">
-            <option value="UN" <%= produto.unidade_medida === 'UN' ? 'selected' : '' %>>UN - Unidade</option>
-            <option value="CX" <%= produto.unidade_medida === 'CX' ? 'selected' : '' %>>CX - Caixa</option>
-            <option value="PAR" <%= produto.unidade_medida === 'PAR' ? 'selected' : '' %>>PAR - Par</option>
-            <option value="KG" <%= produto.unidade_medida === 'KG' ? 'selected' : '' %>>KG - Quilograma</option>
-            <option value="L" <%= produto.unidade_medida === 'L' ? 'selected' : '' %>>L - Litro</option>
-            <option value="M" <%= produto.unidade_medida === 'M' ? 'selected' : '' %>>M - Metro</option>
-            <option value="JG" <%= produto.unidade_medida === 'JG' ? 'selected' : '' %>>JG - Jogo</option>
-          </select>
-        </div>
+          <!-- Nome / Descrição -->
+          <div class="form-group full-width">
+            <label class="form-label" for="produto-nome-input">
+              Nome do Produto / Descrição
+            </label>
+            <input 
+              type="text" 
+              id="produto-nome-input" 
+              name="nome" 
+              class="form-control" 
+              value="<%= produto.nome || '' %>"
+            >
+          </div>
 
-        <!-- Quantidade em Estoque -->
-        <div class="form-group">
-          <label class="form-label" for="produto-quantidade-input">
-            Quantidade Atual em Estoque
-          </label>
-          <input 
-            type="number" 
-            id="produto-quantidade-input" 
-            name="quantidade" 
-            class="form-control" 
-            min="0" 
-            value="<%= produto.quantidade !== undefined ? produto.quantidade : 0 %>"
-          >
-          <span class="form-help">Recomenda-se realizar ajustes por Movimentações (Entrada/Saída).</span>
-        </div>
+          <!-- Quantidade -->
+          <div class="form-group">
+            <label class="form-label" for="produto-quantidade-input">
+              Quantidade
+            </label>
+            <input 
+              type="number" 
+              id="produto-quantidade-input" 
+              name="quantidade" 
+              class="form-control" 
+              min="0" 
+              value="<%= produto.quantidade !== undefined ? produto.quantidade : 0 %>"
+            >
+          </div>
 
-        <!-- Estoque Mínimo -->
-        <div class="form-group">
-          <label class="form-label" for="produto-minimo-input">
-            Estoque Mínimo (Alerta)
-          </label>
-          <input 
-            type="number" 
-            id="produto-minimo-input" 
-            name="estoque_minimo" 
-            class="form-control" 
-            min="0" 
-            value="<%= produto.estoque_minimo !== undefined ? produto.estoque_minimo : 0 %>"
-          >
-          <span class="form-help">Dispara alerta visual quando atingir essa quantia.</span>
-        </div>
+          <!-- Unidade de Medida -->
+          <div class="form-group">
+            <label class="form-label" for="produto-unidade-select">
+              Unidade de Medida
+            </label>
+            <select id="produto-unidade-select" name="unidade_medida" class="form-select">
+              <option value="UN" <%= produto.unidade_medida === 'UN' ? 'selected' : '' %>>UN - Unidade</option>
+              <option value="CX" <%= produto.unidade_medida === 'CX' ? 'selected' : '' %>>CX - Caixa</option>
+              <option value="PAR" <%= produto.unidade_medida === 'PAR' ? 'selected' : '' %>>PAR - Par</option>
+              <option value="KG" <%= produto.unidade_medida === 'KG' ? 'selected' : '' %>>KG - Quilograma</option>
+              <option value="L" <%= produto.unidade_medida === 'L' ? 'selected' : '' %>>L - Litro</option>
+              <option value="M" <%= produto.unidade_medida === 'M' ? 'selected' : '' %>>M - Metro</option>
+              <option value="JG" <%= produto.unidade_medida === 'JG' ? 'selected' : '' %>>JG - Jogo</option>
+            </select>
+          </div>
 
-        <!-- Preço Unitário -->
-        <div class="form-group">
-          <label class="form-label" for="produto-preco-input">
-            Preço Unitário (R$)
-          </label>
-          <input 
-            type="number" 
-            id="produto-preco-input" 
-            name="preco_unitario" 
-            class="form-control" 
-            step="0.01" 
-            min="0" 
-            value="<%= produto.preco_unitario !== undefined ? produto.preco_unitario : '0.00' %>"
-          >
-        </div>
+          <!-- Estoque Mínimo -->
+          <div class="form-group">
+            <label class="form-label" for="produto-minimo-input">
+              Estoque Mínimo (Alerta)
+            </label>
+            <input 
+              type="number" 
+              id="produto-minimo-input" 
+              name="estoque_minimo" 
+              class="form-control" 
+              min="0" 
+              value="<%= produto.estoque_minimo !== undefined ? produto.estoque_minimo : 0 %>"
+            >
+          </div>
 
-        <!-- Localização -->
-        <div class="form-group full-width">
-          <label class="form-label" for="produto-localizacao-input">
-            Localização / Endereçamento Físico
-          </label>
-          <input 
-            type="text" 
-            id="produto-localizacao-input" 
-            name="localizacao" 
-            class="form-control" 
-            value="<%= produto.localizacao || '' %>"
-          >
+          <!-- Preço Unitário -->
+          <div class="form-group">
+            <label class="form-label" for="produto-preco-input">
+              Preço Unitário (R$)
+            </label>
+            <input 
+              type="number" 
+              id="produto-preco-input" 
+              name="preco_unitario" 
+              class="form-control" 
+              step="0.01" 
+              min="0" 
+              value="<%= produto.preco_unitario !== undefined ? produto.preco_unitario : '0.00' %>"
+            >
+          </div>
+
+          <!-- Localização -->
+          <div class="form-group full-width">
+            <label class="form-label" for="produto-localizacao-input">
+              Localização / Endereçamento Físico
+            </label>
+            <input 
+              type="text" 
+              id="produto-localizacao-input" 
+              name="localizacao" 
+              class="form-control" 
+              value="<%= produto.localizacao || '' %>"
+            >
+          </div>
         </div>
       </div>
 
+      <!-- SEÇÃO 2: IDENTIFICAÇÃO E RASTREAMENTO -->
+      <div style="margin-bottom: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light);">
+        <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-barcode" style="color: var(--teal);"></i> Identificação & Rastreamento
+          <span style="font-size: 0.75rem; font-weight: 400; color: var(--text-muted);">(Opcional)</span>
+        </h3>
+
+        <div class="form-grid">
+          <!-- TAG / Plaqueta -->
+          <div class="form-group">
+            <label class="form-label" for="produto-tag-input">
+              TAG / Plaqueta
+            </label>
+            <input 
+              type="text" 
+              id="produto-tag-input" 
+              name="tag" 
+              class="form-control" 
+              value="<%= produto.tag || '' %>" 
+              style="text-transform: uppercase;"
+            >
+          </div>
+
+          <!-- Patrimônio -->
+          <div class="form-group">
+            <label class="form-label" for="produto-patrimonio-input">
+              Nº de Patrimônio
+            </label>
+            <input 
+              type="text" 
+              id="produto-patrimonio-input" 
+              name="patrimonio" 
+              class="form-control" 
+              value="<%= produto.patrimonio || '' %>" 
+              style="text-transform: uppercase;"
+            >
+          </div>
+
+          <!-- Número de Série -->
+          <div class="form-group">
+            <label class="form-label" for="produto-serie-input">
+              Número de Série
+            </label>
+            <input 
+              type="text" 
+              id="produto-serie-input" 
+              name="numero_serie" 
+              class="form-control" 
+              value="<%= produto.numero_serie || '' %>"
+            >
+          </div>
+
+          <!-- C.A (Certificado de Aprovação) -->
+          <div class="form-group">
+            <label class="form-label" for="produto-ca-input">
+              C.A (Certificado de Aprovação - EPI)
+            </label>
+            <input 
+              type="text" 
+              id="produto-ca-input" 
+              name="ca" 
+              class="form-control" 
+              value="<%= produto.ca || '' %>"
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 3: CARACTERÍSTICAS FÍSICAS -->
+      <div style="margin-bottom: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light);">
+        <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-ruler-combined" style="color: var(--purple);"></i> Características Físicas
+          <span style="font-size: 0.75rem; font-weight: 400; color: var(--text-muted);">(Opcional)</span>
+        </h3>
+
+        <div class="form-grid">
+          <!-- Tamanho -->
+          <div class="form-group">
+            <label class="form-label" for="produto-tamanho-input">
+              Tamanho / Dimensão
+            </label>
+            <input 
+              type="text" 
+              id="produto-tamanho-input" 
+              name="tamanho" 
+              class="form-control" 
+              value="<%= produto.tamanho || '' %>"
+            >
+          </div>
+
+          <!-- Cor -->
+          <div class="form-group">
+            <label class="form-label" for="produto-cor-input">
+              Cor
+            </label>
+            <input 
+              type="text" 
+              id="produto-cor-input" 
+              name="cor" 
+              class="form-control" 
+              value="<%= produto.cor || '' %>"
+            >
+          </div>
+
+          <!-- Peso -->
+          <div class="form-group">
+            <label class="form-label" for="produto-peso-input">
+              Peso
+            </label>
+            <input 
+              type="text" 
+              id="produto-peso-input" 
+              name="peso" 
+              class="form-control" 
+              value="<%= produto.peso || '' %>"
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTÕES DE AÇÃO -->
       <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light);">
         <a href="/produtos" class="btn btn-outline">Cancelar</a>
         <button type="submit" class="btn btn-primary" id="btn-atualizar-produto">
@@ -162,5 +290,22 @@
     </form>
   </div>
 </div>
+
+<script>
+  // Exibe campo de especificar outra categoria caso "Outros" esteja selecionado
+  const selectCategoria = document.getElementById('produto-categoria-select');
+  const campoOutraCategoria = document.getElementById('campo-outra-categoria');
+
+  function verificarCategoriaOutros() {
+    if (selectCategoria.value === 'Outros') {
+      campoOutraCategoria.style.display = 'block';
+    } else {
+      campoOutraCategoria.style.display = 'none';
+    }
+  }
+
+  selectCategoria.addEventListener('change', verificarCategoriaOutros);
+  verificarCategoriaOutros();
+</script>
 
 <%- include('../layouts/footer') %>

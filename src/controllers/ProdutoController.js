@@ -52,7 +52,13 @@ class ProdutoController {
         title: 'Novo Produto',
         currentPage: 'produtos',
         categorias,
-        produto: { sku: skuSugerido, quantidade: 0, estoque_minimo: 0, preco_unitario: '0.00' },
+        produto: { 
+          sku: skuSugerido, 
+          quantidade: 0, 
+          estoque_minimo: 0, 
+          preco_unitario: '0.00',
+          categoria: 'Outros'
+        },
         erro: null
       });
     } catch (error) {
@@ -62,24 +68,23 @@ class ProdutoController {
   }
 
   /**
-   * Salva novo produto no banco de dados
+   * Salva novo produto no banco de dados (Campos não obrigatórios)
    */
   static async store(req, res) {
     try {
-      const { sku, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao } = req.body;
+      const { 
+        sku, nome, categoria, categoria_personalizada, unidade_medida, 
+        quantidade, estoque_minimo, preco_unitario, localizacao,
+        tamanho, cor, peso, numero_serie, ca, patrimonio, tag
+      } = req.body;
 
-      if (!nome || !nome.trim()) {
-        const categorias = Produto.getCategorias();
-        return res.render('produtos/create', {
-          title: 'Novo Produto',
-          currentPage: 'produtos',
-          categorias,
-          produto: req.body,
-          erro: 'O nome do produto é obrigatório.'
-        });
+      // Define categoria final: se digitou personalizada ou escolheu da lista
+      let categoriaFinal = categoria || 'Outros';
+      if (categoria === 'Outros' && categoria_personalizada && categoria_personalizada.trim()) {
+        categoriaFinal = categoria_personalizada.trim();
       }
 
-      // Verifica duplicidade de SKU se informado
+      // Verifica duplicidade de SKU apenas se fornecido manualmente
       if (sku && sku.trim()) {
         const existente = Produto.findBySku(sku.trim().toUpperCase());
         if (existente) {
@@ -89,7 +94,7 @@ class ProdutoController {
             currentPage: 'produtos',
             categorias,
             produto: req.body,
-            erro: `Já existe um produto com o SKU "${sku.trim().toUpperCase()}". Escolha outro código.`
+            erro: `O código SKU "${sku.trim().toUpperCase()}" já está cadastrado em outro item.`
           });
         }
       }
@@ -99,28 +104,36 @@ class ProdutoController {
       // Cria produto
       const produtoId = Produto.create({
         sku,
-        nome,
-        categoria,
-        unidade_medida,
+        nome: nome && nome.trim() ? nome.trim() : 'Item sem descrição',
+        categoria: categoriaFinal,
+        unidade_medida: unidade_medida || 'UN',
         quantidade: qtdInicial,
-        estoque_minimo,
-        preco_unitario,
-        localizacao
+        estoque_minimo: parseInt(estoque_minimo, 10) || 0,
+        preco_unitario: parseFloat(preco_unitario) || 0.0,
+        localizacao,
+        tamanho,
+        cor,
+        peso,
+        numero_serie,
+        ca,
+        patrimonio,
+        tag
       });
 
-      // Se informou quantidade inicial maior que 0, registra a movimentação inicial
+      // Se informou quantidade maior que 0, registra a movimentação de entrada inicial
       if (qtdInicial > 0) {
         Movimentacao.registrar({
           produto_id: produtoId,
           tipo: 'ENTRADA',
           quantidade: qtdInicial,
           motivo: 'Carga inicial no cadastro do produto',
-          responsavel: 'Administrador',
+          responsavel: 'Jozivam Silva',
           documento_ref: 'CADASTRO-INICIAL'
         });
       }
 
-      res.redirect('/produtos?sucesso=' + encodeURIComponent(`Produto "${nome}" cadastrado com sucesso!`));
+      const nomeItem = nome && nome.trim() ? `"${nome.trim()}"` : 'Produto';
+      res.redirect('/produtos?sucesso=' + encodeURIComponent(`${nomeItem} cadastrado com sucesso no inventário!`));
     } catch (error) {
       console.error('Erro ao cadastrar produto:', error);
       const categorias = Produto.getCategorias();
@@ -149,7 +162,7 @@ class ProdutoController {
       const categorias = Produto.getCategorias();
 
       res.render('produtos/edit', {
-        title: `Editar ${produto.nome}`,
+        title: `Editar ${produto.nome || 'Produto'}`,
         currentPage: 'produtos',
         produto,
         categorias,
@@ -173,20 +186,19 @@ class ProdutoController {
         return res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
       }
 
-      const { sku, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao } = req.body;
+      const { 
+        sku, nome, categoria, categoria_personalizada, unidade_medida, 
+        quantidade, estoque_minimo, preco_unitario, localizacao,
+        tamanho, cor, peso, numero_serie, ca, patrimonio, tag
+      } = req.body;
 
-      if (!nome || !nome.trim()) {
-        const categorias = Produto.getCategorias();
-        return res.render('produtos/edit', {
-          title: `Editar ${produtoAtual.nome}`,
-          currentPage: 'produtos',
-          produto: { ...produtoAtual, ...req.body },
-          categorias,
-          erro: 'O nome do produto não pode ficar em branco.'
-        });
+      // Define categoria final
+      let categoriaFinal = categoria || produtoAtual.categoria || 'Outros';
+      if (categoria === 'Outros' && categoria_personalizada && categoria_personalizada.trim()) {
+        categoriaFinal = categoria_personalizada.trim();
       }
 
-      // Se alterou o SKU, verifica duplicidade com outro produto
+      // Se alterou o SKU, verifica duplicidade com outro item
       if (sku && sku.trim().toUpperCase() !== produtoAtual.sku) {
         const existente = Produto.findBySku(sku.trim().toUpperCase());
         if (existente && existente.id !== produtoAtual.id) {
@@ -204,16 +216,24 @@ class ProdutoController {
       Produto.update(id, {
         sku,
         sku_atual: produtoAtual.sku,
-        nome,
-        categoria,
-        unidade_medida,
-        quantidade,
-        estoque_minimo,
-        preco_unitario,
-        localizacao
+        nome: nome && nome.trim() ? nome.trim() : 'Item sem descrição',
+        categoria: categoriaFinal,
+        unidade_medida: unidade_medida || 'UN',
+        quantidade: parseInt(quantidade, 10) || 0,
+        estoque_minimo: parseInt(estoque_minimo, 10) || 0,
+        preco_unitario: parseFloat(preco_unitario) || 0.0,
+        localizacao,
+        tamanho,
+        cor,
+        peso,
+        numero_serie,
+        ca,
+        patrimonio,
+        tag
       });
 
-      res.redirect('/produtos?sucesso=' + encodeURIComponent(`Produto "${nome}" atualizado com sucesso!`));
+      const nomeItem = nome && nome.trim() ? `"${nome.trim()}"` : 'Produto';
+      res.redirect('/produtos?sucesso=' + encodeURIComponent(`${nomeItem} atualizado com sucesso!`));
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
       const categorias = Produto.getCategorias();

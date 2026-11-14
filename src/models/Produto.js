@@ -19,7 +19,15 @@ class Produto {
     const params = {};
 
     if (busca && busca.trim()) {
-      sql += ` AND (p.nome LIKE @busca OR p.sku LIKE @busca OR p.localizacao LIKE @busca)`;
+      sql += ` AND (
+        p.nome LIKE @busca 
+        OR p.sku LIKE @busca 
+        OR p.localizacao LIKE @busca
+        OR p.tag LIKE @busca
+        OR p.patrimonio LIKE @busca
+        OR p.numero_serie LIKE @busca
+        OR p.ca LIKE @busca
+      )`;
       params.busca = `%${busca.trim()}%`;
     }
 
@@ -38,7 +46,7 @@ class Produto {
       }
     }
 
-    sql += ` ORDER BY p.nome ASC`;
+    sql += ` ORDER BY p.id DESC`;
 
     return db.prepare(sql).all(params);
   }
@@ -65,32 +73,46 @@ class Produto {
    * Busca produto por código SKU
    */
   static findBySku(sku) {
-    return db.prepare('SELECT * FROM produtos WHERE sku = ?').get(sku);
+    return db.prepare('SELECT * FROM produtos WHERE UPPER(sku) = UPPER(?)').get(sku);
   }
 
   /**
-   * Cadastra um novo produto
+   * Cadastra um novo produto (todos os campos flexíveis/opcionais)
    */
   static create(dados) {
     const stmt = db.prepare(`
       INSERT INTO produtos (
         sku, nome, categoria, unidade_medida, quantidade, 
-        estoque_minimo, preco_unitario, localizacao
+        estoque_minimo, preco_unitario, localizacao,
+        tamanho, cor, peso, numero_serie, ca, patrimonio, tag
       ) VALUES (
         @sku, @nome, @categoria, @unidade_medida, @quantidade, 
-        @estoque_minimo, @preco_unitario, @localizacao
+        @estoque_minimo, @preco_unitario, @localizacao,
+        @tamanho, @cor, @peso, @numero_serie, @ca, @patrimonio, @tag
       )
     `);
 
+    const nomeFormatado = dados.nome && dados.nome.trim() ? dados.nome.trim() : 'Item sem descrição';
+    const skuFormatado = dados.sku && dados.sku.trim() 
+      ? dados.sku.trim().toUpperCase() 
+      : Produto.gerarSku(dados.categoria);
+
     const result = stmt.run({
-      sku: dados.sku ? dados.sku.trim().toUpperCase() : Produto.gerarSku(dados.categoria),
-      nome: dados.nome.trim(),
-      categoria: dados.categoria ? dados.categoria.trim() : 'Geral',
-      unidade_medida: dados.unidade_medida ? dados.unidade_medida.trim().toUpperCase() : 'UN',
+      sku: skuFormatado,
+      nome: nomeFormatado,
+      categoria: dados.categoria && dados.categoria.trim() ? dados.categoria.trim() : 'Outros',
+      unidade_medida: dados.unidade_medida && dados.unidade_medida.trim() ? dados.unidade_medida.trim().toUpperCase() : 'UN',
       quantidade: parseInt(dados.quantidade, 10) || 0,
       estoque_minimo: parseInt(dados.estoque_minimo, 10) || 0,
       preco_unitario: parseFloat(dados.preco_unitario) || 0.0,
-      localizacao: dados.localizacao ? dados.localizacao.trim() : null
+      localizacao: dados.localizacao && dados.localizacao.trim() ? dados.localizacao.trim() : null,
+      tamanho: dados.tamanho && dados.tamanho.trim() ? dados.tamanho.trim() : null,
+      cor: dados.cor && dados.cor.trim() ? dados.cor.trim() : null,
+      peso: dados.peso && dados.peso.trim() ? dados.peso.trim() : null,
+      numero_serie: dados.numero_serie && dados.numero_serie.trim() ? dados.numero_serie.trim() : null,
+      ca: dados.ca && dados.ca.trim() ? dados.ca.trim() : null,
+      patrimonio: dados.patrimonio && dados.patrimonio.trim() ? dados.patrimonio.trim() : null,
+      tag: dados.tag && dados.tag.trim() ? dados.tag.trim().toUpperCase() : null
     });
 
     return result.lastInsertRowid;
@@ -110,20 +132,36 @@ class Produto {
         estoque_minimo = @estoque_minimo,
         preco_unitario = @preco_unitario,
         localizacao = @localizacao,
+        tamanho = @tamanho,
+        cor = @cor,
+        peso = @peso,
+        numero_serie = @numero_serie,
+        ca = @ca,
+        patrimonio = @patrimonio,
+        tag = @tag,
         atualizado_em = datetime('now', 'localtime')
       WHERE id = @id
     `);
 
+    const nomeFormatado = dados.nome && dados.nome.trim() ? dados.nome.trim() : 'Item sem descrição';
+
     return stmt.run({
       id,
-      sku: dados.sku ? dados.sku.trim().toUpperCase() : dados.sku_atual,
-      nome: dados.nome.trim(),
-      categoria: dados.categoria ? dados.categoria.trim() : 'Geral',
-      unidade_medida: dados.unidade_medida ? dados.unidade_medida.trim().toUpperCase() : 'UN',
+      sku: dados.sku && dados.sku.trim() ? dados.sku.trim().toUpperCase() : dados.sku_atual,
+      nome: nomeFormatado,
+      categoria: dados.categoria && dados.categoria.trim() ? dados.categoria.trim() : 'Outros',
+      unidade_medida: dados.unidade_medida && dados.unidade_medida.trim() ? dados.unidade_medida.trim().toUpperCase() : 'UN',
       quantidade: parseInt(dados.quantidade, 10) || 0,
       estoque_minimo: parseInt(dados.estoque_minimo, 10) || 0,
       preco_unitario: parseFloat(dados.preco_unitario) || 0.0,
-      localizacao: dados.localizacao ? dados.localizacao.trim() : null
+      localizacao: dados.localizacao && dados.localizacao.trim() ? dados.localizacao.trim() : null,
+      tamanho: dados.tamanho && dados.tamanho.trim() ? dados.tamanho.trim() : null,
+      cor: dados.cor && dados.cor.trim() ? dados.cor.trim() : null,
+      peso: dados.peso && dados.peso.trim() ? dados.peso.trim() : null,
+      numero_serie: dados.numero_serie && dados.numero_serie.trim() ? dados.numero_serie.trim() : null,
+      ca: dados.ca && dados.ca.trim() ? dados.ca.trim() : null,
+      patrimonio: dados.patrimonio && dados.patrimonio.trim() ? dados.patrimonio.trim() : null,
+      tag: dados.tag && dados.tag.trim() ? dados.tag.trim().toUpperCase() : null
     });
   }
 
@@ -153,19 +191,38 @@ class Produto {
   }
 
   /**
-   * Retorna lista de categorias cadastradas
+   * Retorna lista de categorias cadastradas, sempre incluindo "Outros"
    */
   static getCategorias() {
-    const rows = db.prepare('SELECT DISTINCT categoria FROM produtos WHERE categoria IS NOT NULL ORDER BY categoria ASC').all();
-    return rows.map(r => r.categoria);
+    const categoriasBase = [
+      'Ferramentas',
+      'EPI / Segurança',
+      'Elétrica e TI',
+      'Hidráulica',
+      'Pintura e Acabamento',
+      'Suprimentos Gerais'
+    ];
+
+    const rows = db.prepare(`
+      SELECT DISTINCT categoria 
+      FROM produtos 
+      WHERE categoria IS NOT NULL AND TRIM(categoria) != ''
+      ORDER BY categoria ASC
+    `).all();
+
+    const doBanco = rows.map(r => r.categoria).filter(c => c !== 'Outros');
+    const todas = Array.from(new Set([...categoriasBase, ...doBanco]));
+
+    // "Outros" sempre disponível no final
+    return [...todas, 'Outros'];
   }
 
   /**
-   * Gerador automático de SKU simples e elegante
+   * Gerador automático de SKU
    */
   static gerarSku(categoria = 'GER') {
     const prefixo = categoria ? categoria.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'ITM') : 'ITM';
-    const randomNum = Math.floor(100 + Math.random() * 900);
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
     return `${prefixo}-${randomNum}`;
   }
 }

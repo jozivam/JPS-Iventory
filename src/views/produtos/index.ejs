@@ -88,7 +88,7 @@
         type="text" 
         name="busca" 
         id="quick-table-search" 
-        placeholder="Buscar material, código SKU ou localização..." 
+        placeholder="Buscar material, SKU, TAG, Patrimônio, C.A ou localização..." 
         value="<%= filtros.busca || '' %>"
       >
     </div>
@@ -130,7 +130,7 @@
     <table class="clean-table">
       <thead>
         <tr>
-          <th>Nome do Produto</th>
+          <th>Nome do Produto / Detalhes</th>
           <th>Categoria</th>
           <th>SKU</th>
           <th>Estoque</th>
@@ -144,11 +144,28 @@
         <% if (produtos && produtos.length > 0) { %>
           <% produtos.forEach((p) => { %>
             <tr>
-              <!-- Nome e Localização -->
+              <!-- Nome e Detalhes / Badges -->
               <td>
                 <div class="product-name-text" style="font-weight: 600; color: var(--text-main); font-size: 0.92rem;"><%= p.nome %></div>
-                <div class="product-sku-text" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
-                  <i class="fa-solid fa-location-dot" style="font-size: 0.7rem; color: var(--text-dim);"></i> <%= p.localizacao || 'Almoxarifado' %>
+                <div class="product-sku-text" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+                  <% if (p.localizacao) { %>
+                    <span><i class="fa-solid fa-location-dot" style="font-size: 0.7rem; color: var(--text-dim);"></i> <%= p.localizacao %></span>
+                  <% } %>
+                  <% if (p.tag) { %>
+                    <span style="background: var(--bg-surface); border: 1px solid var(--border-color); padding: 1px 6px; border-radius: 4px; font-size: 0.72rem; font-family: var(--font-mono); color: var(--primary); font-weight: 600;">TAG: <%= p.tag %></span>
+                  <% } %>
+                  <% if (p.patrimonio) { %>
+                    <span style="background: var(--bg-surface); border: 1px solid var(--border-color); padding: 1px 6px; border-radius: 4px; font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-body); font-weight: 600;">PAT: <%= p.patrimonio %></span>
+                  <% } %>
+                  <% if (p.ca) { %>
+                    <span style="background: var(--bg-surface); border: 1px solid var(--border-color); padding: 1px 6px; border-radius: 4px; font-size: 0.72rem; color: var(--teal); font-weight: 600;">C.A: <%= p.ca %></span>
+                  <% } %>
+                  <% if (p.tamanho) { %>
+                    <span style="font-size: 0.72rem; color: var(--text-dim);">Tam: <%= p.tamanho %></span>
+                  <% } %>
+                  <% if (p.cor) { %>
+                    <span style="font-size: 0.72rem; color: var(--text-dim);">Cor: <%= p.cor %></span>
+                  <% } %>
                 </div>
               </td>
 
