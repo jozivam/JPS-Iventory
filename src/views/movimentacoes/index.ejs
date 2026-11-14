@@ -80,8 +80,7 @@
           <th>ID MOVIMENTAÇÃO</th>
           <th>TIPO</th>
           <th>MATERIAL / ITEM</th>
-          <th>VOLUME</th>
-          <th>VALOR ESTIMADO</th>
+          <th>QUANTIDADE</th>
           <th>DATA & HORA</th>
           <th>RESPONSÁVEL</th>
           <th>DOC / NOTA</th>
@@ -103,7 +102,7 @@
               </td>
               <td>
                 <span class="status-pill <%= m.tipo === 'ENTRADA' ? 'in-stock' : 'low-stock' %>">
-                  <span class="status-dot-sm"></span> <%= m.tipo === 'ENTRADA' ? 'Inbound' : 'Outbound' %>
+                  <span class="status-dot-sm"></span> <%= m.tipo === 'ENTRADA' ? 'Entrada' : 'Baixa' %>
                 </span>
               </td>
               <td>
@@ -115,9 +114,6 @@
                   <%= m.tipo === 'ENTRADA' ? '+' : '-' %><%= m.quantidade %>
                 </strong> 
                 <small style="color: var(--text-muted); font-size: 0.75rem;"><%= m.produto_unidade %></small>
-              </td>
-              <td>
-                <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);"><%= formatMoney(m.valor_movimentado) %></span>
               </td>
               <td>
                 <span style="font-size: 0.82rem; color: var(--text-muted);"><%= formatDate(m.criado_em) %></span>
@@ -138,7 +134,7 @@
           <% }) %>
         <% } else { %>
           <tr>
-            <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+            <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
               Nenhuma movimentação registrada para os filtros selecionados.
             </td>
           </tr>

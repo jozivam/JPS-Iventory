@@ -3,11 +3,15 @@ const router = express.Router();
 
 const ProdutoController = require('../controllers/ProdutoController');
 const EstoqueController = require('../controllers/EstoqueController');
+const BuscaController = require('../controllers/BuscaController');
 
 // --- PÁGINA INICIAL (Direciona diretamente para o Inventário) ---
 router.get('/', (req, res) => {
   res.redirect('/produtos');
 });
+
+// --- BUSCA GERAL NO SISTEMA ---
+router.get('/busca', BuscaController.index);
 
 // --- INVENTÁRIO (PRODUTOS) ---
 router.get('/produtos', ProdutoController.index);

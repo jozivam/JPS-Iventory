@@ -22,7 +22,7 @@
   </div>
 
   <div class="page-actions-group">
-    <button type="button" class="btn btn-outline" onclick="window.print()" title="Imprimir / Exportar lista">
+    <button type="button" class="btn btn-outline" onclick="window.print()" title="Imprimir lista">
       <i class="fa-solid fa-print"></i> Imprimir
     </button>
     <a href="/produtos/novo" class="btn btn-primary" id="btn-add-product">
@@ -31,19 +31,25 @@
   </div>
 </div>
 
-<!-- Card de Resumo do Inventário -->
+<!-- Card de Resumo do Inventário (Sem valores monetários) -->
 <div class="fixoria-summary-card">
-  <!-- Valor Patrimonial Total -->
+  <!-- Total de Itens Físicos -->
   <div class="summary-asset-box">
-    <div class="summary-label">Valor Total do Inventário</div>
-    <div class="summary-asset-value"><%= formatMoney(estatisticas.valor_patrimonial) %></div>
+    <div class="summary-label">Total de Itens Cadastrados</div>
+    <div style="font-size: 2rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.02em;">
+      <%= estatisticas.total_itens %> <span style="font-size: 1rem; font-weight: 500; color: var(--text-muted);">produtos</span>
+    </div>
+    <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.2rem;">
+      <%= estatisticas.total_unidades %> unidades físicas em estoque
+    </div>
   </div>
 
-  <!-- Barra Segmentada Multi-Status com Legenda -->
+  <!-- Barra Segmentada de Nível de Estoque -->
   <div class="summary-stock-box">
     <div class="summary-stock-header">
-      <div class="summary-stock-count"><%= estatisticas.total_itens %></div>
-      <div class="summary-stock-sub">Produtos Cadastrados</div>
+      <div class="summary-stock-count" style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">
+        Situação do Estoque
+      </div>
     </div>
 
     <% 
@@ -78,17 +84,17 @@
   </div>
 </div>
 
-<!-- Barra de Filtros e Pesquisa -->
+<!-- Barra de Filtros e Pesquisa Especializada no Inventário -->
 <div class="fixoria-filter-bar">
   <form action="/produtos" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%;">
-    <!-- Campo de Busca -->
+    <!-- Campo de Busca Especializado no Inventário -->
     <div class="filter-search-box">
       <i class="fa-solid fa-magnifying-glass"></i>
       <input 
         type="text" 
         name="busca" 
         id="quick-table-search" 
-        placeholder="Buscar material, SKU, TAG, Patrimônio, C.A ou localização..." 
+        placeholder="Buscar no inventário (item, SKU, TAG, Patrimônio, C.A ou localização)..." 
         value="<%= filtros.busca || '' %>"
       >
     </div>
@@ -124,7 +130,7 @@
   </form>
 </div>
 
-<!-- Tabela Clean de Produtos -->
+<!-- Tabela Clean de Produtos (Sem coluna de Preço) -->
 <div class="table-card">
   <div class="table-responsive">
     <table class="clean-table">
@@ -136,7 +142,6 @@
           <th>Estoque</th>
           <th>Mínimo</th>
           <th>Status</th>
-          <th>Preço Unitário</th>
           <th style="text-align: right;">Ações</th>
         </tr>
       </thead>
@@ -209,11 +214,6 @@
                 <% } %>
               </td>
 
-              <!-- Preço -->
-              <td>
-                <strong style="font-weight: 600; color: var(--text-main);"><%= formatMoney(p.preco_unitario) %></strong>
-              </td>
-
               <!-- Ações -->
               <td style="text-align: right; white-space: nowrap;">
                 <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
@@ -241,7 +241,7 @@
           <% }) %>
         <% } else { %>
           <tr>
-            <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+            <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
               Nenhum produto encontrado com os filtros selecionados.
               <div style="margin-top: 1rem;">
                 <a href="/produtos/novo" class="btn btn-primary btn-sm">Adicionar Novo Produto</a>

@@ -15,9 +15,6 @@
   
   <!-- Estilos Customizados do Design Fixoria / Storaxe -->
   <link rel="stylesheet" href="/css/style.css">
-  
-  <!-- Biblioteca de Gráficos Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -27,26 +24,31 @@
 
     <!-- Área de Conteúdo Principal -->
     <main class="app-main">
-      <!-- Topbar Estilo Fixoria / Storaxe -->
+      <!-- Topbar com Busca Geral no Sistema -->
       <header class="topbar">
-        <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex: 1; max-width: 600px;">
           <button id="btn-toggle-sidebar" class="btn-topbar-icon d-md-none" aria-label="Abrir Menu">
             <i class="fa-solid fa-bars"></i>
           </button>
           
-          <div class="topbar-search">
+          <div class="topbar-search" style="width: 100%;">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <form action="/produtos" method="GET" style="margin: 0;">
-              <input type="text" name="busca" placeholder="Buscar produtos, SKU ou código..." value="<%= (typeof filtros !== 'undefined' && filtros.busca) ? filtros.busca : '' %>">
+            <form action="/busca" method="GET" style="margin: 0; width: 100%;">
+              <input 
+                type="text" 
+                name="q" 
+                placeholder="Busca geral no sistema (itens, movimentações, tags, docs)..." 
+                value="<%= (typeof queryBuscaGeral !== 'undefined' && queryBuscaGeral) ? queryBuscaGeral : '' %>"
+              >
             </form>
           </div>
         </div>
 
         <div class="topbar-actions">
-          <a href="/movimentacoes" class="btn-topbar-icon" title="Mensagens e Movimentações">
+          <a href="/movimentacoes" class="btn-topbar-icon" title="Movimentações">
             <i class="fa-regular fa-envelope"></i>
           </a>
-          <a href="/produtos?status=BAIXO" class="btn-topbar-icon" title="Alertas de Estoque Crítico">
+          <a href="/produtos?status=BAIXO" class="btn-topbar-icon" title="Alertas de Estoque Baixo">
             <i class="fa-regular fa-bell"></i>
             <span class="topbar-badge-dot"></span>
           </a>
