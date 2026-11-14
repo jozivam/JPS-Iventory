@@ -59,7 +59,14 @@
               <% produtos.forEach(p => { %>
                 <tr>
                   <td>
-                    <div class="product-name-text" style="font-weight: 600; color: var(--text-main);"><%= p.nome %></div>
+                    <div class="product-name-text" style="font-weight: 600; color: var(--text-main);">
+                      <%= p.nome %>
+                      <% if (p.marca) { %>
+                        <span style="font-size: 0.72rem; color: var(--primary); background: var(--primary-light); padding: 1px 5px; border-radius: 4px; margin-left: 0.35rem;">
+                          <%= p.marca %>
+                        </span>
+                      <% } %>
+                    </div>
                     <div class="product-sku-text" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;">
                       <% if (p.localizacao) { %>
                         <span><i class="fa-solid fa-location-dot" style="font-size: 0.7rem;"></i> <%= p.localizacao %></span>

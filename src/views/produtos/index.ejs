@@ -130,7 +130,7 @@
   </form>
 </div>
 
-<!-- Tabela Clean de Produtos (Sem coluna de Preço) -->
+<!-- Tabela Clean de Produtos -->
 <div class="table-card">
   <div class="table-responsive">
     <table class="clean-table">
@@ -148,10 +148,17 @@
       <tbody>
         <% if (produtos && produtos.length > 0) { %>
           <% produtos.forEach((p) => { %>
-            <tr>
+            <tr style="cursor: pointer;" onclick="abrirModalProduto(<%= p.id %>)" title="Clique para ver os detalhes completos de <%= p.nome %>">
               <!-- Nome e Detalhes / Badges -->
               <td>
-                <div class="product-name-text" style="font-weight: 600; color: var(--text-main); font-size: 0.92rem;"><%= p.nome %></div>
+                <div class="product-name-text" style="font-weight: 600; color: var(--text-main); font-size: 0.92rem;">
+                  <%= p.nome %>
+                  <% if (p.marca) { %>
+                    <span style="font-size: 0.75rem; font-weight: 500; color: var(--primary); margin-left: 0.4rem; background: var(--primary-light); padding: 1px 6px; border-radius: 4px;">
+                      <%= p.marca %>
+                    </span>
+                  <% } %>
+                </div>
                 <div class="product-sku-text" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
                   <% if (p.localizacao) { %>
                     <span><i class="fa-solid fa-location-dot" style="font-size: 0.7rem; color: var(--text-dim);"></i> <%= p.localizacao %></span>
@@ -171,6 +178,9 @@
                   <% if (p.cor) { %>
                     <span style="font-size: 0.72rem; color: var(--text-dim);">Cor: <%= p.cor %></span>
                   <% } %>
+                  <span style="color: var(--primary); font-size: 0.72rem; font-weight: 600; margin-left: 0.2rem;">
+                    • Ver detalhes ➔
+                  </span>
                 </div>
               </td>
 
@@ -214,8 +224,8 @@
                 <% } %>
               </td>
 
-              <!-- Ações -->
-              <td style="text-align: right; white-space: nowrap;">
+              <!-- Ações (Evita disparar o modal ao clicar nos botões) -->
+              <td style="text-align: right; white-space: nowrap;" onclick="event.stopPropagation()">
                 <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
                   <!-- Dar Baixa (Saída) -->
                   <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Dar Baixa (Saída)">
@@ -253,5 +263,363 @@
     </table>
   </div>
 </div>
+
+<!-- ========================================================================= -->
+<!-- MODAL DE DETALHES E EDIÇÃO RÁPIDA DO PRODUTO -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-detalhes-produto">
+  <div class="modal-container" style="max-width: 780px; width: 95%; max-height: 92vh; display: flex; flex-direction: column;">
+    
+    <!-- Cabeçalho do Modal -->
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div style="width: 38px; height: 38px; border-radius: 8px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+          <i class="fa-solid fa-box"></i>
+        </div>
+        <div>
+          <h3 id="modal-view-title" style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0;">Ficha do Item</h3>
+          <span id="modal-view-subtitle" style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);"></span>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="fecharModalProduto()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Corpo do Modal (com rolagem suave) -->
+    <div class="modal-body" style="overflow-y: auto; padding: 1.5rem; flex: 1;">
+      
+      <!-- MODO VISUALIZAÇÃO -->
+      <div id="secao-modo-visualizacao">
+        
+        <!-- Status & Destaques de Estoque -->
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; background: var(--bg-surface); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+          <div>
+            <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Situação Atual</span>
+            <div id="view-status-badge" style="margin-top: 0.25rem;"></div>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Estoque Físico</span>
+            <div style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">
+              <span id="view-quantidade">0</span> <small id="view-unidade" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted);"></small>
+            </div>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Estoque Mínimo</span>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-body);">
+              <span id="view-estoque-minimo">0</span> <small id="view-unidade-min" style="font-size: 0.8rem; font-weight: 500; color: var(--text-muted);"></small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grade de Detalhes -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Marca / Fabricante</div>
+            <div id="view-marca" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Categoria</div>
+            <div id="view-categoria" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Localização no Almoxarifado</div>
+            <div id="view-localizacao" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">TAG / Plaqueta</div>
+            <div id="view-tag" style="font-size: 0.95rem; font-family: var(--font-mono); font-weight: 600; color: var(--primary); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Nº de Patrimônio</div>
+            <div id="view-patrimonio" style="font-size: 0.95rem; font-family: var(--font-mono); font-weight: 600; color: var(--text-main); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">C.A (Certificado de EPI)</div>
+            <div id="view-ca" style="font-size: 0.95rem; font-weight: 600; color: var(--teal); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Número de Série</div>
+            <div id="view-serie" style="font-size: 0.95rem; font-family: var(--font-mono); color: var(--text-body); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Tamanho / Dimensão</div>
+            <div id="view-tamanho" style="font-size: 0.95rem; font-weight: 500; color: var(--text-body); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Cor</div>
+            <div id="view-cor" style="font-size: 0.95rem; font-weight: 500; color: var(--text-body); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Peso</div>
+            <div id="view-peso" style="font-size: 0.95rem; font-weight: 500; color: var(--text-body); margin-top: 2px;">-</div>
+          </div>
+
+        </div>
+
+        <div style="font-size: 0.75rem; color: var(--text-dim); border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between;">
+          <span>Cadastrado em: <strong id="view-criado-em">-</strong></span>
+          <span>Última atualização: <strong id="view-atualizado-em">-</strong></span>
+        </div>
+
+      </div>
+
+      <!-- MODO EDIÇÃO RÁPIDA DENTRO DO MODAL -->
+      <div id="secao-modo-edicao" style="display: none;">
+        <form id="form-modal-editar" method="POST">
+          <div class="form-grid">
+            
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-sku">Código SKU</label>
+              <input type="text" id="modal-edit-sku" name="sku" class="form-control" style="text-transform: uppercase;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-categoria">Categoria</label>
+              <select id="modal-edit-categoria" name="categoria" class="form-select">
+                <% categorias.forEach(cat => { %>
+                  <option value="<%= cat %>"><%= cat %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-marca">Marca / Fabricante</label>
+              <input type="text" id="modal-edit-marca" name="marca" class="form-control" placeholder="Ex: 3M, Tramontina">
+            </div>
+
+            <div class="form-group full-width">
+              <label class="form-label" for="modal-edit-nome">Nome do Produto / Descrição</label>
+              <input type="text" id="modal-edit-nome" name="nome" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-quantidade">Quantidade em Estoque</label>
+              <input type="number" id="modal-edit-quantidade" name="quantidade" class="form-control" min="0">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-unidade">Unidade de Medida</label>
+              <select id="modal-edit-unidade" name="unidade_medida" class="form-select">
+                <option value="UN">UN - Unidade</option>
+                <option value="CX">CX - Caixa</option>
+                <option value="PAR">PAR - Par</option>
+                <option value="KG">KG - Quilograma</option>
+                <option value="L">L - Litro</option>
+                <option value="M">M - Metro</option>
+                <option value="JG">JG - Jogo</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-minimo">Estoque Mínimo</label>
+              <input type="number" id="modal-edit-minimo" name="estoque_minimo" class="form-control" min="0">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-localizacao">Localização</label>
+              <input type="text" id="modal-edit-localizacao" name="localizacao" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-tag">TAG / Plaqueta</label>
+              <input type="text" id="modal-edit-tag" name="tag" class="form-control" style="text-transform: uppercase;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-patrimonio">Nº de Patrimônio</label>
+              <input type="text" id="modal-edit-patrimonio" name="patrimonio" class="form-control" style="text-transform: uppercase;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-ca">C.A (EPI)</label>
+              <input type="text" id="modal-edit-ca" name="ca" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-serie">Número de Série</label>
+              <input type="text" id="modal-edit-serie" name="numero_serie" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-tamanho">Tamanho / Dimensão</label>
+              <input type="text" id="modal-edit-tamanho" name="tamanho" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-cor">Cor</label>
+              <input type="text" id="modal-edit-cor" name="cor" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-peso">Peso</label>
+              <input type="text" id="modal-edit-peso" name="peso" class="form-control">
+            </div>
+
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Rodapé do Modal -->
+    <div class="modal-footer" style="background: var(--bg-surface); display: flex; align-items: center; justify-content: space-between;">
+      
+      <!-- Lado Esquerdo: Ações Rápidas de Movimentação (Modo Visualização) -->
+      <div id="modal-footer-acoes-mov" style="display: flex; gap: 0.5rem;">
+        <a id="modal-link-baixa" href="#" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);">
+          <i class="fa-solid fa-arrow-down"></i> Dar Baixa
+        </a>
+        <a id="modal-link-entrada" href="#" class="btn btn-outline btn-sm" style="color: var(--teal); border-color: var(--teal);">
+          <i class="fa-solid fa-arrow-up"></i> Nova Entrada
+        </a>
+      </div>
+
+      <!-- Lado Direito: Botões de Alternância e Fechamento -->
+      <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+        
+        <!-- Botões do Modo Visualização -->
+        <button type="button" class="btn btn-outline" id="btn-modal-fechar" onclick="fecharModalProduto()">
+          Fechar
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-ativar-edicao" onclick="ativarModoEdicaoModal()">
+          <i class="fa-solid fa-pen-to-square"></i> Editar Produto
+        </button>
+
+        <!-- Botões do Modo Edição (Inicialmente Ocultos) -->
+        <button type="button" class="btn btn-outline" id="btn-cancelar-edicao" style="display: none;" onclick="cancelarEdicaoModal()">
+          Cancelar
+        </button>
+        <button type="submit" form="form-modal-editar" class="btn btn-primary" id="btn-salvar-edicao" style="display: none;">
+          <i class="fa-solid fa-check"></i> Salvar Alterações
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- JAVASCRIPT DO MODAL INTERATIVO -->
+<!-- ========================================================================= -->
+<script>
+  // Dicionário dos produtos carregados na página
+  const PRODUTOS_MAP = <%- JSON.stringify(produtos.reduce((acc, p) => { acc[p.id] = p; return acc; }, {})) %>;
+  let produtoAtualModal = null;
+
+  function abrirModalProduto(id) {
+    const p = PRODUTOS_MAP[id];
+    if (!p) return;
+
+    produtoAtualModal = p;
+
+    // Preenche cabeçalho
+    document.getElementById('modal-view-title').textContent = p.nome || 'Produto sem nome';
+    document.getElementById('modal-view-subtitle').textContent = `SKU: ${p.sku} ${p.marca ? '• Marca: ' + p.marca : ''}`;
+
+    // Preenche Situação
+    const statusDiv = document.getElementById('view-status-badge');
+    if (p.status_estoque === 'NORMAL') {
+      statusDiv.innerHTML = '<span class="status-pill in-stock"><span class="status-dot-sm"></span> Em estoque</span>';
+    } else if (p.status_estoque === 'BAIXO') {
+      statusDiv.innerHTML = '<span class="status-pill low-stock"><span class="status-dot-sm"></span> Estoque baixo</span>';
+    } else {
+      statusDiv.innerHTML = '<span class="status-pill out-of-stock"><span class="status-dot-sm"></span> Sem estoque</span>';
+    }
+
+    document.getElementById('view-quantidade').textContent = p.quantidade;
+    document.getElementById('view-unidade').textContent = p.unidade_medida || 'UN';
+    document.getElementById('view-estoque-minimo').textContent = p.estoque_minimo;
+    document.getElementById('view-unidade-min').textContent = p.unidade_medida || 'UN';
+
+    // Preenche detalhes
+    document.getElementById('view-marca').textContent = p.marca || 'Não informada';
+    document.getElementById('view-categoria').textContent = p.categoria || 'Geral';
+    document.getElementById('view-localizacao').textContent = p.localizacao || 'Almoxarifado Principal';
+    document.getElementById('view-tag').textContent = p.tag || '-';
+    document.getElementById('view-patrimonio').textContent = p.patrimonio || '-';
+    document.getElementById('view-ca').textContent = p.ca ? `CA ${p.ca}` : '-';
+    document.getElementById('view-serie').textContent = p.numero_serie || '-';
+    document.getElementById('view-tamanho').textContent = p.tamanho || '-';
+    document.getElementById('view-cor').textContent = p.cor || '-';
+    document.getElementById('view-peso').textContent = p.peso || '-';
+    document.getElementById('view-criado-em').textContent = p.criado_em || '-';
+    document.getElementById('view-atualizado-em').textContent = p.atualizado_em || '-';
+
+    // Links de movimentação rápida
+    document.getElementById('modal-link-baixa').href = `/movimentacoes/nova?produto_id=${p.id}&tipo=SAIDA`;
+    document.getElementById('modal-link-entrada').href = `/movimentacoes/nova?produto_id=${p.id}&tipo=ENTRADA`;
+
+    // Reseta para o modo de visualização
+    cancelarEdicaoModal();
+
+    // Abre o modal
+    window.abrirModal('modal-detalhes-produto');
+  }
+
+  function fecharModalProduto() {
+    window.fecharModal('modal-detalhes-produto');
+  }
+
+  function ativarModoEdicaoModal() {
+    if (!produtoAtualModal) return;
+    const p = produtoAtualModal;
+
+    // Configura action do form
+    const form = document.getElementById('form-modal-editar');
+    form.action = `/produtos/${p.id}/editar`;
+
+    // Popula campos de edição
+    document.getElementById('modal-edit-sku').value = p.sku || '';
+    document.getElementById('modal-edit-categoria').value = p.categoria || 'Outros';
+    document.getElementById('modal-edit-marca').value = p.marca || '';
+    document.getElementById('modal-edit-nome').value = p.nome || '';
+    document.getElementById('modal-edit-quantidade').value = p.quantidade !== undefined ? p.quantidade : 0;
+    document.getElementById('modal-edit-unidade').value = p.unidade_medida || 'UN';
+    document.getElementById('modal-edit-minimo').value = p.estoque_minimo !== undefined ? p.estoque_minimo : 0;
+    document.getElementById('modal-edit-localizacao').value = p.localizacao || '';
+    document.getElementById('modal-edit-tag').value = p.tag || '';
+    document.getElementById('modal-edit-patrimonio').value = p.patrimonio || '';
+    document.getElementById('modal-edit-ca').value = p.ca || '';
+    document.getElementById('modal-edit-serie').value = p.numero_serie || '';
+    document.getElementById('modal-edit-tamanho').value = p.tamanho || '';
+    document.getElementById('modal-edit-cor').value = p.cor || '';
+    document.getElementById('modal-edit-peso').value = p.peso || '';
+
+    // Alterna visualizações
+    document.getElementById('secao-modo-visualizacao').style.display = 'none';
+    document.getElementById('secao-modo-edicao').style.display = 'block';
+
+    // Alterna botões do rodapé
+    document.getElementById('modal-footer-acoes-mov').style.display = 'none';
+    document.getElementById('btn-modal-fechar').style.display = 'none';
+    document.getElementById('btn-ativar-edicao').style.display = 'none';
+    document.getElementById('btn-cancelar-edicao').style.display = 'inline-block';
+    document.getElementById('btn-salvar-edicao').style.display = 'inline-block';
+  }
+
+  function cancelarEdicaoModal() {
+    document.getElementById('secao-modo-visualizacao').style.display = 'block';
+    document.getElementById('secao-modo-edicao').style.display = 'none';
+
+    document.getElementById('modal-footer-acoes-mov').style.display = 'flex';
+    document.getElementById('btn-modal-fechar').style.display = 'inline-block';
+    document.getElementById('btn-ativar-edicao').style.display = 'inline-block';
+    document.getElementById('btn-cancelar-edicao').style.display = 'none';
+    document.getElementById('btn-salvar-edicao').style.display = 'none';
+  }
+</script>
 
 <%- include('../layouts/footer') %>

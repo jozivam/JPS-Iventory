@@ -56,7 +56,6 @@ class ProdutoController {
           sku: skuSugerido, 
           quantidade: 0, 
           estoque_minimo: 0, 
-          preco_unitario: '0.00',
           categoria: 'Outros'
         },
         erro: null
@@ -68,23 +67,23 @@ class ProdutoController {
   }
 
   /**
-   * Salva novo produto no banco de dados (Campos não obrigatórios)
+   * Salva novo produto no banco de dados (Campos flexíveis / Marca incluída)
    */
   static async store(req, res) {
     try {
       const { 
-        sku, nome, categoria, categoria_personalizada, unidade_medida, 
-        quantidade, estoque_minimo, preco_unitario, localizacao,
+        sku, nome, categoria, categoria_personalizada, marca, unidade_medida, 
+        quantidade, estoque_minimo, localizacao,
         tamanho, cor, peso, numero_serie, ca, patrimonio, tag
       } = req.body;
 
-      // Define categoria final: se digitou personalizada ou escolheu da lista
+      // Define categoria final
       let categoriaFinal = categoria || 'Outros';
       if (categoria === 'Outros' && categoria_personalizada && categoria_personalizada.trim()) {
         categoriaFinal = categoria_personalizada.trim();
       }
 
-      // Verifica duplicidade de SKU apenas se fornecido manualmente
+      // Verifica duplicidade de SKU se informado manualmente
       if (sku && sku.trim()) {
         const existente = Produto.findBySku(sku.trim().toUpperCase());
         if (existente) {
@@ -106,10 +105,10 @@ class ProdutoController {
         sku,
         nome: nome && nome.trim() ? nome.trim() : 'Item sem descrição',
         categoria: categoriaFinal,
+        marca: marca && marca.trim() ? marca.trim() : null,
         unidade_medida: unidade_medida || 'UN',
         quantidade: qtdInicial,
         estoque_minimo: parseInt(estoque_minimo, 10) || 0,
-        preco_unitario: parseFloat(preco_unitario) || 0.0,
         localizacao,
         tamanho,
         cor,
@@ -148,7 +147,7 @@ class ProdutoController {
   }
 
   /**
-   * Formulário de Edição de Produto
+   * Formulário de Edição de Produto (Página dedicada)
    */
   static async edit(req, res) {
     try {
@@ -175,7 +174,7 @@ class ProdutoController {
   }
 
   /**
-   * Atualiza dados de um produto
+   * Atualiza dados de um produto (via formulário de página ou modal)
    */
   static async update(req, res) {
     try {
@@ -187,8 +186,8 @@ class ProdutoController {
       }
 
       const { 
-        sku, nome, categoria, categoria_personalizada, unidade_medida, 
-        quantidade, estoque_minimo, preco_unitario, localizacao,
+        sku, nome, categoria, categoria_personalizada, marca, unidade_medida, 
+        quantidade, estoque_minimo, localizacao,
         tamanho, cor, peso, numero_serie, ca, patrimonio, tag
       } = req.body;
 
@@ -218,10 +217,10 @@ class ProdutoController {
         sku_atual: produtoAtual.sku,
         nome: nome && nome.trim() ? nome.trim() : 'Item sem descrição',
         categoria: categoriaFinal,
+        marca: marca && marca.trim() ? marca.trim() : null,
         unidade_medida: unidade_medida || 'UN',
         quantidade: parseInt(quantidade, 10) || 0,
         estoque_minimo: parseInt(estoque_minimo, 10) || 0,
-        preco_unitario: parseFloat(preco_unitario) || 0.0,
         localizacao,
         tamanho,
         cor,
@@ -244,6 +243,22 @@ class ProdutoController {
         categorias,
         erro: 'Falha ao atualizar produto: ' + error.message
       });
+    }
+  }
+
+  /**
+   * Endpoint JSON de Detalhes do Produto (para consumo via fetch se necessário)
+   */
+  static async detalhes(req, res) {
+    try {
+      const { id } = req.params;
+      const produto = Produto.findById(id);
+      if (!produto) {
+        return res.status(404).json({ erro: 'Produto não encontrado' });
+      }
+      res.json(produto);
+    } catch (error) {
+      res.status(500).json({ erro: error.message });
     }
   }
 

@@ -17,6 +17,7 @@ function initDatabase() {
       sku TEXT UNIQUE,
       nome TEXT,
       categoria TEXT DEFAULT 'Geral',
+      marca TEXT,
       unidade_medida TEXT DEFAULT 'UN',
       quantidade INTEGER NOT NULL DEFAULT 0,
       estoque_minimo INTEGER NOT NULL DEFAULT 0,
@@ -48,6 +49,7 @@ function initDatabase() {
 
   // Migração segura para adicionar novas colunas caso o banco já exista
   const colunasNecessarias = [
+    { nome: 'marca', tipo: 'TEXT' },
     { nome: 'tamanho', tipo: 'TEXT' },
     { nome: 'cor', tipo: 'TEXT' },
     { nome: 'peso', tipo: 'TEXT' },
@@ -73,22 +75,22 @@ function initDatabase() {
 
 function seedDatabase() {
   const seedProdutos = [
-    { sku: 'FER-ALC-001', nome: 'Alicate Universal 8 Polegadas Isolado 1000V', categoria: 'Ferramentas', unidade: 'UN', qtd: 12, min: 5, preco: 45.20, local: 'Bancada B-05', tamanho: '8"', cor: 'Amarelo/Vermelho', peso: '380g', patrimonio: 'PAT-0010', tag: 'FER-01', ca: null, numero_serie: 'SN-7841' },
-    { sku: 'ELE-CAB-030', nome: 'Cabo de Rede UTP Cat6 100% Cobre (Bobina 305m)', categoria: 'Elétrica e TI', unidade: 'CX', qtd: 2, min: 4, preco: 490.00, local: 'Depósito D-02', tamanho: '305m', cor: 'Azul', peso: '12.5kg', patrimonio: null, tag: 'TI-09', ca: null, numero_serie: 'BOB-2026-X' },
-    { sku: 'EPI-CAP-001', nome: 'Capacete de Segurança com Jugular Azul', categoria: 'EPI / Segurança', unidade: 'UN', qtd: 18, min: 10, preco: 32.50, local: 'Prateleira A-01', tamanho: 'Único', cor: 'Azul', peso: '310g', patrimonio: null, tag: null, ca: '31469', numero_serie: null },
-    { sku: 'ELE-DIS-031', nome: 'Disjuntor Bipolar Din 32A Curva C', categoria: 'Elétrica e TI', unidade: 'UN', qtd: 30, min: 10, preco: 28.75, local: 'Gaveteiro E-08', tamanho: 'Padrão DIN', cor: 'Branco', peso: '180g', patrimonio: null, tag: null, ca: null, numero_serie: null },
-    { sku: 'FER-CHV-010', nome: 'Jogo de Chaves de Fenda e Phillips 6 Peças', categoria: 'Ferramentas', unidade: 'JG', qtd: 8, min: 3, preco: 68.00, local: 'Bancada B-04', tamanho: '6 Peças', cor: 'Vermelho', peso: '520g', patrimonio: 'PAT-0015', tag: 'FER-05', ca: null, numero_serie: null },
-    { sku: 'EPI-LUV-002', nome: 'Luva de Vaqueta Mista Tamanho G', categoria: 'EPI / Segurança', unidade: 'PAR', qtd: 4, min: 15, preco: 18.90, local: 'Prateleira A-03', tamanho: 'G', cor: 'Cinza', peso: '120g', patrimonio: null, tag: null, ca: '28450', numero_serie: null },
-    { sku: 'SUP-FIT-005', nome: 'Fita Isolante 3M Imperial 19mm x 20m', categoria: 'Elétrica e TI', unidade: 'UN', qtd: 45, min: 10, preco: 9.80, local: 'Gaveteiro E-01', tamanho: '19mm x 20m', cor: 'Preto', peso: '80g', patrimonio: null, tag: null, ca: null, numero_serie: null },
-    { sku: 'OUT-DVS-099', nome: 'Lona Plástica Preta 4x50m para Cobertura', categoria: 'Outros', unidade: 'UN', qtd: 3, min: 2, preco: 145.00, local: 'Depósito Externo', tamanho: '4x50m', cor: 'Preto', peso: '15kg', patrimonio: null, tag: 'MAT-12', ca: null, numero_serie: null }
+    { sku: 'FER-ALC-001', nome: 'Alicate Universal 8 Polegadas Isolado 1000V', categoria: 'Ferramentas', marca: 'Tramontina Pro', unidade: 'UN', qtd: 12, min: 5, preco: 45.20, local: 'Bancada B-05', tamanho: '8"', cor: 'Amarelo/Vermelho', peso: '380g', patrimonio: 'PAT-0010', tag: 'FER-01', ca: null, numero_serie: 'SN-7841' },
+    { sku: 'ELE-CAB-030', nome: 'Cabo de Rede UTP Cat6 100% Cobre (Bobina 305m)', categoria: 'Elétrica e TI', marca: 'Furukawa', unidade: 'CX', qtd: 2, min: 4, preco: 490.00, local: 'Depósito D-02', tamanho: '305m', cor: 'Azul', peso: '12.5kg', patrimonio: null, tag: 'TI-09', ca: null, numero_serie: 'BOB-2026-X' },
+    { sku: 'EPI-CAP-001', nome: 'Capacete de Segurança com Jugular Azul', categoria: 'EPI / Segurança', marca: 'MSA', unidade: 'UN', qtd: 18, min: 10, preco: 32.50, local: 'Prateleira A-01', tamanho: 'Único', cor: 'Azul', peso: '310g', patrimonio: null, tag: null, ca: '31469', numero_serie: null },
+    { sku: 'ELE-DIS-031', nome: 'Disjuntor Bipolar Din 32A Curva C', categoria: 'Elétrica e TI', marca: 'Schneider Electric', unidade: 'UN', qtd: 30, min: 10, preco: 28.75, local: 'Gaveteiro E-08', tamanho: 'Padrão DIN', cor: 'Branco', peso: '180g', patrimonio: null, tag: null, ca: null, numero_serie: null },
+    { sku: 'FER-CHV-010', nome: 'Jogo de Chaves de Fenda e Phillips 6 Peças', categoria: 'Ferramentas', marca: 'Gedore', unidade: 'JG', qtd: 8, min: 3, preco: 68.00, local: 'Bancada B-04', tamanho: '6 Peças', cor: 'Vermelho', peso: '520g', patrimonio: 'PAT-0015', tag: 'FER-05', ca: null, numero_serie: null },
+    { sku: 'EPI-LUV-002', nome: 'Luva de Vaqueta Mista Tamanho G', categoria: 'EPI / Segurança', marca: 'Danny', unidade: 'PAR', qtd: 4, min: 15, preco: 18.90, local: 'Prateleira A-03', tamanho: 'G', cor: 'Cinza', peso: '120g', patrimonio: null, tag: null, ca: '28450', numero_serie: null },
+    { sku: 'SUP-FIT-005', nome: 'Fita Isolante 3M Imperial 19mm x 20m', categoria: 'Elétrica e TI', marca: '3M', unidade: 'UN', qtd: 45, min: 10, preco: 9.80, local: 'Gaveteiro E-01', tamanho: '19mm x 20m', cor: 'Preto', peso: '80g', patrimonio: null, tag: null, ca: null, numero_serie: null },
+    { sku: 'FER-TRN-003', nome: 'Trena Métrica Profissional 8 Metros Emborrachada', categoria: 'Ferramentas', marca: 'Lufkin', unidade: 'UN', qtd: 0, min: 5, preco: 35.00, local: 'Bancada B-01', tamanho: '8m', cor: 'Laranja/Preto', peso: '320g', patrimonio: null, tag: null, ca: null, numero_serie: null }
   ];
 
   const insertProd = db.prepare(`
     INSERT INTO produtos (
-      sku, nome, categoria, unidade_medida, quantidade, estoque_minimo, 
+      sku, nome, categoria, marca, unidade_medida, quantidade, estoque_minimo, 
       preco_unitario, localizacao, tamanho, cor, peso, numero_serie, ca, patrimonio, tag
     ) VALUES (
-      @sku, @nome, @categoria, @unidade, @qtd, @min, 
+      @sku, @nome, @categoria, @marca, @unidade, @qtd, @min, 
       @preco, @local, @tamanho, @cor, @peso, @numero_serie, @ca, @patrimonio, @tag
     )
   `);

@@ -22,6 +22,7 @@ class Produto {
       sql += ` AND (
         p.nome LIKE @busca 
         OR p.sku LIKE @busca 
+        OR p.marca LIKE @busca
         OR p.localizacao LIKE @busca
         OR p.tag LIKE @busca
         OR p.patrimonio LIKE @busca
@@ -82,11 +83,11 @@ class Produto {
   static create(dados) {
     const stmt = db.prepare(`
       INSERT INTO produtos (
-        sku, nome, categoria, unidade_medida, quantidade, 
+        sku, nome, categoria, marca, unidade_medida, quantidade, 
         estoque_minimo, preco_unitario, localizacao,
         tamanho, cor, peso, numero_serie, ca, patrimonio, tag
       ) VALUES (
-        @sku, @nome, @categoria, @unidade_medida, @quantidade, 
+        @sku, @nome, @categoria, @marca, @unidade_medida, @quantidade, 
         @estoque_minimo, @preco_unitario, @localizacao,
         @tamanho, @cor, @peso, @numero_serie, @ca, @patrimonio, @tag
       )
@@ -101,6 +102,7 @@ class Produto {
       sku: skuFormatado,
       nome: nomeFormatado,
       categoria: dados.categoria && dados.categoria.trim() ? dados.categoria.trim() : 'Outros',
+      marca: dados.marca && dados.marca.trim() ? dados.marca.trim() : null,
       unidade_medida: dados.unidade_medida && dados.unidade_medida.trim() ? dados.unidade_medida.trim().toUpperCase() : 'UN',
       quantidade: parseInt(dados.quantidade, 10) || 0,
       estoque_minimo: parseInt(dados.estoque_minimo, 10) || 0,
@@ -127,6 +129,7 @@ class Produto {
         sku = @sku,
         nome = @nome,
         categoria = @categoria,
+        marca = @marca,
         unidade_medida = @unidade_medida,
         quantidade = @quantidade,
         estoque_minimo = @estoque_minimo,
@@ -150,6 +153,7 @@ class Produto {
       sku: dados.sku && dados.sku.trim() ? dados.sku.trim().toUpperCase() : dados.sku_atual,
       nome: nomeFormatado,
       categoria: dados.categoria && dados.categoria.trim() ? dados.categoria.trim() : 'Outros',
+      marca: dados.marca && dados.marca.trim() ? dados.marca.trim() : null,
       unidade_medida: dados.unidade_medida && dados.unidade_medida.trim() ? dados.unidade_medida.trim().toUpperCase() : 'UN',
       quantidade: parseInt(dados.quantidade, 10) || 0,
       estoque_minimo: parseInt(dados.estoque_minimo, 10) || 0,

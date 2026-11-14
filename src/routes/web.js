@@ -17,6 +17,7 @@ router.get('/busca', BuscaController.index);
 router.get('/produtos', ProdutoController.index);
 router.get('/produtos/novo', ProdutoController.create);
 router.post('/produtos', ProdutoController.store);
+router.get('/produtos/:id/detalhes', ProdutoController.detalhes);
 router.get('/produtos/:id/editar', ProdutoController.edit);
 router.post('/produtos/:id/editar', ProdutoController.update);
 router.post('/produtos/:id/excluir', ProdutoController.delete);

@@ -32,6 +32,7 @@ class BuscaController {
             OR m.documento_ref LIKE @q
             OR p.nome LIKE @q
             OR p.sku LIKE @q
+            OR p.marca LIKE @q
             OR p.tag LIKE @q
             OR p.patrimonio LIKE @q
           )
