@@ -8,7 +8,8 @@ require('./config/database');
 const webRoutes = require('./src/routes/web');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+// Configuração da porta do servidor
+const PORT = process.env.PORT || 3001;
 
 // Configuração do motor de visualização (EJS)
 app.set('view engine', 'ejs');
