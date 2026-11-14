@@ -1,6 +1,6 @@
 <%- include('../layouts/header') %>
 
-<div style="max-width: 860px; margin: 0 auto;">
+<div style="max-width: 800px; margin: 0 auto;">
   <% if (typeof erro !== 'undefined' && erro) { %>
     <div class="alert alert-danger">
       <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
@@ -11,7 +11,7 @@
   <div class="page-header-flex">
     <div class="page-title-wrap">
       <h2>Editar Produto</h2>
-      <p>Atualize as informações cadastrais do item. Todos os campos são flexíveis e opcionais.</p>
+      <p>Atualize as informações do item no inventário.</p>
     </div>
     <a href="/produtos" class="btn btn-outline btn-sm">
       <i class="fa-solid fa-arrow-left"></i> Voltar ao Inventário
@@ -32,42 +32,9 @@
             name="sku" 
             class="form-control" 
             value="<%= produto.sku || '' %>" 
-            placeholder="Ex: AFZM647 (Opcional)" 
             style="text-transform: uppercase;"
           >
-          <span class="form-help">Código identificador único no almoxarifado.</span>
-        </div>
-
-        <!-- TAG / Plaqueta -->
-        <div class="form-group">
-          <label class="form-label" for="produto-tag-input">
-            TAG / Plaqueta de Rastreamento
-          </label>
-          <input 
-            type="text" 
-            id="produto-tag-input" 
-            name="tag" 
-            class="form-control" 
-            value="<%= produto.tag || '' %>" 
-            placeholder="Ex: TAG-1049 ou PAT-0082" 
-            style="text-transform: uppercase;"
-          >
-          <span class="form-help">Etiqueta física, código RFID ou número de patrimônio.</span>
-        </div>
-
-        <!-- Nome / Descrição -->
-        <div class="form-group">
-          <label class="form-label" for="produto-nome-input">
-            Nome do Produto / Item
-          </label>
-          <input 
-            type="text" 
-            id="produto-nome-input" 
-            name="nome" 
-            class="form-control" 
-            value="<%= produto.nome || '' %>" 
-            placeholder="Descrição ou nome do material"
-          >
+          <span class="form-help">Identificador único do produto.</span>
         </div>
 
         <!-- Categoria -->
@@ -80,19 +47,31 @@
             id="produto-categoria-select" 
             name="categoria" 
             class="form-control" 
-            value="<%= produto.categoria || '' %>" 
-            placeholder="Selecione ou digite..."
+            value="<%= produto.categoria || '' %>"
           >
           <datalist id="lista-categorias">
-            <option value="Electronics">
-            <option value="Apparel">
-            <option value="Wellness">
-            <option value="Home & Living">
-            <option value="EPI / Segurança">
             <option value="Ferramentas">
-            <option value="Escritório">
+            <option value="EPI / Segurança">
             <option value="Elétrica e TI">
+            <option value="Hidráulica">
+            <option value="Pintura e Acabamento">
+            <option value="Suprimentos Gerais">
           </datalist>
+        </div>
+
+        <!-- Nome / Descrição -->
+        <div class="form-group full-width">
+          <label class="form-label" for="produto-nome-input">
+            Nome do Produto / Descrição <span class="required">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="produto-nome-input" 
+            name="nome" 
+            class="form-control" 
+            value="<%= produto.nome || '' %>"
+            required
+          >
         </div>
 
         <!-- Unidade de Medida -->
@@ -111,43 +90,26 @@
           </select>
         </div>
 
-        <!-- Distribuição por Almoxarifados / Canteiros -->
-        <div class="form-group full-width">
-          <label class="form-label">Distribuição pelos Almoxarifados & Canteiros de Obras</label>
-          <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem 1.15rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
-              <div>
-                <span style="font-size: 0.85rem; color: var(--text-muted);">Saldo Físico Total:</span>
-                <strong style="font-size: 1.1rem; color: var(--text-main); margin-left: 0.35rem;">
-                  <%= produto.quantidade %> <%= produto.unidade_medida %>
-                </strong>
-              </div>
-              <div style="display: flex; gap: 0.5rem;">
-                <a href="/transferencias/nova?produto_id=<%= produto.id %>" class="btn btn-outline btn-sm" style="font-size: 0.75rem;">
-                  <i class="fa-solid fa-arrow-right-arrow-left"></i> Transferir entre Obras
-                </a>
-                <a href="/produtos/<%= produto.id %>" class="btn btn-primary btn-sm" style="font-size: 0.75rem;">
-                  <i class="fa-solid fa-id-card"></i> Ficha Completa
-                </a>
-              </div>
-            </div>
-            <% if (produto.estoquesObras && produto.estoquesObras.length > 0) { %>
-              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
-                <% produto.estoquesObras.forEach(est => { %>
-                  <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem; font-size: 0.82rem; display: flex; align-items: center; gap: 0.4rem;">
-                    <span><strong><%= est.almoxarifado_nome %>:</strong></span>
-                    <strong style="color: <%= est.quantidade > 0 ? 'var(--teal)' : 'var(--text-dim)' %>;"><%= est.quantidade %> <%= produto.unidade_medida %></strong>
-                  </div>
-                <% }) %>
-              </div>
-            <% } %>
-          </div>
+        <!-- Quantidade em Estoque -->
+        <div class="form-group">
+          <label class="form-label" for="produto-quantidade-input">
+            Quantidade Atual em Estoque
+          </label>
+          <input 
+            type="number" 
+            id="produto-quantidade-input" 
+            name="quantidade" 
+            class="form-control" 
+            min="0" 
+            value="<%= produto.quantidade !== undefined ? produto.quantidade : 0 %>"
+          >
+          <span class="form-help">Recomenda-se realizar ajustes por Movimentações (Entrada/Saída).</span>
         </div>
 
         <!-- Estoque Mínimo -->
         <div class="form-group">
           <label class="form-label" for="produto-minimo-input">
-            Estoque Mínimo
+            Estoque Mínimo (Alerta)
           </label>
           <input 
             type="number" 
@@ -157,7 +119,7 @@
             min="0" 
             value="<%= produto.estoque_minimo !== undefined ? produto.estoque_minimo : 0 %>"
           >
-          <span class="form-help">Deixe 0 se este item não precisar de alerta de estoque mínimo.</span>
+          <span class="form-help">Dispara alerta visual quando atingir essa quantia.</span>
         </div>
 
         <!-- Preço Unitário -->
@@ -172,14 +134,14 @@
             class="form-control" 
             step="0.01" 
             min="0" 
-            value="<%= produto.preco_unitario !== undefined ? produto.preco_unitario : 0.00 %>"
+            value="<%= produto.preco_unitario !== undefined ? produto.preco_unitario : '0.00' %>"
           >
         </div>
 
         <!-- Localização -->
-        <div class="form-group">
+        <div class="form-group full-width">
           <label class="form-label" for="produto-localizacao-input">
-            Localização / Endereçamento
+            Localização / Endereçamento Físico
           </label>
           <input 
             type="text" 
@@ -187,23 +149,7 @@
             name="localizacao" 
             class="form-control" 
             value="<%= produto.localizacao || '' %>"
-            placeholder="Ex: Prateleira B-05"
           >
-        </div>
-
-        <!-- Fornecedor -->
-        <div class="form-group full-width">
-          <label class="form-label" for="produto-fornecedor-select">
-            Fornecedor Principal
-          </label>
-          <select id="produto-fornecedor-select" name="fornecedor_id" class="form-select">
-            <option value="">Nenhum fornecedor vinculado</option>
-            <% fornecedores.forEach(f => { %>
-              <option value="<%= f.id %>" <%= produto.fornecedor_id == f.id ? 'selected' : '' %>>
-                <%= f.nome %> <%= f.cnpj ? `(${f.cnpj})` : '' %>
-              </option>
-            <% }) %>
-          </select>
         </div>
       </div>
 

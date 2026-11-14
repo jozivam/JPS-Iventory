@@ -1,168 +1,162 @@
 const Produto = require('../models/Produto');
-const Fornecedor = require('../models/Fornecedor');
-const Almoxarifado = require('../models/Almoxarifado');
+const Movimentacao = require('../models/Movimentacao');
 
 class ProdutoController {
   /**
-   * Lista todos os produtos com filtros e suporte a multi-almoxarifado
+   * Listagem de Inventário (Itens)
    */
   static async index(req, res) {
     try {
-      const { busca = '', categoria = '', status = '', ordenarPor = 'nome_asc', almoxarifado_id = '' } = req.query;
-      const produtos = Produto.findAll({ busca, categoria, status, ordenarPor, almoxarifado_id });
-      const categorias = Produto.getCategorias();
-      const almoxarifados = Almoxarifado.findAll();
-      const estatisticas = Produto.getEstatisticas(almoxarifado_id);
-      const almoxarifadoAtual = almoxarifado_id ? almoxarifados.find(a => a.id == almoxarifado_id) : null;
+      const { busca, categoria, status, sucesso, erro } = req.query;
 
-      // Estatísticas segmentadas para a barra Fixoria
-      const inStockCount = Math.max(0, estatisticas.total_itens - estatisticas.total_em_alerta);
-      const lowStockCount = estatisticas.total_baixos;
-      const outOfStockCount = estatisticas.total_zerados;
+      const filtros = {
+        busca: busca || '',
+        categoria: categoria || '',
+        status: status || ''
+      };
+
+      const produtos = Produto.findAll(filtros);
+      const estatisticas = Produto.getEstatisticas();
+      const categorias = Produto.getCategorias();
 
       res.render('produtos/index', {
-        title: 'Inventário (Inventory)',
+        title: 'Inventário de Produtos',
         currentPage: 'produtos',
         produtos,
+        estatisticas,
         categorias,
-        almoxarifados,
-        almoxarifadoAtual,
-        estatisticas: {
-          ...estatisticas,
-          inStockCount,
-          lowStockCount,
-          outOfStockCount
-        },
-        filtros: { busca, categoria, status, ordenarPor, almoxarifado_id },
-        sucesso: req.query.sucesso || null,
-        erro: req.query.erro || null
+        filtros,
+        sucesso: sucesso || null,
+        erro: erro || null
       });
     } catch (error) {
       console.error('Erro ao listar produtos:', error);
-      res.redirect(`/?erro=${encodeURIComponent('Erro ao carregar lista de produtos: ' + error.message)}`);
-    }
-  }
-
-  /**
-   * Ficha Completa do Produto (Exibe dados, estoques por obra e ações rápidas)
-   */
-  static async show(req, res) {
-    try {
-      const { id } = req.params;
-      const produto = Produto.findByIdWithEstoques(id);
-
-      if (!produto) {
-        return res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
-      }
-
-      const almoxarifados = Almoxarifado.findAll();
-
-      res.render('produtos/show', {
-        title: `Ficha: ${produto.nome}`,
+      res.status(500).render('layouts/erro', {
+        title: 'Erro no Inventário',
         currentPage: 'produtos',
-        produto,
-        almoxarifados,
-        sucesso: req.query.sucesso || null,
-        erro: req.query.erro || null
+        mensagem: 'Não foi possível carregar o inventário de produtos.',
+        detalhes: error.message
       });
-    } catch (error) {
-      console.error('Erro ao abrir ficha do produto:', error);
-      res.redirect('/produtos?erro=' + encodeURIComponent(error.message));
     }
   }
 
   /**
-   * Formulário de novo produto
+   * Formulário de Cadastro de Novo Produto
    */
   static async create(req, res) {
     try {
-      const fornecedores = Fornecedor.findAll();
       const categorias = Produto.getCategorias();
-      const almoxarifados = Almoxarifado.findAll();
+      const skuSugerido = Produto.gerarSku();
 
       res.render('produtos/create', {
-        title: 'Adicionar Produto (Add Product)',
+        title: 'Novo Produto',
         currentPage: 'produtos',
-        fornecedores,
         categorias,
-        almoxarifados,
-        produto: {},
-        erro: req.query.erro || null
+        produto: { sku: skuSugerido, quantidade: 0, estoque_minimo: 0, preco_unitario: '0.00' },
+        erro: null
       });
     } catch (error) {
-      console.error('Erro ao abrir formulário de cadastro:', error);
+      console.error('Erro ao abrir tela de novo produto:', error);
       res.redirect('/produtos?erro=' + encodeURIComponent(error.message));
     }
   }
 
   /**
-   * Processa o cadastro de um novo produto (Flexível com campos opcionais)
+   * Salva novo produto no banco de dados
    */
   static async store(req, res) {
     try {
-      const { sku, tag, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, fornecedor_id, almoxarifado_id } = req.body;
+      const { sku, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao } = req.body;
 
-      const novoProdutoId = Produto.create({
+      if (!nome || !nome.trim()) {
+        const categorias = Produto.getCategorias();
+        return res.render('produtos/create', {
+          title: 'Novo Produto',
+          currentPage: 'produtos',
+          categorias,
+          produto: req.body,
+          erro: 'O nome do produto é obrigatório.'
+        });
+      }
+
+      // Verifica duplicidade de SKU se informado
+      if (sku && sku.trim()) {
+        const existente = Produto.findBySku(sku.trim().toUpperCase());
+        if (existente) {
+          const categorias = Produto.getCategorias();
+          return res.render('produtos/create', {
+            title: 'Novo Produto',
+            currentPage: 'produtos',
+            categorias,
+            produto: req.body,
+            erro: `Já existe um produto com o SKU "${sku.trim().toUpperCase()}". Escolha outro código.`
+          });
+        }
+      }
+
+      const qtdInicial = parseInt(quantidade, 10) || 0;
+
+      // Cria produto
+      const produtoId = Produto.create({
         sku,
-        tag,
         nome,
         categoria,
         unidade_medida,
-        quantidade,
+        quantidade: qtdInicial,
         estoque_minimo,
         preco_unitario,
-        localizacao,
-        fornecedor_id,
-        almoxarifado_id
+        localizacao
       });
 
-      const nomeItem = nome ? nome.trim() : (tag ? `Item [${tag}]` : 'Novo produto');
-      res.redirect(`/produtos/${novoProdutoId}?sucesso=` + encodeURIComponent(`"${nomeItem}" salvo com sucesso! Ficha completa gerada.`));
-    } catch (error) {
-      console.error('Erro ao salvar produto:', error);
-      const fornecedores = Fornecedor.findAll();
-      const categorias = Produto.getCategorias();
-      const almoxarifados = Almoxarifado.findAll();
+      // Se informou quantidade inicial maior que 0, registra a movimentação inicial
+      if (qtdInicial > 0) {
+        Movimentacao.registrar({
+          produto_id: produtoId,
+          tipo: 'ENTRADA',
+          quantidade: qtdInicial,
+          motivo: 'Carga inicial no cadastro do produto',
+          responsavel: 'Administrador',
+          documento_ref: 'CADASTRO-INICIAL'
+        });
+      }
 
+      res.redirect('/produtos?sucesso=' + encodeURIComponent(`Produto "${nome}" cadastrado com sucesso!`));
+    } catch (error) {
+      console.error('Erro ao cadastrar produto:', error);
+      const categorias = Produto.getCategorias();
       res.render('produtos/create', {
-        title: 'Adicionar Produto',
+        title: 'Novo Produto',
         currentPage: 'produtos',
-        fornecedores,
         categorias,
-        almoxarifados,
         produto: req.body,
-        erro: error.message
+        erro: 'Falha ao salvar produto: ' + error.message
       });
     }
   }
 
   /**
-   * Formulário de edição
+   * Formulário de Edição de Produto
    */
   static async edit(req, res) {
     try {
       const { id } = req.params;
-      const produto = Produto.findByIdWithEstoques(id);
+      const produto = Produto.findById(id);
 
       if (!produto) {
         return res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
       }
 
-      const fornecedores = Fornecedor.findAll();
       const categorias = Produto.getCategorias();
-      const almoxarifados = Almoxarifado.findAll();
 
       res.render('produtos/edit', {
         title: `Editar ${produto.nome}`,
         currentPage: 'produtos',
         produto,
-        fornecedores,
         categorias,
-        almoxarifados,
-        erro: req.query.erro || null
+        erro: null
       });
     } catch (error) {
-      console.error('Erro ao carregar edição do produto:', error);
+      console.error('Erro ao abrir edição de produto:', error);
       res.redirect('/produtos?erro=' + encodeURIComponent(error.message));
     }
   }
@@ -171,52 +165,85 @@ class ProdutoController {
    * Atualiza dados de um produto
    */
   static async update(req, res) {
-    const { id } = req.params;
     try {
-      const { sku, tag, nome, categoria, unidade_medida, estoque_minimo, preco_unitario, localizacao, fornecedor_id } = req.body;
+      const { id } = req.params;
+      const produtoAtual = Produto.findById(id);
+
+      if (!produtoAtual) {
+        return res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
+      }
+
+      const { sku, nome, categoria, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao } = req.body;
+
+      if (!nome || !nome.trim()) {
+        const categorias = Produto.getCategorias();
+        return res.render('produtos/edit', {
+          title: `Editar ${produtoAtual.nome}`,
+          currentPage: 'produtos',
+          produto: { ...produtoAtual, ...req.body },
+          categorias,
+          erro: 'O nome do produto não pode ficar em branco.'
+        });
+      }
+
+      // Se alterou o SKU, verifica duplicidade com outro produto
+      if (sku && sku.trim().toUpperCase() !== produtoAtual.sku) {
+        const existente = Produto.findBySku(sku.trim().toUpperCase());
+        if (existente && existente.id !== produtoAtual.id) {
+          const categorias = Produto.getCategorias();
+          return res.render('produtos/edit', {
+            title: `Editar ${produtoAtual.nome}`,
+            currentPage: 'produtos',
+            produto: { ...produtoAtual, ...req.body },
+            categorias,
+            erro: `O SKU "${sku.trim().toUpperCase()}" já está em uso por outro produto.`
+          });
+        }
+      }
 
       Produto.update(id, {
         sku,
-        tag,
+        sku_atual: produtoAtual.sku,
         nome,
         categoria,
         unidade_medida,
+        quantidade,
         estoque_minimo,
         preco_unitario,
-        localizacao,
-        fornecedor_id
+        localizacao
       });
 
-      const nomeItem = nome ? nome.trim() : 'Produto';
-      res.redirect(`/produtos/${id}?sucesso=` + encodeURIComponent(`"${nomeItem}" atualizado com sucesso!`));
+      res.redirect('/produtos?sucesso=' + encodeURIComponent(`Produto "${nome}" atualizado com sucesso!`));
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
-      const fornecedores = Fornecedor.findAll();
       const categorias = Produto.getCategorias();
-      const produto = { ...req.body, id };
-
       res.render('produtos/edit', {
-        title: `Editar Produto`,
+        title: 'Editar Produto',
         currentPage: 'produtos',
-        produto,
-        fornecedores,
+        produto: { id: req.params.id, ...req.body },
         categorias,
-        erro: error.message
+        erro: 'Falha ao atualizar produto: ' + error.message
       });
     }
   }
 
   /**
-   * Exclui um produto (com validação de rastreabilidade)
+   * Exclui um produto
    */
   static async delete(req, res) {
     try {
       const { id } = req.params;
-      Produto.delete(id);
-      res.redirect('/produtos?sucesso=' + encodeURIComponent('Item removido com sucesso do catálogo.'));
+      const produto = Produto.findById(id);
+
+      if (produto) {
+        Produto.delete(id);
+        res.redirect('/produtos?sucesso=' + encodeURIComponent(`Produto "${produto.nome}" excluído com sucesso.`));
+      } else {
+        res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
+      }
     } catch (error) {
-      console.error('Erro ao remover produto:', error);
-      res.redirect('/produtos?erro=' + encodeURIComponent(error.message));
+      console.error('Erro ao excluir produto:', error);
+      res.redirect('/produtos?erro=' + encodeURIComponent('Falha ao excluir produto: ' + error.message));
     }
   }
 }

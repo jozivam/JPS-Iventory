@@ -1,6 +1,6 @@
 <aside class="app-sidebar">
-  <!-- Brand Logo estilo Fixoria -->
-  <a href="/" class="sidebar-brand">
+  <!-- Brand Logo -->
+  <a href="/produtos" class="sidebar-brand">
     <div class="brand-icon">
       <i class="fa-solid fa-cube"></i>
     </div>
@@ -9,14 +9,9 @@
     </div>
   </a>
 
-  <!-- Menu de Navegação -->
+  <!-- Menu de Navegação - Apenas os 2 módulos essenciais -->
   <nav class="sidebar-nav">
     <div class="nav-section-title">MENU PRINCIPAL</div>
-    
-    <a href="/" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'dashboard') ? 'active' : '' %>" id="nav-dashboard">
-      <i class="fa-regular fa-compass"></i>
-      <span>Visão Geral</span>
-    </a>
 
     <a href="/produtos" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'produtos') ? 'active' : '' %>" id="nav-produtos">
       <i class="fa-solid fa-boxes-stacked"></i>
@@ -27,33 +22,9 @@
       <i class="fa-solid fa-clock-rotate-left"></i>
       <span>Movimentações</span>
     </a>
-
-    <div class="nav-section-title">GESTÃO DE OBRAS & FLUXO</div>
-
-    <a href="/almoxarifados" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'almoxarifados') ? 'active' : '' %>" id="nav-almoxarifados">
-      <i class="fa-solid fa-helmet-safety"></i>
-      <span>Canteiros & Obras</span>
-    </a>
-
-    <a href="/transferencias" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'transferencias') ? 'active' : '' %>" id="nav-transferencias">
-      <i class="fa-solid fa-arrow-right-arrow-left"></i>
-      <span>Transferências</span>
-    </a>
-
-    <div class="nav-section-title">GESTÃO & SUPRIMENTOS</div>
-
-    <a href="/fornecedores" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'fornecedores') ? 'active' : '' %>" id="nav-fornecedores">
-      <i class="fa-regular fa-building"></i>
-      <span>Fornecedores</span>
-    </a>
-
-    <a href="/relatorios" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'relatorios') ? 'active' : '' %>" id="nav-relatorios">
-      <i class="fa-solid fa-chart-line"></i>
-      <span>Relatórios & Dados</span>
-    </a>
   </nav>
 
-  <!-- Perfil do Usuário na Base estilo Fixoria -->
+  <!-- Perfil do Usuário na Base -->
   <div class="sidebar-user">
     <div class="user-avatar">
       <i class="fa-solid fa-user-tie"></i>
@@ -62,6 +33,6 @@
       <div class="user-name">Jozivam Silva</div>
       <div class="user-role">Gestor de Almoxarifado</div>
     </div>
-    <i class="fa-solid fa-chevron-right" style="font-size: 0.75rem; color: var(--text-dim);"></i>
+    <i class="fa-solid fa-circle" style="font-size: 0.5rem; color: var(--success); margin-left: auto;"></i>
   </div>
 </aside>

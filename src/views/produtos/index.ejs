@@ -15,32 +15,27 @@
   </div>
 <% } %>
 
-<!-- Cabeçalho da Página (Estilo Fixoria UI) -->
+<!-- Cabeçalho da Página -->
 <div class="page-header-flex">
   <div class="page-title-wrap">
     <h2>Inventário</h2>
   </div>
 
   <div class="page-actions-group">
-    <a href="/relatorios" class="btn btn-outline" id="btn-importar-fixoria">
-      <i class="fa-solid fa-arrow-up-from-bracket"></i> Importar
-    </a>
-    <button type="button" class="btn btn-outline" onclick="window.print()" id="btn-exportar-fixoria">
-      <i class="fa-regular fa-file-lines"></i> Exportar
+    <button type="button" class="btn btn-outline" onclick="window.print()" title="Imprimir / Exportar lista">
+      <i class="fa-solid fa-print"></i> Imprimir
     </button>
-    <a href="/produtos/novo" class="btn btn-primary" id="btn-add-product-fixoria">
+    <a href="/produtos/novo" class="btn btn-primary" id="btn-add-product">
       <i class="fa-solid fa-plus"></i> Adicionar Produto
     </a>
   </div>
 </div>
 
-<!-- Card de Resumo do Inventário (Estilo Fixoria UI) -->
+<!-- Card de Resumo do Inventário -->
 <div class="fixoria-summary-card">
-  <!-- Valor Patrimonial Total (Global ou Filtrado por Obra) -->
+  <!-- Valor Patrimonial Total -->
   <div class="summary-asset-box">
-    <div class="summary-label">
-      <%= typeof almoxarifadoAtual !== 'undefined' && almoxarifadoAtual ? `Valor do Inventário (${almoxarifadoAtual.nome})` : 'Valor Total do Inventário' %>
-    </div>
+    <div class="summary-label">Valor Total do Inventário</div>
     <div class="summary-asset-value"><%= formatMoney(estatisticas.valor_patrimonial) %></div>
   </div>
 
@@ -48,9 +43,7 @@
   <div class="summary-stock-box">
     <div class="summary-stock-header">
       <div class="summary-stock-count"><%= estatisticas.total_itens %></div>
-      <div class="summary-stock-sub">
-        <%= typeof almoxarifadoAtual !== 'undefined' && almoxarifadoAtual ? 'Itens Alocados Nesta Obra' : 'Produtos Cadastrados' %>
-      </div>
+      <div class="summary-stock-sub">Produtos Cadastrados</div>
     </div>
 
     <% 
@@ -85,35 +78,23 @@
   </div>
 </div>
 
-<!-- Barra de Filtros e Pesquisa Fixoria -->
+<!-- Barra de Filtros e Pesquisa -->
 <div class="fixoria-filter-bar">
   <form action="/produtos" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%;">
-    <!-- Campo de Busca com Ícone de Lupa -->
+    <!-- Campo de Busca -->
     <div class="filter-search-box">
       <i class="fa-solid fa-magnifying-glass"></i>
       <input 
         type="text" 
         name="busca" 
         id="quick-table-search" 
-        placeholder="Buscar material, código ou localização..." 
+        placeholder="Buscar material, código SKU ou localização..." 
         value="<%= filtros.busca || '' %>"
       >
     </div>
 
-    <!-- Pílulas de Seleção Fixoria -->
+    <!-- Pílulas de Seleção -->
     <div class="filter-pills-group">
-      <!-- Filtro Almoxarifado / Canteiro de Obras -->
-      <select name="almoxarifado_id" class="filter-select-pill" onchange="this.form.submit()" style="font-weight: 600; color: var(--primary);">
-        <option value="">Todos os Almoxarifados (Global)</option>
-        <% if (typeof almoxarifados !== 'undefined' && almoxarifados) { %>
-          <% almoxarifados.forEach(alm => { %>
-            <option value="<%= alm.id %>" <%= filtros.almoxarifado_id == alm.id ? 'selected' : '' %>>
-              <%= alm.nome %> (<%= alm.codigo %>)
-            </option>
-          <% }) %>
-        <% } %>
-      </select>
-
       <!-- Filtro Categoria -->
       <select name="categoria" class="filter-select-pill" onchange="this.form.submit()">
         <option value="">Todas as Categorias</option>
@@ -134,7 +115,7 @@
         <i class="fa-solid fa-sliders"></i> Filtrar
       </button>
 
-      <% if (filtros.busca || filtros.categoria || filtros.status || filtros.almoxarifado_id) { %>
+      <% if (filtros.busca || filtros.categoria || filtros.status) { %>
         <a href="/produtos" class="btn btn-outline btn-sm" title="Limpar Filtros">
           <i class="fa-solid fa-rotate-left"></i>
         </a>
@@ -143,7 +124,7 @@
   </form>
 </div>
 
-<!-- Tabela Clean de Produtos (Estilo Fixoria UI) -->
+<!-- Tabela Clean de Produtos -->
 <div class="table-card">
   <div class="table-responsive">
     <table class="clean-table">
@@ -151,58 +132,50 @@
         <tr>
           <th>Nome do Produto</th>
           <th>Categoria</th>
-          <th>SKU / TAG</th>
-          <th>Entradas</th>
+          <th>SKU</th>
           <th>Estoque</th>
-          <th>Status <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem;"></i></th>
-          <th>Preço</th>
-          <th style="text-align: right;">Ação</th>
+          <th>Mínimo</th>
+          <th>Status</th>
+          <th>Preço Unitário</th>
+          <th style="text-align: right;">Ações</th>
         </tr>
       </thead>
       <tbody>
         <% if (produtos && produtos.length > 0) { %>
           <% produtos.forEach((p) => { %>
             <tr>
-              <!-- Product Name Limpo (Sem Thumbnails, Clicável para Ficha Completa) -->
+              <!-- Nome e Localização -->
               <td>
-                <a href="/produtos/<%= p.id %>" class="product-cell-clean" style="text-decoration: none; color: inherit; display: block;" title="Clique para abrir a Ficha Completa de <%= p.nome %>">
-                  <div class="product-name-text" style="font-weight: 600; color: var(--text-main); font-size: 0.92rem; transition: color 0.15s ease;"><%= p.nome %></div>
-                  <div class="product-sku-text" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
-                    <%= p.localizacao || 'Almoxarifado' %> 
-                    <span style="color: var(--primary); font-size: 0.72rem; margin-left: 0.35rem; font-weight: 500;">• Ver ficha ➔</span>
-                  </div>
-                </a>
+                <div class="product-name-text" style="font-weight: 600; color: var(--text-main); font-size: 0.92rem;"><%= p.nome %></div>
+                <div class="product-sku-text" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                  <i class="fa-solid fa-location-dot" style="font-size: 0.7rem; color: var(--text-dim);"></i> <%= p.localizacao || 'Almoxarifado' %>
+                </div>
               </td>
 
-              <!-- Category -->
+              <!-- Categoria -->
               <td>
                 <span style="color: var(--text-body); font-weight: 500;"><%= p.categoria %></span>
               </td>
 
-              <!-- SKU & TAG -->
+              <!-- SKU -->
               <td>
                 <span style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-body); font-weight: 600;">
                   <%= p.sku %>
                 </span>
-                <% if (p.tag) { %>
-                  <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem; margin-top: 2px;">
-                    <i class="fa-solid fa-tag" style="font-size: 0.65rem;"></i> <%= p.tag %>
-                  </div>
-                <% } %>
               </td>
 
-              <!-- Incoming (Entradas / Reposição) -->
+              <!-- Saldo Físico -->
               <td>
-                <span style="font-weight: 500; color: var(--text-muted);"><%= p.estoque_minimo * 2 %></span>
-              </td>
-
-              <!-- Stock (Saldo Físico) -->
-              <td>
-                <strong style="color: var(--text-main); font-size: 0.92rem;"><%= p.quantidade %></strong>
+                <strong style="color: var(--text-main); font-size: 0.95rem;"><%= p.quantidade %></strong>
                 <span style="font-size: 0.75rem; color: var(--text-dim);"><%= p.unidade_medida %></span>
               </td>
 
-              <!-- Status Pill Fixoria -->
+              <!-- Estoque Mínimo -->
+              <td>
+                <span style="font-size: 0.85rem; color: var(--text-muted);"><%= p.estoque_minimo %> <%= p.unidade_medida %></span>
+              </td>
+
+              <!-- Status Pill -->
               <td>
                 <% if (p.status_estoque === 'NORMAL') { %>
                   <span class="status-pill in-stock">
@@ -219,37 +192,29 @@
                 <% } %>
               </td>
 
-              <!-- Price -->
+              <!-- Preço -->
               <td>
                 <strong style="font-weight: 600; color: var(--text-main);"><%= formatMoney(p.preco_unitario) %></strong>
               </td>
 
-              <!-- Action (...) -->
+              <!-- Ações -->
               <td style="text-align: right; white-space: nowrap;">
-                <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                  <!-- Ver Ficha Completa -->
-                  <a href="/produtos/<%= p.id %>" class="action-more-btn" title="Ver Ficha Completa">
-                    <i class="fa-solid fa-id-card" style="color: var(--primary);"></i>
-                  </a>
-                  <!-- Atalho Rápido de Baixa -->
-                  <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Dar Baixa">
+                <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                  <!-- Dar Baixa (Saída) -->
+                  <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Dar Baixa (Saída)">
                     <i class="fa-solid fa-arrow-down" style="color: var(--danger);"></i>
                   </a>
-                  <!-- Atalho Rápido de Entrada -->
+                  <!-- Entrada de Mercadoria -->
                   <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=ENTRADA" class="action-more-btn" title="Nova Entrada">
                     <i class="fa-solid fa-arrow-up" style="color: var(--teal);"></i>
                   </a>
-                  <!-- Transferência entre Obras -->
-                  <a href="/transferencias/nova?produto_id=<%= p.id %>" class="action-more-btn" title="Transferir entre Obras">
-                    <i class="fa-solid fa-arrow-right-arrow-left" style="color: var(--purple);"></i>
-                  </a>
                   <!-- Editar -->
-                  <a href="/produtos/<%= p.id %>/editar" class="action-more-btn" title="Editar">
+                  <a href="/produtos/<%= p.id %>/editar" class="action-more-btn" title="Editar Produto">
                     <i class="fa-solid fa-pen-to-square"></i>
                   </a>
                   <!-- Excluir -->
                   <form id="form-delete-prod-<%= p.id %>" action="/produtos/<%= p.id %>/excluir" method="POST" style="display: inline;">
-                    <button type="button" class="action-more-btn" title="Excluir" onclick="window.confirmarExclusao('form-delete-prod-<%= p.id %>', '<%= p.nome %>')">
+                    <button type="button" class="action-more-btn" title="Excluir Produto" onclick="window.confirmarExclusao('form-delete-prod-<%= p.id %>', '<%= p.nome %>')">
                       <i class="fa-solid fa-trash-can" style="color: var(--danger);"></i>
                     </button>
                   </form>
@@ -269,32 +234,6 @@
         <% } %>
       </tbody>
     </table>
-  </div>
-
-  <!-- Rodapé de Paginação Fixoria -->
-  <div class="pagination-footer">
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <span>Resultado 1-<%= produtos.length %> de <%= produtos.length %></span>
-      <select class="filter-select-pill" style="padding: 0.2rem 0.5rem; font-size: 0.78rem;">
-        <option>10</option>
-        <option>25</option>
-        <option>50</option>
-      </select>
-    </div>
-
-    <div class="pagination-controls">
-      <a href="#" class="page-btn">
-        <i class="fa-solid fa-chevron-left" style="font-size: 0.7rem;"></i> Anterior
-      </a>
-      <a href="#" class="page-btn active">1</a>
-      <a href="#" class="page-btn">2</a>
-      <a href="#" class="page-btn">3</a>
-      <span style="padding: 0 0.35rem; color: var(--text-dim);">...</span>
-      <a href="#" class="page-btn">12</a>
-      <a href="#" class="page-btn">
-        Próximo <i class="fa-solid fa-chevron-right" style="font-size: 0.7rem;"></i>
-      </a>
-    </div>
   </div>
 </div>
 

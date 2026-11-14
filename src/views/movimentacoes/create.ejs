@@ -1,6 +1,6 @@
 <%- include('../layouts/header') %>
 
-<div style="max-width: 860px; margin: 0 auto;">
+<div style="max-width: 800px; margin: 0 auto;">
   <% if (typeof erro !== 'undefined' && erro) { %>
     <div class="alert alert-danger">
       <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
@@ -11,7 +11,7 @@
   <div class="page-header-flex">
     <div class="page-title-wrap">
       <h2>Registrar Movimentação</h2>
-      <p>Lance entradas (Inbound) ou baixas de consumo (Outbound) de forma rastreável.</p>
+      <p>Lance entradas de suprimentos ou baixas de consumo no estoque.</p>
     </div>
     <a href="/movimentacoes" class="btn btn-outline btn-sm">
       <i class="fa-solid fa-arrow-left"></i> Histórico de Movimentações
@@ -20,128 +20,77 @@
 
   <div class="table-card" style="padding: 1.75rem;">
     <form action="/movimentacoes" method="POST" id="form-movimentacao">
-      <!-- Seletor de Tipo Estilo Storaxe -->
+      <!-- Seletor de Tipo (Entrada ou Saída) -->
       <label class="form-label" style="margin-bottom: 0.75rem; display: block;">
         Natureza da Operação <span class="required">*</span>
       </label>
       
-      <div class="movement-type-selector">
-        <!-- SAÍDA / BAIXA (Outbound) -->
-        <label class="type-option-card <%= tipoPadrao === 'SAIDA' ? 'selected-out' : '' %>" id="card-tipo-saida">
+      <div class="movement-type-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+        <!-- SAÍDA / BAIXA -->
+        <label class="type-option-card <%= tipoPadrao === 'SAIDA' ? 'selected-out' : '' %>" id="card-tipo-saida" style="cursor: pointer; border: 2px solid <%= tipoPadrao === 'SAIDA' ? 'var(--primary)' : 'var(--border-color)' %>; padding: 1rem; border-radius: var(--radius-md); display: block;">
           <input 
             type="radio" 
             name="tipo" 
             value="SAIDA" 
             id="tipo-mov-saida" 
             <%= tipoPadrao === 'SAIDA' ? 'checked' : '' %>
+            style="display: none;"
           >
-          <div class="type-icon" style="color: var(--primary);">
-            <i class="fa-solid fa-arrow-up-from-bracket"></i>
+          <div class="type-icon" style="color: var(--danger); font-size: 1.5rem; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-arrow-down"></i>
           </div>
-          <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Baixa de Estoque (Outbound)</div>
+          <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Baixa de Estoque (Saída)</div>
           <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
-            Consumo interno, requisições de equipes, ordens de serviço ou perdas.
+            Consumo, requisição de equipe ou baixa de material.
           </div>
         </label>
 
-        <!-- ENTRADA / REPOSIÇÃO (Inbound) -->
-        <label class="type-option-card <%= tipoPadrao === 'ENTRADA' ? 'selected-in' : '' %>" id="card-tipo-entrada">
+        <!-- ENTRADA / REPOSIÇÃO -->
+        <label class="type-option-card <%= tipoPadrao === 'ENTRADA' ? 'selected-in' : '' %>" id="card-tipo-entrada" style="cursor: pointer; border: 2px solid <%= tipoPadrao === 'ENTRADA' ? 'var(--teal)' : 'var(--border-color)' %>; padding: 1rem; border-radius: var(--radius-md); display: block;">
           <input 
             type="radio" 
             name="tipo" 
             value="ENTRADA" 
             id="tipo-mov-entrada" 
             <%= tipoPadrao === 'ENTRADA' ? 'checked' : '' %>
+            style="display: none;"
           >
-          <div class="type-icon" style="color: var(--teal);">
-            <i class="fa-solid fa-arrow-down-to-bracket"></i>
+          <div class="type-icon" style="color: var(--teal); font-size: 1.5rem; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-arrow-up"></i>
           </div>
-          <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Entrada / Carga (Inbound)</div>
+          <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Entrada / Reposição</div>
           <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
-            Recebimento de Nota Fiscal, compra de suprimentos ou devolução.
+            Recebimento de Nota Fiscal, compras ou devoluções.
           </div>
         </label>
       </div>
-
-      <input type="hidden" name="retorno_produto_id" value="<%= typeof retornoProdutoId !== 'undefined' ? retornoProdutoId : '' %>">
 
       <div class="form-grid">
         <!-- Seleção do Produto -->
         <div class="form-group full-width">
           <label class="form-label" for="mov-produto-select">
-            Item a Movimentar <span class="required">*</span>
+            Produto a Movimentar <span class="required">*</span>
           </label>
           <select id="mov-produto-select" name="produto_id" class="form-select" required>
-            <option value="">-- Selecione o material no catálogo --</option>
+            <option value="">-- Selecione o item no inventário --</option>
             <% produtos.forEach(p => { %>
               <option 
                 value="<%= p.id %>" 
                 data-estoque="<%= p.quantidade %>" 
-                data-minimo="<%= p.estoque_minimo %>" 
                 data-unidade="<%= p.unidade_medida %>"
                 data-preco="<%= p.preco_unitario %>"
                 <%= (produtoPreSelecionado && produtoPreSelecionado.id === p.id) ? 'selected' : '' %>
               >
-                [<%= p.sku %><%= p.tag ? ` | TAG: ${p.tag}` : '' %>] <%= p.nome %> - Saldo: <%= p.quantidade %> <%= p.unidade_medida %>
+                [<%= p.sku %>] <%= p.nome %> (Saldo Atual: <%= p.quantidade %> <%= p.unidade_medida %>)
               </option>
             <% }) %>
           </select>
-        </div>
-
-        <!-- Seleção do Canteiro / Almoxarifado -->
-        <div class="form-group full-width">
-          <label class="form-label" for="mov-almoxarifado-select">
-            <span id="label-almoxarifado-texto">Canteiro de Obras / Almoxarifado</span> <span class="required">*</span>
-          </label>
-          <select id="mov-almoxarifado-select" class="form-select" required>
-            <% almoxarifados.forEach(alm => { %>
-              <option 
-                value="<%= alm.id %>" 
-                <%= (typeof almoxarifadoPreSelecionado !== 'undefined' && almoxarifadoPreSelecionado == alm.id) ? 'selected' : '' %>
-              >
-                <%= alm.nome %> (<%= alm.codigo %>) - <%= alm.responsavel || 'Sem responsável' %>
-              </option>
-            <% }) %>
-          </select>
-          <input type="hidden" name="almoxarifado_origem_id" id="hidden-origem-id" value="">
-          <input type="hidden" name="almoxarifado_destino_id" id="hidden-destino-id" value="">
-          <small style="color: var(--text-dim); font-size: 0.78rem;">
-            Indica em qual canteiro ou almoxarifado a carga está entrando ou sendo consumida.
-          </small>
-        </div>
-
-        <!-- Caixa Informativa de Saldo Físico -->
-        <div class="form-group full-width" id="mov-info-estoque" style="display: none;">
-          <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Estoque Físico Total</span>
-              <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-main);">
-                <span id="info-estoque-qtd">0</span> <span id="info-estoque-un" style="font-size: 0.85rem; color: var(--text-muted);">UN</span>
-              </div>
-            </div>
-            <div style="width: 1px; height: 35px; background: var(--border-color);"></div>
-            <div>
-              <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Estoque Mínimo</span>
-              <div style="font-size: 1.25rem; font-weight: 800; color: var(--warning);">
-                <span id="info-estoque-min">0</span>
-              </div>
-            </div>
-            <div style="width: 1px; height: 35px; background: var(--border-color);"></div>
-            <div>
-              <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Valor Médio Unitário</span>
-              <div style="font-size: 1.15rem; font-weight: 700; color: var(--teal);" id="info-estoque-preco">
-                R$ 0,00
-              </div>
-            </div>
-          </div>
-          <div id="aviso-saldo-insuficiente" style="display: none; color: var(--danger-text); font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem; padding: 0.6rem; background: var(--danger-bg); border-radius: var(--radius-sm); border: 1px solid var(--danger-border);">
-          </div>
         </div>
 
         <!-- Quantidade -->
         <div class="form-group">
           <label class="form-label" for="mov-quantidade-input">
-            Quantidade <span class="required">*</span>
+            Quantidade a Movimentar <span class="required">*</span>
           </label>
           <input 
             type="number" 
@@ -149,75 +98,99 @@
             name="quantidade" 
             class="form-control" 
             min="1" 
-            value="<%= typeof dadosPreenchidos !== 'undefined' ? dadosPreenchidos.quantidade : '1' %>" 
+            placeholder="1"
             required
           >
+          <span class="form-help" id="saldo-info-texto">Informe a quantia a ser debitada ou creditada.</span>
         </div>
 
         <!-- Responsável -->
         <div class="form-group">
           <label class="form-label" for="mov-responsavel-input">
-            Responsável / Solicitante <span class="required">*</span>
+            Responsável <span class="required">*</span>
           </label>
           <input 
             type="text" 
             id="mov-responsavel-input" 
             name="responsavel" 
             class="form-control" 
-            placeholder="Ex: João Pereira (Encarregado de Obra)" 
-            value="<%= typeof dadosPreenchidos !== 'undefined' ? dadosPreenchidos.responsavel : '' %>" 
+            placeholder="Nome de quem retirou ou recebeu" 
+            value="Jozivam Silva"
             required
           >
         </div>
 
-        <!-- Motivo -->
-        <div class="form-group">
+        <!-- Motivo / Justificativa -->
+        <div class="form-group full-width">
           <label class="form-label" for="mov-motivo-input">
-            Motivo / Finalidade <span class="required">*</span>
-          </label>
-          <input 
-            list="lista-motivos" 
-            id="mov-motivo-input" 
-            name="motivo" 
-            class="form-control" 
-            placeholder="Ex: Requisição de Setor, Compra NF..." 
-            value="<%= typeof dadosPreenchidos !== 'undefined' ? dadosPreenchidos.motivo : '' %>" 
-            required
-          >
-          <datalist id="lista-motivos">
-            <option value="Compra / Reposição de Estoque">
-            <option value="Requisição de Setor / Obras">
-            <option value="Atendimento a Ordem de Serviço">
-            <option value="Entrega de EPI a Colaborador">
-            <option value="Devolução de Sobra de Material">
-            <option value="Ajuste de Balanço / Inventário">
-          </datalist>
-        </div>
-
-        <!-- Documento -->
-        <div class="form-group">
-          <label class="form-label" for="mov-documento-input">
-            Documento / Nota Fiscal / O.S.
+            Motivo / Justificativa
           </label>
           <input 
             type="text" 
-            id="mov-documento-input" 
+            id="mov-motivo-input" 
+            name="motivo" 
+            class="form-control" 
+            placeholder="Ex: Manutenção preventiva, consumo diário, entrega NF" 
+          >
+        </div>
+
+        <!-- Documento / Nota Fiscal -->
+        <div class="form-group full-width">
+          <label class="form-label" for="mov-doc-input">
+            Nº Documento / Nota Fiscal / O.S. (Opcional)
+          </label>
+          <input 
+            type="text" 
+            id="mov-doc-input" 
             name="documento_ref" 
             class="form-control" 
-            placeholder="Ex: NF-10452 ou REQ-2026-88" 
-            value="<%= typeof dadosPreenchidos !== 'undefined' ? dadosPreenchidos.documento_ref : '' %>"
+            placeholder="Ex: NF-40812 ou OS-109" 
           >
         </div>
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light);">
         <a href="/movimentacoes" class="btn btn-outline">Cancelar</a>
-        <button type="submit" class="btn btn-primary" id="btn-submeter-mov">
-          <i class="fa-solid fa-check"></i> Confirmar Operação
+        <button type="submit" class="btn btn-primary" id="btn-confirmar-mov">
+          <i class="fa-solid fa-check"></i> Confirmar Movimentação
         </button>
       </div>
     </form>
   </div>
 </div>
+
+<script>
+  // Alternância visual dos cards de tipo
+  const cardSaida = document.getElementById('card-tipo-saida');
+  const cardEntrada = document.getElementById('card-tipo-entrada');
+  const radioSaida = document.getElementById('tipo-mov-saida');
+  const radioEntrada = document.getElementById('tipo-mov-entrada');
+
+  function atualizarBordasTipo() {
+    if (radioSaida.checked) {
+      cardSaida.style.borderColor = 'var(--danger)';
+      cardSaida.style.background = 'var(--bg-surface)';
+      cardEntrada.style.borderColor = 'var(--border-color)';
+      cardEntrada.style.background = 'transparent';
+    } else {
+      cardEntrada.style.borderColor = 'var(--teal)';
+      cardEntrada.style.background = 'var(--bg-surface)';
+      cardSaida.style.borderColor = 'var(--border-color)';
+      cardSaida.style.background = 'transparent';
+    }
+  }
+
+  cardSaida.addEventListener('click', () => {
+    radioSaida.checked = true;
+    atualizarBordasTipo();
+  });
+
+  cardEntrada.addEventListener('click', () => {
+    radioEntrada.checked = true;
+    atualizarBordasTipo();
+  });
+
+  atualizarBordasTipo();
+</script>
 
 <%- include('../layouts/footer') %>
