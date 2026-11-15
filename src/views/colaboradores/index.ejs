@@ -162,7 +162,7 @@
       <tbody>
         <% if (colaboradores && colaboradores.length > 0) { %>
           <% colaboradores.forEach(c => { %>
-            <tr style="cursor: pointer;" onclick="abrirModalDetalhesColaborador(<%= c.id %>)">
+            <tr style="cursor: pointer;" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
               
               <!-- Nome e Matrícula -->
               <td>
@@ -249,10 +249,10 @@
               <!-- Ações -->
               <td style="text-align: right;" onclick="event.stopPropagation()">
                 <div style="display: inline-flex; gap: 0.35rem;">
-                  <button type="button" class="btn btn-outline btn-sm" title="Ver Detalhes e Nível de Acesso" onclick="abrirModalDetalhesColaborador(<%= c.id %>)">
+                  <button type="button" class="btn btn-outline btn-sm" title="Ver Detalhes e Nível de Acesso" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
                     <i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i>
                   </button>
-                  <button type="button" class="btn btn-outline btn-sm" title="Editar Cadastro" onclick="abrirModalEditarColaborador(<%= c.id %>)">
+                  <button type="button" class="btn btn-outline btn-sm" title="Editar Cadastro" onclick="abrirModalEditarColaborador('<%= c.id %>')">
                     <i class="fa-solid fa-pen-to-square"></i>
                   </button>
                   <form action="/colaboradores/<%= c.id %>/excluir" method="POST" style="display: inline;" onsubmit="return confirm('Tem certeza de que deseja remover o cadastro de <%= c.nome %>?')">
@@ -281,7 +281,7 @@
   <div class="mobile-only" style="flex-direction: column; gap: 0.65rem; padding: 0.85rem;">
     <% if (colaboradores && colaboradores.length > 0) { %>
       <% colaboradores.forEach(c => { %>
-        <div class="inventory-mobile-card" onclick="abrirModalDetalhesColaborador(<%= c.id %>)">
+        <div class="inventory-mobile-card" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem;">
             <div style="display: flex; align-items: center; gap: 0.65rem;">
               <div style="width: 34px; height: 34px; border-radius: 50%; background: <%= c.tipo_perfil === 'SISTEMA' ? '#EDE9FE' : '#FEF3C7' %>; color: <%= c.tipo_perfil === 'SISTEMA' ? '#6D28D9' : '#B45309' %>; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0;">
@@ -324,10 +324,10 @@
             </div>
 
             <div style="display: flex; gap: 0.4rem;" onclick="event.stopPropagation()">
-              <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalDetalhesColaborador(<%= c.id %>)">
+              <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
                 <i class="fa-solid fa-shield-halved"></i> Acesso
               </button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalEditarColaborador(<%= c.id %>)">
+              <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalEditarColaborador('<%= c.id %>')">
                 <i class="fa-solid fa-pen-to-square"></i>
               </button>
             </div>
@@ -345,7 +345,7 @@
 <!-- ========================================================================= -->
 <!-- MODAL DE DETALHES & GESTÃO DE NÍVEL DE ACESSO DO COLABORADOR              -->
 <!-- ========================================================================= -->
-<div class="modal-overlay" id="modal-detalhes-colaborador" style="display: none;">
+<div class="modal-overlay" id="modal-detalhes-colaborador">
   <div class="modal-container" style="max-width: 620px;">
     
     <!-- Cabeçalho do Modal -->
@@ -513,7 +513,7 @@
 <!-- ========================================================================= -->
 <!-- MODAL DE CADASTRO / EDIÇÃO DE COLABORADOR E USUÁRIO                       -->
 <!-- ========================================================================= -->
-<div class="modal-overlay" id="modal-form-colaborador" style="display: none;">
+<div class="modal-overlay" id="modal-form-colaborador">
   <div class="modal-container" style="max-width: 650px;">
     
     <div class="modal-header">
@@ -705,120 +705,152 @@
 
 <script>
   let colaboradorAtualId = null;
+  const LISTA_COLABORADORES = <%- JSON.stringify(colaboradores || []) %>;
+
+  // Funções Seguras para Abertura e Fechamento de Modais
+  function abrirModalSeguro(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.classList.add('active');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('opacity', '1', 'important');
+    modal.style.setProperty('pointer-events', 'auto', 'important');
+    modal.style.setProperty('z-index', '99999', 'important');
+  }
+
+  function fecharModalSeguro(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.style.setProperty('display', 'none', 'important');
+    modal.style.removeProperty('opacity');
+    modal.style.removeProperty('pointer-events');
+  }
 
   // =========================================================================
   // MODAL DE DETALHES E NÍVEL DE ACESSO
   // =========================================================================
-  async function abrirModalDetalhesColaborador(id) {
+  function abrirModalDetalhesColaborador(id) {
     colaboradorAtualId = id;
+    const c = LISTA_COLABORADORES.find(item => String(item.id) === String(id));
+
+    if (!c) {
+      alert('Colaborador não encontrado na lista.');
+      return;
+    }
+
+    // 1. Preenche cabeçalho
+    document.getElementById('modal-view-nome').textContent = c.nome;
+    document.getElementById('modal-view-matricula').textContent = c.matricula || 'SEM MATRÍCULA';
+    document.getElementById('modal-view-avatar').textContent = (c.nome || 'JS').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
     
-    try {
-      const resp = await fetch(`/colaboradores/${id}/detalhes`);
-      const dados = await resp.json();
-      if (!dados.sucesso || !dados.colaborador) {
-        alert(dados.erro || 'Não foi possível carregar os detalhes do colaborador.');
-        return;
-      }
+    const statusPill = document.getElementById('modal-view-status-pill');
+    if (c.status === 'ATIVO') {
+      statusPill.className = 'status-pill in-stock';
+      statusPill.innerHTML = '<span class="status-dot-sm"></span> Ativo';
+    } else {
+      statusPill.className = 'status-pill';
+      statusPill.style.background = '#F1F5F9';
+      statusPill.style.color = '#64748B';
+      statusPill.innerHTML = '<span class="status-dot-sm" style="background: #94A3B8;"></span> Inativo';
+    }
 
-      const c = dados.colaborador;
-      const emprestimos = dados.emprestimosAtivos || [];
+    // 2. Preenche Seção de Nível de Acesso
+    document.getElementById('modal-acesso-colab-id').value = c.id;
+    document.getElementById('form-alterar-nivel-acesso').action = `/colaboradores/${c.id}/nivel-acesso`;
 
-      // Preenche cabeçalho
-      document.getElementById('modal-view-nome').textContent = c.nome;
-      document.getElementById('modal-view-matricula').textContent = c.matricula || 'SEM MATRÍCULA';
-      document.getElementById('modal-view-avatar').textContent = c.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-      
-      const statusPill = document.getElementById('modal-view-status-pill');
-      if (c.status === 'ATIVO') {
-        statusPill.className = 'status-pill in-stock';
-        statusPill.innerHTML = '<span class="status-dot-sm"></span> Ativo';
-      } else {
-        statusPill.className = 'status-pill';
-        statusPill.style.background = '#F1F5F9';
-        statusPill.style.color = '#64748B';
-        statusPill.innerHTML = '<span class="status-dot-sm" style="background: #94A3B8;"></span> Inativo';
-      }
+    const badgePerfil = document.getElementById('modal-view-badge-perfil');
+    const radioTecnico = document.getElementById('radio-perfil-tecnico');
+    const radioSistema = document.getElementById('radio-perfil-sistema');
+    const selectNivel = document.getElementById('select-nivel-acesso');
 
-      // Preenche Seção de Nível de Acesso
-      document.getElementById('modal-acesso-colab-id').value = c.id;
-      document.getElementById('form-alterar-nivel-acesso').action = `/colaboradores/${c.id}/nivel-acesso`;
+    if (c.tipo_perfil === 'SISTEMA') {
+      radioSistema.checked = true;
+      badgePerfil.className = 'status-pill';
+      badgePerfil.style.background = '#EDE9FE';
+      badgePerfil.style.color = '#6D28D9';
+      badgePerfil.innerHTML = `<i class="fa-solid fa-id-card-clip"></i> ${c.nivel_acesso || 'SISTEMA'}`;
+      alternarCamposNivelAcesso('SISTEMA');
+      if (selectNivel) selectNivel.value = c.nivel_acesso || 'ALMOXARIFE';
+    } else {
+      radioTecnico.checked = true;
+      badgePerfil.className = 'status-pill';
+      badgePerfil.style.background = '#FEF3C7';
+      badgePerfil.style.color = '#B45309';
+      badgePerfil.innerHTML = `<i class="fa-solid fa-wrench"></i> Técnico (Apenas Balcão)`;
+      alternarCamposNivelAcesso('TECNICO');
+    }
 
-      const badgePerfil = document.getElementById('modal-view-badge-perfil');
-      const radioTecnico = document.getElementById('radio-perfil-tecnico');
-      const radioSistema = document.getElementById('radio-perfil-sistema');
-      const selectNivel = document.getElementById('select-nivel-acesso');
+    // 3. Preenche Dados Cadastrais
+    document.getElementById('modal-view-cargo').textContent = c.cargo || 'Não especificado';
+    document.getElementById('modal-view-depto').textContent = c.departamento || 'Não especificado';
+    document.getElementById('modal-view-telefone').textContent = c.telefone || 'Não cadastrado';
+    document.getElementById('modal-view-email').textContent = c.email || 'Não cadastrado';
 
-      if (c.tipo_perfil === 'SISTEMA') {
-        radioSistema.checked = true;
-        badgePerfil.className = 'status-pill';
-        badgePerfil.style.background = '#EDE9FE';
-        badgePerfil.style.color = '#6D28D9';
-        badgePerfil.innerHTML = `<i class="fa-solid fa-id-card-clip"></i> ${c.nivel_acesso}`;
-        alternarCamposNivelAcesso('SISTEMA');
-        selectNivel.value = c.nivel_acesso || 'ALMOXARIFE';
-      } else {
-        radioTecnico.checked = true;
-        badgePerfil.className = 'status-pill';
-        badgePerfil.style.background = '#FEF3C7';
-        badgePerfil.style.color = '#B45309';
-        badgePerfil.innerHTML = `<i class="fa-solid fa-wrench"></i> Técnico (Apenas Balcão)`;
-        alternarCamposNivelAcesso('TECNICO');
-      }
+    const obsWrap = document.getElementById('box-observacoes-wrapper');
+    if (c.observacoes && c.observacoes.trim()) {
+      document.getElementById('modal-view-obs').textContent = c.observacoes;
+      obsWrap.style.display = 'block';
+    } else {
+      obsWrap.style.display = 'none';
+    }
 
-      // Preenche Empréstimos Ativos
-      const badgeEmp = document.getElementById('badge-total-emprestimos-abertos');
-      badgeEmp.textContent = `${emprestimos.length} em aberto`;
+    // 4. Inicializa visual de empréstimos
+    const badgeEmp = document.getElementById('badge-total-emprestimos-abertos');
+    badgeEmp.textContent = 'consultando...';
+    const listaEmp = document.getElementById('lista-emprestimos-colaborador');
+    listaEmp.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Consultando ferramentas com o colaborador...</div>';
 
-      const listaEmp = document.getElementById('lista-emprestimos-colaborador');
-      if (emprestimos.length === 0) {
+    // 5. ABRE O MODAL IMEDIATAMENTE (0ms de atraso)
+    abrirModalSeguro('modal-detalhes-colaborador');
+
+    // 6. Atualiza empréstimos em segundo plano sem bloquear a abertura do modal
+    fetch(`/colaboradores/${id}/detalhes`)
+      .then(resp => resp.json())
+      .then(dados => {
+        if (dados && dados.sucesso) {
+          const emprestimos = dados.emprestimosAtivos || [];
+          badgeEmp.textContent = `${emprestimos.length} em aberto`;
+
+          if (emprestimos.length === 0) {
+            listaEmp.innerHTML = `
+              <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 0.75rem 0.85rem; color: #065F46; font-size: 0.82rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 1rem;"></i>
+                Nenhuma ferramenta emprestada em aberto com este colaborador no momento.
+              </div>
+            `;
+          } else {
+            listaEmp.innerHTML = emprestimos.map(e => `
+              <div style="background: #ffffff; border: 1.5px solid #FDE68A; border-radius: 8px; padding: 0.65rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                <div>
+                  <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">
+                    ${e.produto_nome}
+                  </div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1px;">
+                    <span style="font-family: var(--font-mono); font-weight: 700;">${e.produto_sku}</span> • Qtd: <strong>${e.quantidade} ${e.produto_unidade}</strong>
+                  </div>
+                </div>
+                <a href="/balcao?tipo=DEVOLUCAO" class="btn btn-outline btn-sm" style="color: #0891B2; border-color: #A5F3FC; font-weight: 700; font-size: 0.75rem;" title="Devolver no Balcão">
+                  <i class="fa-solid fa-rotate-left"></i> Devolver
+                </a>
+              </div>
+            `).join('');
+          }
+        }
+      })
+      .catch(err => {
+        console.warn('Erro ao atualizar empréstimos:', err);
+        badgeEmp.textContent = '0 em aberto';
         listaEmp.innerHTML = `
-          <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 0.75rem 0.85rem; color: #065F46; font-size: 0.82rem; display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 1rem;"></i>
-            Nenhuma ferramenta emprestada em aberto com este colaborador no momento.
+          <div style="background: #F8FAFC; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.65rem 0.85rem; color: var(--text-muted); font-size: 0.82rem;">
+            Nenhuma ferramenta pendente registrada.
           </div>
         `;
-      } else {
-        listaEmp.innerHTML = emprestimos.map(e => `
-          <div style="background: #ffffff; border: 1.5px solid #FDE68A; border-radius: 8px; padding: 0.65rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-            <div>
-              <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">
-                ${e.produto_nome}
-              </div>
-              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1px;">
-                <span style="font-family: var(--font-mono); font-weight: 700;">${e.produto_sku}</span> • Qtd: <strong>${e.quantidade} ${e.produto_unidade}</strong>
-              </div>
-            </div>
-            <a href="/balcao?tipo=DEVOLUCAO" class="btn btn-outline btn-sm" style="color: #0891B2; border-color: #A5F3FC; font-weight: 700; font-size: 0.75rem;" title="Devolver no Balcão">
-              <i class="fa-solid fa-rotate-left"></i> Devolver
-            </a>
-          </div>
-        `).join('');
-      }
-
-      // Preenche Dados Cadastrais
-      document.getElementById('modal-view-cargo').textContent = c.cargo || 'Não especificado';
-      document.getElementById('modal-view-depto').textContent = c.departamento || 'Não especificado';
-      document.getElementById('modal-view-telefone').textContent = c.telefone || 'Não cadastrado';
-      document.getElementById('modal-view-email').textContent = c.email || 'Não cadastrado';
-
-      const obsWrap = document.getElementById('box-observacoes-wrapper');
-      if (c.observacoes && c.observacoes.trim()) {
-        document.getElementById('modal-view-obs').textContent = c.observacoes;
-        obsWrap.style.display = 'block';
-      } else {
-        obsWrap.style.display = 'none';
-      }
-
-      // Abre Modal
-      window.abrirModal('modal-detalhes-colaborador');
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao buscar dados do colaborador.');
-    }
+      });
   }
 
   function fecharModalDetalhesColaborador() {
-    window.fecharModal('modal-detalhes-colaborador');
+    fecharModalSeguro('modal-detalhes-colaborador');
   }
 
   function alternarCamposNivelAcesso(perfil) {
@@ -826,11 +858,11 @@
     const boxSistema = document.getElementById('box-nivel-acesso-sistema');
 
     if (perfil === 'SISTEMA') {
-      bannerTecnico.style.display = 'none';
-      boxSistema.style.display = 'block';
+      if (bannerTecnico) bannerTecnico.style.display = 'none';
+      if (boxSistema) boxSistema.style.display = 'block';
     } else {
-      bannerTecnico.style.display = 'block';
-      boxSistema.style.display = 'none';
+      if (bannerTecnico) bannerTecnico.style.display = 'block';
+      if (boxSistema) boxSistema.style.display = 'none';
     }
   }
 
@@ -855,59 +887,53 @@
     toggleFormNivelAcesso('TECNICO');
     gerarMatriculaAuto();
 
-    window.abrirModal('modal-form-colaborador');
+    abrirModalSeguro('modal-form-colaborador');
   }
 
-  async function abrirModalEditarColaborador(id) {
-    try {
-      const resp = await fetch(`/colaboradores/${id}/detalhes`);
-      const dados = await resp.json();
-      if (!dados.sucesso || !dados.colaborador) {
-        alert(dados.erro || 'Colaborador não encontrado.');
-        return;
-      }
-
-      const c = dados.colaborador;
-
-      document.getElementById('form-salvar-colaborador').action = `/colaboradores/${c.id}/editar`;
-      document.getElementById('modal-form-titulo').innerHTML = '<i class="fa-solid fa-user-pen" style="color: var(--primary);"></i> Editar Colaborador';
-      document.getElementById('form-colab-id').value = c.id;
-      document.getElementById('form-colab-nome').value = c.nome;
-      document.getElementById('form-colab-matricula').value = c.matricula || '';
-      document.getElementById('form-colab-cargo').value = c.cargo || '';
-      document.getElementById('form-colab-depto').value = c.departamento || '';
-      document.getElementById('form-colab-telefone').value = c.telefone || '';
-      document.getElementById('form-colab-email').value = c.email || '';
-      document.getElementById('form-colab-status').value = c.status || 'ATIVO';
-      document.getElementById('form-colab-obs').value = c.observacoes || '';
-      document.getElementById('btn-submit-form-colab').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Atualizar Dados';
-
-      if (c.tipo_perfil === 'SISTEMA') {
-        document.getElementById('form-radio-sistema').checked = true;
-        toggleFormNivelAcesso('SISTEMA');
-        document.getElementById('form-colab-nivel-acesso').value = c.nivel_acesso || 'ALMOXARIFE';
-      } else {
-        document.getElementById('form-radio-tecnico').checked = true;
-        toggleFormNivelAcesso('TECNICO');
-      }
-
-      window.abrirModal('modal-form-colaborador');
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao carregar dados para edição.');
+  function abrirModalEditarColaborador(id) {
+    const c = LISTA_COLABORADORES.find(item => String(item.id) === String(id));
+    if (!c) {
+      alert('Colaborador não localizado.');
+      return;
     }
+
+    document.getElementById('form-salvar-colaborador').action = `/colaboradores/${c.id}/editar`;
+    document.getElementById('modal-form-titulo').innerHTML = '<i class="fa-solid fa-user-pen" style="color: var(--primary);"></i> Editar Colaborador';
+    document.getElementById('form-colab-id').value = c.id;
+    document.getElementById('form-colab-nome').value = c.nome || '';
+    document.getElementById('form-colab-matricula').value = c.matricula || '';
+    document.getElementById('form-colab-cargo').value = c.cargo || '';
+    document.getElementById('form-colab-depto').value = c.departamento || '';
+    document.getElementById('form-colab-telefone').value = c.telefone || '';
+    document.getElementById('form-colab-email').value = c.email || '';
+    document.getElementById('form-colab-status').value = c.status || 'ATIVO';
+    document.getElementById('form-colab-obs').value = c.observacoes || '';
+    document.getElementById('btn-submit-form-colab').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Atualizar Dados';
+
+    if (c.tipo_perfil === 'SISTEMA') {
+      document.getElementById('form-radio-sistema').checked = true;
+      toggleFormNivelAcesso('SISTEMA');
+      document.getElementById('form-colab-nivel-acesso').value = c.nivel_acesso || 'ALMOXARIFE';
+    } else {
+      document.getElementById('form-radio-tecnico').checked = true;
+      toggleFormNivelAcesso('TECNICO');
+    }
+
+    abrirModalSeguro('modal-form-colaborador');
   }
 
   function fecharModalFormColaborador() {
-    window.fecharModal('modal-form-colaborador');
+    fecharModalSeguro('modal-form-colaborador');
   }
 
   function toggleFormNivelAcesso(perfil) {
     const boxAcesso = document.getElementById('form-box-nivel-acesso');
-    if (perfil === 'SISTEMA') {
-      boxAcesso.style.display = 'block';
-    } else {
-      boxAcesso.style.display = 'none';
+    if (boxAcesso) {
+      if (perfil === 'SISTEMA') {
+        boxAcesso.style.display = 'block';
+      } else {
+        boxAcesso.style.display = 'none';
+      }
     }
   }
 
@@ -915,8 +941,25 @@
     const isSistema = document.getElementById('form-radio-sistema')?.checked;
     const prefixo = isSistema ? 'ALM' : 'TEC';
     const num = Math.floor(100 + Math.random() * 900);
-    document.getElementById('form-colab-matricula').value = `${prefixo}-${num}`;
+    const input = document.getElementById('form-colab-matricula');
+    if (input) input.value = `${prefixo}-${num}`;
   }
+
+  // Fechamento de modais com clique fora ou tecla ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      fecharModalDetalhesColaborador();
+      fecharModalFormColaborador();
+    }
+  });
+
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        fecharModalSeguro(overlay.id);
+      }
+    });
+  });
 </script>
 
 <%- include('../layouts/footer') %>

@@ -2,6 +2,23 @@
  * JPS ALMOXARIFADO - JAVASCRIPT GLOBAL & INTERATIVIDADE
  */
 
+// Controle Global dos Modais (Disponível imediatamente)
+window.abrirModal = (modalId) => {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+  }
+};
+
+window.fecharModal = (modalId) => {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Fechamento de Alertas
   document.querySelectorAll('.alert-close').forEach(btn => {
@@ -32,18 +49,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // 3. Controle dos Modais
   window.abrirModal = (modalId) => {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.add('active');
+    if (modal) {
+      modal.style.display = 'flex';
+      modal.classList.add('active');
+    }
   };
 
   window.fecharModal = (modalId) => {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+      modal.classList.remove('active');
+      modal.style.display = 'none';
+    }
   };
 
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) {
         overlay.classList.remove('active');
+        overlay.style.display = 'none';
       }
     });
   });

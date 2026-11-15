@@ -1,7 +1,7 @@
 -- =============================================================================
 -- JPS ALMOXARIFADO - RECRIAÇÃO LIMPA DO BANCO DE DADOS NO SUPABASE
 -- Versão: Completa (Inventário + Balcão/Movimentações + Colaboradores/Usuários)
--- Data de Geração: 15/11/2026, 16:08:39
+-- Data de Geração: 15/11/2026, 16:25:18
 -- =============================================================================
 
 -- 1. LIMPEZA SEGURA DE TABELAS LEGADAS E ATUAIS
@@ -133,7 +133,7 @@ SELECT setval(pg_get_serial_sequence('movimentacoes', 'id'), COALESCE((SELECT MA
 
 -- Colaboradores cadastrados (5 pessoas)
 INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, telefone, tipo_perfil, nivel_acesso, status, observacoes, criado_em, atualizado_em) VALUES (1, 'Jozivam Silva', 'ALM-001', 'Gestor de Almoxarifado', 'Almoxarifado & Logística', 'jozivam.silva@empresa.com', '(11) 98765-4321', 'SISTEMA', 'ADMIN', 'ATIVO', 'Administrador geral do sistema de almoxarifado', '2026-11-15 15:53:25', '2026-11-15 15:53:25');
-INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, telefone, tipo_perfil, nivel_acesso, status, observacoes, criado_em, atualizado_em) VALUES (2, 'Carlos Pereira', 'TEC-101', 'Eletricista de Manutenção', 'Manutenção Elétrica', 'carlos.pereira@empresa.com', '(11) 97654-3210', 'TECNICO', 'SOLICITANTE', 'ATIVO', 'Técnico de campo para requisição de materiais elétricos e ferramentas', '2026-11-15 15:53:25', '2026-11-15 15:53:25');
+INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, telefone, tipo_perfil, nivel_acesso, status, observacoes, criado_em, atualizado_em) VALUES (2, 'Carlos Pereira', 'TEC-101', 'Eletricista de Manutenção', 'Manutenção Elétrica', 'carlos.pereira@empresa.com', '(11) 97654-3210', 'TECNICO', 'SOLICITANTE', 'ATIVO', 'Técnico de campo para requisição de materiais elétricos e ferramentas', '2026-11-15 15:53:25', '2026-11-15 16:25:10');
 INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, telefone, tipo_perfil, nivel_acesso, status, observacoes, criado_em, atualizado_em) VALUES (3, 'Marcos Souza', 'TEC-102', 'Técnico de Redes e TI', 'TI / Telecom', 'marcos.souza@empresa.com', '(11) 96543-2109', 'TECNICO', 'SOLICITANTE', 'ATIVO', 'Técnico responsável por cabeamento e infraestrutura de TI', '2026-11-15 15:53:25', '2026-11-15 15:53:25');
 INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, telefone, tipo_perfil, nivel_acesso, status, observacoes, criado_em, atualizado_em) VALUES (4, 'Lucas Mendes', 'TEC-103', 'Encarregado de Obras', 'Operações e Obras', 'lucas.mendes@empresa.com', '(11) 95432-1098', 'TECNICO', 'SOLICITANTE', 'ATIVO', 'Responsável por solicitações de EPIs e ferramentas pesadas', '2026-11-15 15:53:25', '2026-11-15 15:53:25');
 INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, telefone, tipo_perfil, nivel_acesso, status, observacoes, criado_em, atualizado_em) VALUES (5, 'Ana Paula Ribeiro', 'ALM-002', 'Assistente de Almoxarifado', 'Almoxarifado & Logística', 'ana.ribeiro@empresa.com', '(11) 94321-0987', 'SISTEMA', 'ALMOXARIFE', 'ATIVO', 'Atendente de balcão e conferência de notas fiscais', '2026-11-15 15:53:25', '2026-11-15 15:53:25');

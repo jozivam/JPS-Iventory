@@ -1198,13 +1198,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 9999;
   opacity: 0;
   pointer-events: none;
   transition: var(--transition);
 }
 
 .modal-overlay.active {
+  display: flex !important;
   opacity: 1;
   pointer-events: auto;
 }
