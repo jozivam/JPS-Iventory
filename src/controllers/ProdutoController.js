@@ -1,5 +1,7 @@
 const Produto = require('../models/Produto');
 const Movimentacao = require('../models/Movimentacao');
+const db = require('../../config/database');
+const xlsx = require('xlsx');
 
 class ProdutoController {
   /**
@@ -67,7 +69,7 @@ class ProdutoController {
   }
 
   /**
-   * Salva novo produto no banco de dados (Campos flexíveis / Marca incluída)
+   * Salva novo produto no banco de dados
    */
   static async store(req, res) {
     try {
@@ -147,7 +149,7 @@ class ProdutoController {
   }
 
   /**
-   * Formulário de Edição de Produto (Página dedicada)
+   * Formulário de Edição de Produto
    */
   static async edit(req, res) {
     try {
@@ -174,7 +176,7 @@ class ProdutoController {
   }
 
   /**
-   * Atualiza dados de um produto (via formulário de página ou modal)
+   * Atualiza dados de um produto
    */
   static async update(req, res) {
     try {
@@ -247,7 +249,7 @@ class ProdutoController {
   }
 
   /**
-   * Endpoint JSON de Detalhes do Produto (para consumo via fetch se necessário)
+   * Endpoint JSON de Detalhes do Produto
    */
   static async detalhes(req, res) {
     try {
@@ -279,6 +281,221 @@ class ProdutoController {
     } catch (error) {
       console.error('Erro ao excluir produto:', error);
       res.redirect('/produtos?erro=' + encodeURIComponent('Falha ao excluir produto: ' + error.message));
+    }
+  }
+
+  /**
+   * Exporta todo o inventário atual para uma planilha Excel (.xlsx)
+   */
+  static async exportarExcel(req, res) {
+    try {
+      const { busca, categoria, status } = req.query;
+      const produtos = Produto.findAll({ busca, categoria, status });
+
+      const dadosFormatados = produtos.map(p => ({
+        'SKU': p.sku || '',
+        'Nome do Produto': p.nome || '',
+        'Categoria': p.categoria || 'Geral',
+        'Marca': p.marca || '',
+        'Quantidade': p.quantidade !== undefined ? p.quantidade : 0,
+        'Unidade': p.unidade_medida || 'UN',
+        'Estoque Mínimo': p.estoque_minimo !== undefined ? p.estoque_minimo : 0,
+        'Status Estoque': p.status_estoque || 'NORMAL',
+        'Localização': p.localizacao || '',
+        'TAG': p.tag || '',
+        'Patrimônio': p.patrimonio || '',
+        'C.A (EPI)': p.ca || '',
+        'Número de Série': p.numero_serie || '',
+        'Tamanho': p.tamanho || '',
+        'Cor': p.cor || '',
+        'Peso': p.peso || '',
+        'Última Atualização': p.atualizado_em || ''
+      }));
+
+      const ws = xlsx.utils.json_to_sheet(dadosFormatados);
+
+      // Larguras automáticas de colunas
+      const wscols = [
+        { wch: 14 }, // SKU
+        { wch: 38 }, // Nome
+        { wch: 18 }, // Categoria
+        { wch: 18 }, // Marca
+        { wch: 12 }, // Quantidade
+        { wch: 10 }, // Unidade
+        { wch: 14 }, // Mínimo
+        { wch: 14 }, // Status
+        { wch: 22 }, // Localização
+        { wch: 14 }, // TAG
+        { wch: 16 }, // Patrimônio
+        { wch: 12 }, // C.A
+        { wch: 18 }, // Nº Série
+        { wch: 14 }, // Tamanho
+        { wch: 14 }, // Cor
+        { wch: 12 }, // Peso
+        { wch: 20 }  // Data
+      ];
+      ws['!cols'] = wscols;
+
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, 'Inventário');
+
+      const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      const hoje = new Date().toISOString().split('T')[0];
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="inventario_produtos_${hoje}.xlsx"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error('Erro ao exportar Excel do inventário:', error);
+      res.redirect('/produtos?erro=' + encodeURIComponent('Falha ao exportar planilha: ' + error.message));
+    }
+  }
+
+  /**
+   * Importa e atualiza o inventário a partir de uma planilha Excel (.xlsx, .xls, .csv)
+   */
+  static async importarExcel(req, res) {
+    try {
+      if (!req.file || !req.file.buffer) {
+        return res.redirect('/produtos?erro=' + encodeURIComponent('Nenhum arquivo de planilha foi selecionado.'));
+      }
+
+      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        return res.redirect('/produtos?erro=' + encodeURIComponent('A planilha enviada está vazia.'));
+      }
+
+      const sheet = workbook.Sheets[sheetName];
+      const linhas = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+
+      if (!linhas || linhas.length === 0) {
+        return res.redirect('/produtos?erro=' + encodeURIComponent('Nenhum dado legível foi encontrado na planilha.'));
+      }
+
+      let criados = 0;
+      let atualizados = 0;
+
+      const tx = db.transaction(() => {
+        linhas.forEach(row => {
+          // Normalização tolerante de cabeçalhos
+          const sku = (row['SKU'] || row['Código SKU'] || row['sku'] || row['Codigo SKU'] || '').toString().trim().toUpperCase();
+          const nome = (row['Nome do Produto'] || row['Nome'] || row['Descrição'] || row['Descricao'] || row['nome'] || '').toString().trim();
+          const categoria = (row['Categoria'] || row['categoria'] || 'Outros').toString().trim();
+          const marca = (row['Marca'] || row['Marca / Fabricante'] || row['Fabricante'] || row['marca'] || '').toString().trim() || null;
+          const unidade = (row['Unidade'] || row['Unidade de Medida'] || row['UN'] || row['unidade'] || 'UN').toString().trim().toUpperCase();
+          const quantidade = parseInt(row['Quantidade'] || row['Estoque'] || row['Qtd'] || 0, 10) || 0;
+          const estoqueMinimo = parseInt(row['Estoque Mínimo'] || row['Estoque Minimo'] || row['Mínimo'] || row['Minimo'] || 0, 10) || 0;
+          const localizacao = (row['Localização'] || row['Localizacao'] || row['Endereçamento'] || '').toString().trim() || null;
+          const tag = (row['TAG'] || row['TAG / Plaqueta'] || row['Plaqueta'] || '').toString().trim().toUpperCase() || null;
+          const patrimonio = (row['Patrimônio'] || row['Patrimonio'] || row['Nº de Patrimônio'] || '').toString().trim().toUpperCase() || null;
+          const ca = (row['C.A (EPI)'] || row['C.A'] || row['CA'] || '').toString().trim() || null;
+          const numeroSerie = (row['Número de Série'] || row['Numero de Serie'] || row['Série'] || '').toString().trim() || null;
+          const tamanho = (row['Tamanho'] || row['Tamanho / Dimensão'] || row['Dimensão'] || '').toString().trim() || null;
+          const cor = (row['Cor'] || '').toString().trim() || null;
+          const peso = (row['Peso'] || '').toString().trim() || null;
+
+          // Pula linhas totalmente vazias
+          if (!sku && !nome) return;
+
+          // Verifica se o SKU já existe no banco
+          let produtoExistente = null;
+          if (sku) {
+            produtoExistente = db.prepare('SELECT id, sku, nome, quantidade FROM produtos WHERE UPPER(sku) = ?').get(sku);
+          }
+
+          if (produtoExistente) {
+            // ATUALIZA o produto existente
+            db.prepare(`
+              UPDATE produtos SET
+                nome = COALESCE(NULLIF(@nome, ''), nome),
+                categoria = COALESCE(NULLIF(@categoria, ''), categoria),
+                marca = COALESCE(@marca, marca),
+                unidade_medida = COALESCE(NULLIF(@unidade_medida, ''), unidade_medida),
+                quantidade = @quantidade,
+                estoque_minimo = @estoque_minimo,
+                localizacao = COALESCE(@localizacao, localizacao),
+                tamanho = COALESCE(@tamanho, tamanho),
+                cor = COALESCE(@cor, cor),
+                peso = COALESCE(@peso, peso),
+                numero_serie = COALESCE(@numero_serie, numero_serie),
+                ca = COALESCE(@ca, ca),
+                patrimonio = COALESCE(@patrimonio, patrimonio),
+                tag = COALESCE(@tag, tag),
+                atualizado_em = datetime('now', 'localtime')
+              WHERE id = @id
+            `).run({
+              id: produtoExistente.id,
+              nome: nome || produtoExistente.nome,
+              categoria: categoria || 'Outros',
+              marca,
+              unidade_medida: unidade || 'UN',
+              quantidade,
+              estoque_minimo: estoqueMinimo,
+              localizacao,
+              tamanho,
+              cor,
+              peso,
+              numero_serie: numeroSerie,
+              ca,
+              patrimonio,
+              tag
+            });
+            atualizados++;
+          } else {
+            // CADASTRA novo produto
+            const novoSku = sku || Produto.gerarSku(categoria);
+            const resInsert = db.prepare(`
+              INSERT INTO produtos (
+                sku, nome, categoria, marca, unidade_medida, quantidade, 
+                estoque_minimo, preco_unitario, localizacao,
+                tamanho, cor, peso, numero_serie, ca, patrimonio, tag
+              ) VALUES (
+                @sku, @nome, @categoria, @marca, @unidade_medida, @quantidade, 
+                @estoque_minimo, 0.0, @localizacao,
+                @tamanho, @cor, @peso, @numero_serie, @ca, @patrimonio, @tag
+              )
+            `).run({
+              sku: novoSku,
+              nome: nome || 'Item importado sem descrição',
+              categoria: categoria || 'Outros',
+              marca,
+              unidade_medida: unidade || 'UN',
+              quantidade,
+              estoque_minimo: estoqueMinimo,
+              localizacao,
+              tamanho,
+              cor,
+              peso,
+              numero_serie: numeroSerie,
+              ca,
+              patrimonio,
+              tag
+            });
+
+            // Se quantidade inicial > 0, registra a carga inicial
+            if (quantidade > 0) {
+              db.prepare(`
+                INSERT INTO movimentacoes (produto_id, tipo, quantidade, motivo, responsavel, documento_ref)
+                VALUES (@produto_id, 'ENTRADA', @quantidade, 'Carga inicial via importação Excel', 'Importação em Lote', 'PLANILHA-IMPORT')
+              `).run({
+                produto_id: resInsert.lastInsertRowid,
+                quantidade
+              });
+            }
+
+            criados++;
+          }
+        });
+      });
+
+      tx();
+
+      const mensagemSucesso = `Planilha processada com sucesso! ${criados} produto(s) cadastrado(s) e ${atualizados} atualizado(s) no inventário.`;
+      res.redirect('/produtos?sucesso=' + encodeURIComponent(mensagemSucesso));
+    } catch (error) {
+      console.error('Erro ao importar Excel:', error);
+      res.redirect('/produtos?erro=' + encodeURIComponent('Falha ao processar arquivo Excel: ' + error.message));
     }
   }
 }

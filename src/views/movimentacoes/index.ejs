@@ -22,8 +22,11 @@
   </div>
 
   <div class="page-actions-group">
-    <button type="button" class="btn btn-outline" onclick="window.print()" title="Imprimir extrato de movimentações">
-      <i class="fa-solid fa-print"></i> Imprimir Extrato
+    <a href="/movimentacoes/exportar/excel?periodo=<%= encodeURIComponent(filtros.periodo || '') %>&produto_id=<%= encodeURIComponent(filtros.produto_id || '') %>&tipo=<%= encodeURIComponent(filtros.tipo || '') %>&data_inicio=<%= encodeURIComponent(filtros.data_inicio || '') %>&data_fim=<%= encodeURIComponent(filtros.data_fim || '') %>" class="btn btn-outline" title="Exportar movimentações para Excel">
+      <i class="fa-solid fa-file-excel" style="color: var(--teal);"></i> Exportar Excel
+    </a>
+    <button type="button" class="btn btn-outline" onclick="window.print()" title="Imprimir extrato ou salvar em PDF">
+      <i class="fa-solid fa-print"></i> Imprimir Extrato / PDF
     </button>
   </div>
 </div>

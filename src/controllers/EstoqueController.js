@@ -1,5 +1,6 @@
 const Movimentacao = require('../models/Movimentacao');
 const Produto = require('../models/Produto');
+const xlsx = require('xlsx');
 
 class EstoqueController {
   /**
@@ -177,6 +178,88 @@ class EstoqueController {
     } catch (error) {
       console.error('Erro ao excluir movimentação:', error);
       res.redirect('/movimentacoes?erro=' + encodeURIComponent(error.message));
+    }
+  }
+
+  /**
+   * Exporta extrato de movimentações para Excel (.xlsx)
+   */
+  static async exportarExcel(req, res) {
+    try {
+      const { produto_id, tipo, data_inicio, data_fim, periodo } = req.query;
+
+      let dtInicio = data_inicio ? data_inicio.trim() : '';
+      let dtFim = data_fim ? data_fim.trim() : '';
+
+      const hoje = new Date();
+      const formatYMD = (d) => d.toISOString().split('T')[0];
+
+      if (periodo === 'hoje') {
+        dtInicio = formatYMD(hoje);
+        dtFim = formatYMD(hoje);
+      } else if (periodo === '7dias') {
+        const d7 = new Date();
+        d7.setDate(d7.getDate() - 7);
+        dtInicio = formatYMD(d7);
+        dtFim = formatYMD(hoje);
+      } else if (periodo === '30dias') {
+        const d30 = new Date();
+        d30.setDate(d30.getDate() - 30);
+        dtInicio = formatYMD(d30);
+        dtFim = formatYMD(hoje);
+      } else if (periodo === 'mes') {
+        const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        dtInicio = formatYMD(primeiroDiaMes);
+        dtFim = formatYMD(hoje);
+      }
+
+      const movimentacoes = Movimentacao.findAll({
+        produto_id: produto_id ? parseInt(produto_id, 10) : '',
+        tipo: tipo || '',
+        data_inicio: dtInicio,
+        data_fim: dtFim,
+        limite: 1000
+      });
+
+      const dadosFormatados = movimentacoes.map(m => ({
+        'Código': `MOV-${String(m.id).padStart(4, '0')}`,
+        'Tipo': m.tipo === 'ENTRADA' ? 'Entrada' : 'Baixa',
+        'Produto / Material': m.produto_nome || '',
+        'SKU': m.produto_sku || '',
+        'Quantidade': m.tipo === 'ENTRADA' ? m.quantidade : -m.quantidade,
+        'Unidade': m.produto_unidade || 'UN',
+        'Responsável': m.responsavel || '',
+        'Documento / NF': m.documento_ref || '',
+        'Motivo / Justificativa': m.motivo || '',
+        'Data & Hora': m.criado_em || ''
+      }));
+
+      const ws = xlsx.utils.json_to_sheet(dadosFormatados);
+      ws['!cols'] = [
+        { wch: 14 }, // Código
+        { wch: 12 }, // Tipo
+        { wch: 38 }, // Produto
+        { wch: 14 }, // SKU
+        { wch: 14 }, // Quantidade
+        { wch: 10 }, // Unidade
+        { wch: 22 }, // Responsável
+        { wch: 18 }, // Documento
+        { wch: 32 }, // Motivo
+        { wch: 20 }  // Data
+      ];
+
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, 'Movimentações');
+
+      const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      const dataArquivo = hoje.toISOString().split('T')[0];
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="movimentacoes_almoxarifado_${dataArquivo}.xlsx"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error('Erro ao exportar Excel de movimentações:', error);
+      res.redirect('/movimentacoes?erro=' + encodeURIComponent('Falha ao exportar movimentações: ' + error.message));
     }
   }
 }
