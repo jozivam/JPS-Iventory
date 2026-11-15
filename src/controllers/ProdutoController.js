@@ -441,10 +441,13 @@ class ProdutoController {
         // Pula linhas totalmente vazias
         if (!sku && !nome) continue;
 
-        // Verifica se o SKU já existe no banco
+        // Verifica se o SKU ou Nome exato já existe no banco para evitar duplicações
         let produtoExistente = null;
         if (sku) {
           produtoExistente = await Produto.findBySku(sku);
+        }
+        if (!produtoExistente && nome) {
+          produtoExistente = await Produto.findByNomeExato(nome);
         }
 
         if (produtoExistente) {
