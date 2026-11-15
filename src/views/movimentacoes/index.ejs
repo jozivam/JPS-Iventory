@@ -130,9 +130,9 @@
   </form>
 </div>
 
-<!-- Tabela de Movimentações (Linhas clicáveis para ver/editar) -->
+<!-- Tabela de Movimentações (Desktop & Tablets Largos) -->
 <div class="table-card">
-  <div class="table-responsive">
+  <div class="desktop-only table-responsive">
     <table class="clean-table">
       <thead>
         <tr>
@@ -257,6 +257,89 @@
             </td>
           </tr>
         <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Cartões Otimizados para Celular (Mobile Movement Cards) -->
+  <div class="mobile-only" style="flex-direction: column; gap: 0.75rem; padding: 0.85rem;">
+    <% if (movimentacoes && movimentacoes.length > 0) { %>
+      <% movimentacoes.forEach(m => { %>
+        <div class="movement-mobile-card" onclick="abrirModalMovimentacao(<%= m.id %>)" title="Ver detalhes e opções">
+          <!-- Topo do Card -->
+          <div class="movement-mobile-top">
+            <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--text-main);">
+              MOV-<%= String(m.id).padStart(4, '0') %>
+            </span>
+            <div>
+              <% if (m.tipo === 'ENTRADA') { %>
+                <span class="status-pill in-stock" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                  <span class="status-dot-sm"></span> Entrada
+                </span>
+              <% } else if (m.tipo === 'SAIDA') { %>
+                <span class="status-pill low-stock" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                  <span class="status-dot-sm"></span> Saída
+                </span>
+              <% } else if (m.tipo === 'EMPRESTIMO') { %>
+                <span class="status-pill" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                  <i class="fa-solid fa-hand-holding-hand" style="font-size: 0.68rem;"></i> Empréstimo
+                  <% if (m.status_emprestimo === 'PENDENTE') { %>
+                    <small style="color: #B45309; font-weight: 700;">(Pendente)</small>
+                  <% } else if (m.status_emprestimo === 'DEVOLVIDO') { %>
+                    <small style="color: #059669; font-weight: 700;">(Devolvido)</small>
+                  <% } %>
+                </span>
+              <% } else if (m.tipo === 'DEVOLUCAO') { %>
+                <span class="status-pill" style="background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                  <i class="fa-solid fa-rotate-left" style="font-size: 0.68rem;"></i> Devolução
+                </span>
+              <% } else { %>
+                <span class="status-pill" style="background: #EDE9FE; color: #5B21B6; border: 1px solid #DDD6FE; font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                  <i class="fa-solid fa-repeat" style="font-size: 0.68rem;"></i> Troca
+                </span>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Produto e Volume -->
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;">
+            <div class="movement-mobile-prod">
+              <%= m.produto_nome %>
+              <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim); font-weight: normal;"><%= m.produto_sku %></div>
+            </div>
+            <div class="movement-mobile-qty">
+              <% if (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO') { %>
+                <span style="color: var(--teal);">+<%= m.quantidade %></span>
+              <% } else if (m.tipo === 'SAIDA' || m.tipo === 'EMPRESTIMO') { %>
+                <span style="color: var(--danger);">-<%= m.quantidade %></span>
+              <% } else { %>
+                <span style="color: #7C3AED;">±<%= m.quantidade %></span>
+              <% } %>
+              <small style="font-size: 0.72rem; color: var(--text-muted); font-weight: normal;"><%= m.produto_unidade %></small>
+            </div>
+          </div>
+
+          <!-- Rodapé com Responsável, Colaborador e Data -->
+          <div class="movement-mobile-footer">
+            <div>
+              <span><i class="fa-solid fa-user"></i> <%= m.colaborador || m.responsavel %></span>
+              <% if (m.colaborador && m.responsavel && m.colaborador !== m.responsavel) { %>
+                <span style="color: var(--text-dim); font-size: 0.7rem;"> (Resp: <%= m.responsavel %>)</span>
+              <% } %>
+            </div>
+            <div>
+              <i class="fa-regular fa-clock"></i> <%= formatDate(m.criado_em) %>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.85rem;">
+        <i class="fa-solid fa-clock-rotate-left" style="font-size: 2rem; color: var(--border-color); margin-bottom: 0.5rem; display: block;"></i>
+        Nenhuma movimentação encontrada com os filtros selecionados.
+      </div>
+    <% } %>
+  </div>
       </tbody>
     </table>
   </div>

@@ -30,6 +30,31 @@
     </div>
   </div>
 
+  <!-- Barra de Navegação Inferior Móvel (Fixa para Celulares) -->
+  <nav class="mobile-bottom-nav">
+    <a href="/produtos" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'produtos') ? 'active' : '' %>">
+      <i class="fa-solid fa-boxes-stacked"></i>
+      <span>Inventário</span>
+    </a>
+    
+    <a href="/balcao" class="mobile-nav-item mobile-nav-highlight <%= (typeof currentPage !== 'undefined' && currentPage === 'balcao') ? 'active' : '' %>">
+      <div class="mobile-nav-circle">
+        <i class="fa-solid fa-store"></i>
+      </div>
+      <span>Balcão</span>
+    </a>
+    
+    <a href="/movimentacoes" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'movimentacoes') ? 'active' : '' %>">
+      <i class="fa-solid fa-clock-rotate-left"></i>
+      <span>Histórico</span>
+    </a>
+    
+    <a href="/produtos/novo" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'novo-produto') ? 'active' : '' %>">
+      <i class="fa-solid fa-circle-plus"></i>
+      <span>Novo Item</span>
+    </a>
+  </nav>
+
   <!-- JavaScript Global -->
   <script src="/js/main.js"></script>
 </body>

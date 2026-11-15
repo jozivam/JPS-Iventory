@@ -29,7 +29,7 @@
 </div>
 
 <!-- Cards de Indicadores do Balcão -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+<div class="balcao-kpi-grid">
   
   <!-- Empréstimos Ativos -->
   <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #F59E0B;">
@@ -86,7 +86,7 @@
 </div>
 
 <!-- Grade Principal: Formulário de Lançamento (Esquerda) vs Empréstimos Ativos (Direita) -->
-<div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem; align-items: flex-start; margin-bottom: 2rem;">
+<div class="balcao-layout-grid">
   
   <!-- COLUNA 1: FORMULÁRIO DE ATENDIMENTO E LANÇAMENTO -->
   <div class="table-card" style="padding: 1.5rem;">
@@ -104,7 +104,7 @@
         
         <input type="hidden" name="tipo" id="input-tipo-operacao" value="<%= tipoPreSelecionado %>">
         
-        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.4rem;" id="grid-tipos-operacao">
+        <div class="balcao-types-grid" id="grid-tipos-operacao">
           
           <!-- Saída -->
           <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'SAIDA' ? 'ativo' : '' %>" data-tipo="SAIDA" data-cor="#EF4444" data-titulo="Saída de Consumo" onclick="selecionarTipo('SAIDA', this)">
@@ -211,27 +211,34 @@
         <label class="form-label" for="balcao-quantidade-input">
           Quantidade a Movimentar <span style="color: var(--danger);">*</span>
         </label>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-          <input 
-            type="number" 
-            id="balcao-quantidade-input" 
-            name="quantidade" 
-            class="form-control" 
-            min="1" 
-            value="1" 
-            required 
-            style="font-size: 1.1rem; font-weight: 700; width: 140px; text-align: center;"
-          >
+        <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+          <!-- Stepper Fácil de Tocar no Mobile -->
+          <div class="stepper-box">
+            <button type="button" class="stepper-btn" onclick="ajustarQtdRelativo(-1)" title="Diminuir 1">-</button>
+            <input 
+              type="number" 
+              id="balcao-quantidade-input" 
+              name="quantidade" 
+              class="stepper-input" 
+              min="1" 
+              value="1" 
+              required
+            >
+            <button type="button" class="stepper-btn" onclick="ajustarQtdRelativo(1)" title="Aumentar 1">+</button>
+          </div>
+
           <!-- Botões Rápidos -->
-          <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(1)">+1</button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(2)">+2</button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(5)">+5</button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(10)">+10</button>
+          <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(1)">+1</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(2)">+2</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(5)">+5</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(10)">+10</button>
+          </div>
         </div>
       </div>
 
       <!-- Colaborador e Responsável -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+      <div class="form-row-responsive">
         <div class="form-group">
           <label class="form-label" for="balcao-colaborador-input" id="label-colaborador">
             Colaborador / Solicitante <span style="color: var(--danger);">*</span>
@@ -262,7 +269,7 @@
       </div>
 
       <!-- Motivo e Documento de Referência -->
-      <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; margin-bottom: 1.5rem;">
+      <div class="form-row-responsive">
         <div class="form-group">
           <label class="form-label" for="balcao-motivo-input">
             Motivo / Justificativa / Finalidade
@@ -375,7 +382,8 @@
     <a href="/movimentacoes" class="btn btn-outline btn-sm">Ver Extrato Completo</a>
   </div>
 
-  <div class="table-responsive">
+  <!-- Tabela para Desktop -->
+  <div class="desktop-only table-responsive">
     <table class="fixoria-table">
       <thead>
         <tr>
@@ -461,6 +469,69 @@
             </td>
           </tr>
         <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Cartões Otimizados para Celular (Mobile) -->
+  <div class="mobile-only" style="flex-direction: column; gap: 0.65rem; padding: 0.85rem;">
+    <% if (ultimosAtendimentos && ultimosAtendimentos.length > 0) { %>
+      <% ultimosAtendimentos.forEach(m => { %>
+        <div class="movement-mobile-card">
+          <div class="movement-mobile-top">
+            <span style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">
+              MOV-<%= String(m.id).padStart(4, '0') %>
+            </span>
+            <div>
+              <% if (m.tipo === 'ENTRADA') { %>
+                <span class="status-pill in-stock"><span class="status-dot-sm"></span> Entrada</span>
+              <% } else if (m.tipo === 'SAIDA') { %>
+                <span class="status-pill out-of-stock"><span class="status-dot-sm"></span> Saída</span>
+              <% } else if (m.tipo === 'EMPRESTIMO') { %>
+                <span class="status-pill" style="background: #FEF3C7; color: #B45309; border: 1px solid #FCD34D;">
+                  <i class="fa-solid fa-hand-holding-hand" style="font-size: 0.7rem;"></i> Empréstimo
+                </span>
+              <% } else if (m.tipo === 'DEVOLUCAO') { %>
+                <span class="status-pill" style="background: #CFFAFE; color: #0E7490; border: 1px solid #A5F3FC;">
+                  <i class="fa-solid fa-rotate-left" style="font-size: 0.7rem;"></i> Devolução
+                </span>
+              <% } else if (m.tipo === 'TROCA') { %>
+                <span class="status-pill" style="background: #EDE9FE; color: #6D28D9; border: 1px solid #DDD6FE;">
+                  <i class="fa-solid fa-repeat" style="font-size: 0.7rem;"></i> Troca
+                </span>
+              <% } %>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;">
+            <div class="movement-mobile-prod">
+              <%= m.produto_nome %>
+              <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim); font-weight: normal;"><%= m.produto_sku %></div>
+            </div>
+            <div class="movement-mobile-qty">
+              <% if (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO') { %>
+                <span style="color: #059669;">+<%= m.quantidade %></span>
+              <% } else if (m.tipo === 'SAIDA' || m.tipo === 'EMPRESTIMO') { %>
+                <span style="color: #DC2626;">-<%= m.quantidade %></span>
+              <% } else { %>
+                <span><%= m.quantidade %></span>
+              <% } %>
+              <small style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;"><%= m.produto_unidade %></small>
+            </div>
+          </div>
+
+          <div class="movement-mobile-footer">
+            <span><i class="fa-solid fa-user"></i> <%= m.colaborador || m.responsavel %></span>
+            <span><i class="fa-regular fa-clock"></i> <%= formatDate(m.criado_em) %></span>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.85rem;">
+        Nenhum atendimento registrado recentemente no balcão.
+      </div>
+    <% } %>
+  </div>
       </tbody>
     </table>
   </div>

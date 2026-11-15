@@ -1,13 +1,18 @@
 <aside class="app-sidebar">
-  <!-- Brand Logo -->
-  <a href="/produtos" class="sidebar-brand">
-    <div class="brand-icon">
-      <i class="fa-solid fa-cube"></i>
-    </div>
-    <div class="brand-text">
-      <h1>JPS Almoxarifado</h1>
-    </div>
-  </a>
+  <!-- Brand Logo & Botão Fechar no Mobile -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding-right: 0.75rem;">
+    <a href="/produtos" class="sidebar-brand" style="margin-right: 0;">
+      <div class="brand-icon">
+        <i class="fa-solid fa-cube"></i>
+      </div>
+      <div class="brand-text">
+        <h1>JPS Almoxarifado</h1>
+      </div>
+    </a>
+    <button type="button" class="btn-topbar-icon d-md-none" id="btn-close-sidebar" onclick="document.getElementById('sidebar-backdrop').click()" title="Fechar Menu" style="width: 32px; height: 32px; border: none; background: transparent; color: var(--text-muted); cursor: pointer;">
+      <i class="fa-solid fa-xmark" style="font-size: 1.15rem;"></i>
+    </button>
+  </div>
 
   <!-- Menu de Navegação - Apenas os 2 módulos essenciais -->
   <nav class="sidebar-nav">

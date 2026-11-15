@@ -214,6 +214,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   backdrop?.addEventListener('click', fecharSidebar);
 
+  // 8. Ajuste relativo de quantidade (Stepper para mobile/desktop)
+  window.ajustarQtdRelativo = (delta) => {
+    const input = document.getElementById('balcao-quantidade-input') || document.getElementById('mov-quantidade-input');
+    if (!input) return;
+    const atual = parseInt(input.value || '1', 10);
+    const novo = Math.max(1, atual + delta);
+    input.value = novo;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
   // Fecha sidebar ao redimensionar para desktop
   window.addEventListener('resize', () => {
     if (window.innerWidth > 992) {
