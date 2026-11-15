@@ -62,6 +62,22 @@ class BalcaoController {
         throw new Error('A quantidade deve ser um número maior que zero.');
       }
 
+      // Validação estrita: impede saída ou empréstimo de produto zerado ou saldo insuficiente
+      if (tipo === 'SAIDA' || tipo === 'EMPRESTIMO') {
+        const prod = await Produto.findById(parseInt(produto_id, 10));
+        if (!prod) {
+          throw new Error('Produto selecionado não foi encontrado no inventário.');
+        }
+        const un = prod.unidade_medida || 'UN';
+        const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
+        if (Number(prod.quantidade) <= 0) {
+          throw new Error(`Operação Bloqueada: O produto "${prod.nome}" está com estoque ZERADO (0 ${un}). Não é permitido realizar ${op} de itens zerados. Realize primeiro uma operação de Entrada para repor o estoque.`);
+        }
+        if (Number(prod.quantidade) < qtd) {
+          throw new Error(`Saldo insuficiente para ${op}: O produto "${prod.nome}" possui apenas ${prod.quantidade} ${un} disponíveis em estoque, mas foi solicitada a movimentação de ${qtd} ${un}.`);
+        }
+      }
+
       const colabFinal = (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão';
 
       const resultado = await Movimentacao.registrar({

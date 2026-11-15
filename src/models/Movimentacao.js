@@ -178,15 +178,21 @@ class Movimentacao {
     const statusFinal = status_emprestimo || (tipo === 'EMPRESTIMO' ? 'PENDENTE' : (tipo === 'DEVOLUCAO' ? 'CONCLUIDO' : null));
 
     if (useSupabase && supabase) {
-      const { data: prod, error: errProd } = await supabase.from('produtos').select('id, nome, quantidade').eq('id', produto_id).single();
+      const { data: prod, error: errProd } = await supabase.from('produtos').select('id, nome, quantidade, unidade_medida').eq('id', produto_id).single();
       if (errProd || !prod) {
         throw new Error('Produto selecionado não existe.');
       }
 
-      // Valida saldo suficiente para saídas e empréstimos
-      if (fator < 0 && Number(prod.quantidade) < qtd) {
+      // Valida saldo e impede saída ou empréstimo de produto zerado
+      if (fator < 0) {
         const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
-        throw new Error(`Saldo insuficiente para o ${op} de "${prod.nome}". Saldo atual: ${prod.quantidade}, solicitado: ${qtd}.`);
+        const un = prod.unidade_medida || 'UN';
+        if (Number(prod.quantidade) <= 0) {
+          throw new Error(`Operação Bloqueada: O produto "${prod.nome}" está com estoque ZERADO (0 ${un}). Não é permitido realizar ${op} de produtos sem estoque disponível. Realize uma Entrada para reabastecer.`);
+        }
+        if (Number(prod.quantidade) < qtd) {
+          throw new Error(`Saldo insuficiente para o ${op} de "${prod.nome}". Saldo disponível: ${prod.quantidade} ${un}, solicitado: ${qtd} ${un}.`);
+        }
       }
 
       const novoSaldo = Number(prod.quantidade) + (qtd * fator);
@@ -255,14 +261,20 @@ class Movimentacao {
     if (!db) throw new Error('Banco de dados não disponível');
 
     const tx = db.transaction(() => {
-      const produto = db.prepare('SELECT id, nome, quantidade FROM produtos WHERE id = ?').get(produto_id);
+      const produto = db.prepare('SELECT id, nome, quantidade, unidade_medida FROM produtos WHERE id = ?').get(produto_id);
       if (!produto) {
         throw new Error('Produto selecionado não existe.');
       }
 
-      if (fator < 0 && produto.quantidade < qtd) {
+      if (fator < 0) {
         const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
-        throw new Error(`Saldo insuficiente para o ${op} de "${produto.nome}". Saldo atual: ${produto.quantidade}, solicitado: ${qtd}.`);
+        const un = produto.unidade_medida || 'UN';
+        if (Number(produto.quantidade) <= 0) {
+          throw new Error(`Operação Bloqueada: O produto "${produto.nome}" está com estoque ZERADO (0 ${un}). Não é permitido realizar ${op} de produtos sem estoque disponível. Realize uma Entrada para reabastecer.`);
+        }
+        if (Number(produto.quantidade) < qtd) {
+          throw new Error(`Saldo insuficiente para o ${op} de "${produto.nome}". Saldo disponível: ${produto.quantidade} ${un}, solicitado: ${qtd} ${un}.`);
+        }
       }
 
       const novoSaldo = produto.quantidade + (qtd * fator);

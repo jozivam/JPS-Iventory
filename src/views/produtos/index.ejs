@@ -739,11 +739,35 @@
     document.getElementById('view-criado-em').textContent = p.criado_em || '-';
     document.getElementById('view-atualizado-em').textContent = p.atualizado_em || '-';
 
-    // Links de movimentação rápida via Balcão
-    document.getElementById('modal-link-baixa').href = `/balcao?produto_id=${p.id}&tipo=SAIDA`;
+    // Links de movimentação rápida via Balcão com proteção para itens zerados
+    const linkBaixa = document.getElementById('modal-link-baixa');
+    const isZerado = Number(p.quantidade) <= 0;
+    if (isZerado) {
+      linkBaixa.href = `/balcao?produto_id=${p.id}&tipo=ENTRADA`;
+      linkBaixa.title = 'Item com estoque zerado (0 UN) - Clique para repor estoque';
+      linkBaixa.style.opacity = '0.65';
+      linkBaixa.innerHTML = '<i class="fa-solid fa-ban"></i> Baixa (Zerado)';
+    } else {
+      linkBaixa.href = `/balcao?produto_id=${p.id}&tipo=SAIDA`;
+      linkBaixa.title = 'Lançar Baixa / Consumo no Balcão';
+      linkBaixa.style.opacity = '1';
+      linkBaixa.innerHTML = '<i class="fa-solid fa-arrow-up"></i> Baixa (Balcão)';
+    }
+
     document.getElementById('modal-link-entrada').href = `/balcao?produto_id=${p.id}&tipo=ENTRADA`;
     if (document.getElementById('modal-link-emprestimo')) {
-      document.getElementById('modal-link-emprestimo').href = `/balcao?produto_id=${p.id}&tipo=EMPRESTIMO`;
+      const linkEmp = document.getElementById('modal-link-emprestimo');
+      if (isZerado) {
+        linkEmp.href = `/balcao?produto_id=${p.id}&tipo=ENTRADA`;
+        linkEmp.title = 'Item com estoque zerado (0 UN) - Não disponível para empréstimo';
+        linkEmp.style.opacity = '0.65';
+        linkEmp.innerHTML = '<i class="fa-solid fa-ban"></i> Empréstimo (Zerado)';
+      } else {
+        linkEmp.href = `/balcao?produto_id=${p.id}&tipo=EMPRESTIMO`;
+        linkEmp.title = 'Lançar Empréstimo no Balcão';
+        linkEmp.style.opacity = '1';
+        linkEmp.innerHTML = '<i class="fa-solid fa-hand-holding-hand"></i> Emprestar (Balcão)';
+      }
     }
 
     // Reseta para o modo de visualização

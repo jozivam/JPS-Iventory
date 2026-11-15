@@ -226,9 +226,48 @@
             <% } %>
           </div>
           <div>
-            Saldo Atual: <strong id="detalhe-produto-saldo" style="color: var(--primary); font-size: 1rem;">
+            Saldo Atual: <strong id="detalhe-produto-saldo" style="color: <%= (produtoPreSelecionado && produtoPreSelecionado.quantidade <= 0) ? 'var(--danger)' : 'var(--primary)' %>; font-size: 1rem;">
               <%= produtoPreSelecionado ? produtoPreSelecionado.quantidade : 0 %> <%= produtoPreSelecionado ? (produtoPreSelecionado.unidade_medida || 'UN') : '' %>
             </strong>
+          </div>
+        </div>
+
+        <!-- Banner de Alerta: Produto com Estoque ZERADO -->
+        <div id="alerta-estoque-zerado" style="display: none; margin-top: 0.65rem; padding: 0.85rem 1rem; background: #FEF2F2; border: 1.5px solid #F87171; border-radius: 8px; color: #991B1B; font-size: 0.84rem; line-height: 1.45;">
+          <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.35rem; color: #DC2626; margin-top: 2px; flex-shrink: 0;"></i>
+            <div style="flex: 1;">
+              <div style="font-weight: 800; font-size: 0.92rem; color: #B91C1C; margin-bottom: 3px; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                <span>PRODUTO COM ESTOQUE ZERADO</span>
+                <span class="badge" style="background: #DC2626; color: #ffffff; font-size: 0.72rem; padding: 2px 7px;">0 DISPONÍVEL</span>
+              </div>
+              <div style="color: #7F1D1D;" id="texto-alerta-zerado">
+                Não é permitido registrar <strong>Saída</strong> ou <strong>Empréstimo</strong> deste item porque não há unidades físicas em estoque.
+              </div>
+              <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #FECACA; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; color: #64748B;">
+                  Precisa abastecer o almoxarifado?
+                </span>
+                <button type="button" class="btn btn-sm" onclick="alternarParaEntrada()" style="background: #10B981; color: #ffffff; border: none; font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                  <i class="fa-solid fa-arrow-down"></i> Mudar para Entrada / Reposição
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banner de Alerta: Quantidade Solicitada Maior que Estoque -->
+        <div id="alerta-saldo-insuficiente" style="display: none; margin-top: 0.65rem; padding: 0.85rem 1rem; background: #FFFBEB; border: 1.5px solid #FBBF24; border-radius: 8px; color: #92400E; font-size: 0.84rem; line-height: 1.45;">
+          <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+            <i class="fa-solid fa-circle-exclamation" style="font-size: 1.35rem; color: #D97706; margin-top: 2px; flex-shrink: 0;"></i>
+            <div style="flex: 1;">
+              <strong style="display: block; font-size: 0.92rem; color: #B45309; margin-bottom: 2px;">
+                Quantidade Solicitada Excede o Estoque Disponível!
+              </strong>
+              <div id="texto-alerta-saldo-insuficiente" style="color: #78350F;">
+                O saldo atual é menor do que a quantidade solicitada.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -686,12 +725,31 @@
     if (boxDev) {
       boxDev.style.display = (tipo === 'DEVOLUCAO') ? 'block' : 'none';
     }
+
+    // Revalida permissão de estoque com base no novo tipo selecionado
+    if (typeof validarEstoqueOperacao === 'function') {
+      validarEstoqueOperacao();
+    }
   }
 
   function ajustarQtd(delta) {
     const input = document.getElementById('balcao-quantidade-input');
     const atual = parseInt(input.value, 10) || 0;
     input.value = Math.max(1, atual + delta);
+    if (typeof validarEstoqueOperacao === 'function') {
+      validarEstoqueOperacao();
+    }
+  }
+
+  function ajustarQtdRelativo(delta) {
+    ajustarQtd(delta);
+  }
+
+  function alternarParaEntrada() {
+    const btnEntrada = document.querySelector('.btn-tipo-op[data-tipo="ENTRADA"]');
+    if (btnEntrada) {
+      selecionarTipo('ENTRADA', btnEntrada);
+    }
   }
 
   // =========================================================================
@@ -756,7 +814,7 @@
             </div>
             <div style="text-align: right; flex-shrink: 0;">
               <span class="badge" style="background: ${temEstoque ? '#D1FAE5' : '#FEE2E2'}; color: ${temEstoque ? '#065F46' : '#991B1B'}; font-weight: 700; font-size: 0.78rem;">
-                ${p.quantidade} ${p.unidade_medida || 'UN'}
+                ${temEstoque ? `${p.quantidade} ${p.unidade_medida || 'UN'}` : `ZERADO (0 ${p.unidade_medida || 'UN'})`}
               </span>
             </div>
           </div>
@@ -790,10 +848,15 @@
     }
 
     const saldoEl = document.getElementById('detalhe-produto-saldo');
-    saldoEl.textContent = `${prod.quantidade} ${prod.unidade_medida || 'UN'}`;
-    saldoEl.style.color = prod.quantidade <= 0 ? 'var(--danger)' : 'var(--primary)';
+    const isZerado = Number(prod.quantidade) <= 0;
+    saldoEl.textContent = `${prod.quantidade} ${prod.unidade_medida || 'UN'}${isZerado ? ' (ZERADO)' : ''}`;
+    saldoEl.style.color = isZerado ? 'var(--danger)' : 'var(--primary)';
 
     boxDetalhe.style.display = 'flex';
+
+    if (typeof validarEstoqueOperacao === 'function') {
+      validarEstoqueOperacao();
+    }
   }
 
   function limparProdutoSelecionado() {
@@ -803,6 +866,9 @@
     boxDetalhe.style.display = 'none';
     inputBusca.focus();
     renderizarDropdownProdutos('');
+    if (typeof validarEstoqueOperacao === 'function') {
+      validarEstoqueOperacao();
+    }
   }
 
   // Interatividade com o input de busca
@@ -900,7 +966,159 @@
 
     document.getElementById('balcao-origem-id').value = emprestimoId;
     document.getElementById('balcao-motivo-input').value = `Devolução de ferramenta emprestada (Ref: MOV-${String(emprestimoId).padStart(4, '0')})`;
+    if (typeof validarEstoqueOperacao === 'function') {
+      validarEstoqueOperacao();
+    }
   }
+
+  // =========================================================================
+  // VALIDAÇÃO EM TEMPO REAL DE ESTOQUE ZERADO E SALDO DISPONÍVEL
+  // =========================================================================
+  function validarEstoqueOperacao() {
+    const produtoId = document.getElementById('balcao-produto-id')?.value;
+    const tipo = document.getElementById('input-tipo-operacao')?.value || 'SAIDA';
+    const inputQtd = document.getElementById('balcao-quantidade-input');
+    const qtd = parseInt(inputQtd?.value, 10) || 1;
+
+    const alertaZerado = document.getElementById('alerta-estoque-zerado');
+    const alertaInsuficiente = document.getElementById('alerta-saldo-insuficiente');
+    const btnSubmit = document.getElementById('btn-submit-balcao');
+    const btnSubmitTexto = document.getElementById('btn-submit-texto');
+    const cfg = configTipos[tipo] || configTipos['SAIDA'];
+
+    if (!produtoId) {
+      if (alertaZerado) alertaZerado.style.display = 'none';
+      if (alertaInsuficiente) alertaInsuficiente.style.display = 'none';
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.style.background = cfg.btnCor;
+        btnSubmit.style.borderColor = cfg.btnCor;
+        btnSubmit.style.cursor = 'pointer';
+        btnSubmit.style.opacity = '1';
+        if (btnSubmitTexto) btnSubmitTexto.textContent = cfg.btnTexto;
+      }
+      return true;
+    }
+
+    const prod = LISTA_PRODUTOS.find(p => String(p.id) === String(produtoId));
+    if (!prod) return true;
+
+    const saldo = Number(prod.quantidade);
+    const un = prod.unidade_medida || 'UN';
+    const isOperacaoSaida = (tipo === 'SAIDA' || tipo === 'EMPRESTIMO');
+
+    if (isOperacaoSaida) {
+      // Caso 1: Estoque Zerado ou Negativo
+      if (saldo <= 0) {
+        if (alertaZerado) alertaZerado.style.display = 'block';
+        if (alertaInsuficiente) alertaInsuficiente.style.display = 'none';
+
+        if (btnSubmit) {
+          btnSubmit.disabled = true;
+          btnSubmit.style.background = '#94A3B8';
+          btnSubmit.style.borderColor = '#94A3B8';
+          btnSubmit.style.cursor = 'not-allowed';
+          btnSubmit.style.opacity = '0.9';
+          if (btnSubmitTexto) {
+            btnSubmitTexto.innerHTML = `<i class="fa-solid fa-ban" style="margin-right: 5px;"></i> Item Zerado — ${tipo === 'EMPRESTIMO' ? 'Empréstimo' : 'Saída'} Bloqueada`;
+          }
+        }
+        return false;
+      }
+
+      // Caso 2: Quantidade maior que o saldo em estoque
+      if (qtd > saldo) {
+        if (alertaZerado) alertaZerado.style.display = 'none';
+        if (alertaInsuficiente) {
+          alertaInsuficiente.style.display = 'block';
+          const txt = document.getElementById('texto-alerta-saldo-insuficiente');
+          if (txt) {
+            txt.innerHTML = `O item possui apenas <strong>${saldo} ${un}</strong> disponíveis em estoque, mas foi solicitada a ${tipo === 'EMPRESTIMO' ? 'saída por empréstimo' : 'baixa'} de <strong>${qtd} ${un}</strong>. Reduza a quantidade para continuar.`;
+          }
+        }
+
+        if (btnSubmit) {
+          btnSubmit.disabled = true;
+          btnSubmit.style.background = '#F59E0B';
+          btnSubmit.style.borderColor = '#F59E0B';
+          btnSubmit.style.cursor = 'not-allowed';
+          btnSubmit.style.opacity = '0.9';
+          if (btnSubmitTexto) {
+            btnSubmitTexto.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="margin-right: 5px;"></i> Saldo Insuficiente (${saldo} ${un} disponíveis)`;
+          }
+        }
+        return false;
+      }
+
+      // Caso 3: Saldo OK para Saída/Empréstimo
+      if (alertaZerado) alertaZerado.style.display = 'none';
+      if (alertaInsuficiente) alertaInsuficiente.style.display = 'none';
+
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.style.background = cfg.btnCor;
+        btnSubmit.style.borderColor = cfg.btnCor;
+        btnSubmit.style.cursor = 'pointer';
+        btnSubmit.style.opacity = '1';
+        if (btnSubmitTexto) btnSubmitTexto.textContent = cfg.btnTexto;
+      }
+      return true;
+    } else {
+      // Para Entrada, Devolução ou Troca (operações que abastecem ou trocam)
+      if (alertaZerado) alertaZerado.style.display = 'none';
+      if (alertaInsuficiente) alertaInsuficiente.style.display = 'none';
+
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.style.background = cfg.btnCor;
+        btnSubmit.style.borderColor = cfg.btnCor;
+        btnSubmit.style.cursor = 'pointer';
+        btnSubmit.style.opacity = '1';
+        if (btnSubmitTexto) btnSubmitTexto.textContent = cfg.btnTexto;
+      }
+      return true;
+    }
+  }
+
+  // Ouve alterações no input numérico de quantidade
+  document.getElementById('balcao-quantidade-input')?.addEventListener('input', () => {
+    validarEstoqueOperacao();
+  });
+
+  // Intercepta envio do formulário para garantir que itens zerados não saiam
+  document.getElementById('form-balcao')?.addEventListener('submit', (e) => {
+    const produtoId = document.getElementById('balcao-produto-id')?.value;
+    const tipo = document.getElementById('input-tipo-operacao')?.value;
+    const inputQtd = document.getElementById('balcao-quantidade-input');
+    const qtd = parseInt(inputQtd?.value, 10) || 1;
+
+    if (!produtoId) {
+      e.preventDefault();
+      alert('Por favor, selecione um produto no campo de busca para continuar.');
+      document.getElementById('balcao-produto-busca')?.focus();
+      return false;
+    }
+
+    const prod = LISTA_PRODUTOS.find(p => String(p.id) === String(produtoId));
+    if (prod && (tipo === 'SAIDA' || tipo === 'EMPRESTIMO')) {
+      const saldo = Number(prod.quantidade);
+      const un = prod.unidade_medida || 'UN';
+      const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
+
+      if (saldo <= 0) {
+        e.preventDefault();
+        alert(`❌ Operação Não Permitida!\n\nO produto "${prod.nome}" está com estoque ZERADO (0 ${un}).\n\nNão é permitido realizar ${op} de itens zerados.\nCaso tenha recebido novas unidades, selecione a operação "Entrada" para reabastecer.`);
+        return false;
+      }
+
+      if (qtd > saldo) {
+        e.preventDefault();
+        alert(`❌ Saldo Insuficiente!\n\nVocê solicitou ${qtd} ${un}, mas há apenas ${saldo} ${un} disponíveis em estoque.`);
+        inputQtd?.focus();
+        return false;
+      }
+    }
+  });
 
   // Inicializa visual do tipo pré-selecionado
   window.addEventListener('DOMContentLoaded', () => {
@@ -909,6 +1127,8 @@
     if (btnAtual) {
       selecionarTipo(tipoAtual, btnAtual);
     }
+    // Valida imediatamente caso venha com produto pré-selecionado
+    validarEstoqueOperacao();
   });
 </script>
 
