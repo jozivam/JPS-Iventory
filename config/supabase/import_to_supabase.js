@@ -51,9 +51,11 @@ async function executarMigracao() {
       console.log('\n--- RESUMO DO BANCO NO SUPABASE ---');
       const resProds = await client.query('SELECT COUNT(*) FROM produtos');
       const resMov = await client.query('SELECT COUNT(*) FROM movimentacoes');
+      const resColab = await client.query('SELECT COUNT(*) FROM colaboradores');
 
       console.log(`• Produtos no Inventário: ${resProds.rows[0].count}`);
       console.log(`• Movimentações Registradas: ${resMov.rows[0].count}`);
+      console.log(`• Colaboradores / Usuários: ${resColab.rows[0].count}`);
       console.log('\n✓ OPERAÇÃO CONCLUÍDA COM SUCESSO NO SUPABASE!');
     } finally {
       client.release();

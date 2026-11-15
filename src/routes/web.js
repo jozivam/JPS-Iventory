@@ -65,15 +65,19 @@ router.get('/api/diagnostico', async (req, res) => {
   const { supabase } = require('../../config/supabase');
   let prodsCount = 0;
   let movsCount = 0;
+  let colabsCount = 0;
   let erro = null;
   try {
     if (supabase) {
       const { data: p, error: ep } = await supabase.from('produtos').select('id');
       const { data: m, error: em } = await supabase.from('movimentacoes').select('id');
+      const { data: c, error: ec } = await supabase.from('colaboradores').select('id');
       if (ep) erro = ep.message;
       else if (em) erro = em.message;
+      else if (ec) erro = ec.message;
       prodsCount = p ? p.length : 0;
       movsCount = m ? m.length : 0;
+      colabsCount = c ? c.length : 0;
     }
   } catch (e) {
     erro = e.message;
@@ -85,6 +89,7 @@ router.get('/api/diagnostico', async (req, res) => {
     supabaseAtivo: !!supabase,
     produtosNoSupabase: prodsCount,
     movimentacoesNoSupabase: movsCount,
+    colaboradoresNoSupabase: colabsCount,
     erro
   });
 });
