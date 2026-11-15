@@ -5,11 +5,20 @@ const isVercel = !!process.env.VERCEL;
 const isSupabaseDriver = process.env.DB_DRIVER === 'supabase';
 const useSupabase = isVercel || isSupabaseDriver;
 
+const TIPOS_VALIDOS = ['ENTRADA', 'SAIDA', 'EMPRESTIMO', 'DEVOLUCAO', 'TROCA'];
+
+function getFatorTipo(tipo) {
+  if (tipo === 'ENTRADA' || tipo === 'DEVOLUCAO') return 1;
+  if (tipo === 'SAIDA' || tipo === 'EMPRESTIMO') return -1;
+  if (tipo === 'TROCA') return 0;
+  return 0;
+}
+
 class Movimentacao {
   /**
    * Lista histórico de movimentações com filtros opcionais
    */
-  static async findAll({ produto_id, tipo, data_inicio, data_fim, busca, limite = 200 } = {}) {
+  static async findAll({ produto_id, tipo, data_inicio, data_fim, busca, status_emprestimo, limite = 200 } = {}) {
     if (useSupabase && supabase) {
       let q = supabase.from('movimentacoes').select('*, produtos(nome, sku, unidade_medida, marca, tag, patrimonio)');
 
@@ -17,8 +26,12 @@ class Movimentacao {
         q = q.eq('produto_id', parseInt(produto_id, 10));
       }
 
-      if (tipo && (tipo === 'ENTRADA' || tipo === 'SAIDA')) {
+      if (tipo && TIPOS_VALIDOS.includes(tipo)) {
         q = q.eq('tipo', tipo);
+      }
+
+      if (status_emprestimo) {
+        q = q.eq('status_emprestimo', status_emprestimo);
       }
 
       if (data_inicio && data_inicio.trim()) {
@@ -46,6 +59,7 @@ class Movimentacao {
         const b = busca.trim().toLowerCase();
         list = list.filter(m => 
           (m.responsavel && m.responsavel.toLowerCase().includes(b)) ||
+          (m.colaborador && m.colaborador.toLowerCase().includes(b)) ||
           (m.motivo && m.motivo.toLowerCase().includes(b)) ||
           (m.documento_ref && m.documento_ref.toLowerCase().includes(b)) ||
           (m.produto_nome && m.produto_nome.toLowerCase().includes(b)) ||
@@ -75,9 +89,14 @@ class Movimentacao {
       params.produto_id = parseInt(produto_id, 10);
     }
 
-    if (tipo && (tipo === 'ENTRADA' || tipo === 'SAIDA')) {
+    if (tipo && TIPOS_VALIDOS.includes(tipo)) {
       sql += ` AND m.tipo = @tipo`;
       params.tipo = tipo;
+    }
+
+    if (status_emprestimo) {
+      sql += ` AND m.status_emprestimo = @status_emprestimo`;
+      params.status_emprestimo = status_emprestimo;
     }
 
     if (data_inicio && data_inicio.trim()) {
@@ -93,6 +112,7 @@ class Movimentacao {
     if (busca && busca.trim()) {
       sql += ` AND (
         m.responsavel LIKE @busca
+        OR m.colaborador LIKE @busca
         OR m.motivo LIKE @busca
         OR m.documento_ref LIKE @busca
         OR p.nome LIKE @busca
@@ -142,15 +162,20 @@ class Movimentacao {
   /**
    * Registra uma nova movimentação atômica
    */
-  static async registrar({ produto_id, tipo, quantidade, motivo, responsavel, documento_ref }) {
+  static async registrar({ produto_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, status_emprestimo, movimentacao_origem_id }) {
     const qtd = parseInt(quantidade, 10);
     if (!qtd || qtd <= 0) {
       throw new Error('A quantidade deve ser um número inteiro maior que zero.');
     }
 
-    if (!['ENTRADA', 'SAIDA'].includes(tipo)) {
-      throw new Error('Tipo de movimentação inválido. Deve ser ENTRADA ou SAIDA.');
+    if (!TIPOS_VALIDOS.includes(tipo)) {
+      throw new Error(`Tipo de movimentação inválido (${tipo}). Deve ser ENTRADA, SAIDA, EMPRESTIMO, DEVOLUCAO ou TROCA.`);
     }
+
+    const fator = getFatorTipo(tipo);
+    const colaboradorFinal = colaborador ? colaborador.trim() : (responsavel ? responsavel.trim() : 'Não informado');
+    const responsavelFinal = responsavel ? responsavel.trim() : 'Almoxarife';
+    const statusFinal = status_emprestimo || (tipo === 'EMPRESTIMO' ? 'PENDENTE' : (tipo === 'DEVOLUCAO' ? 'CONCLUIDO' : null));
 
     if (useSupabase && supabase) {
       const { data: prod, error: errProd } = await supabase.from('produtos').select('id, nome, quantidade').eq('id', produto_id).single();
@@ -158,32 +183,73 @@ class Movimentacao {
         throw new Error('Produto selecionado não existe.');
       }
 
-      if (tipo === 'SAIDA' && Number(prod.quantidade) < qtd) {
-        throw new Error(`Saldo insuficiente para o produto "${prod.nome}". Saldo atual: ${prod.quantidade}, solicitado: ${qtd}.`);
+      // Valida saldo suficiente para saídas e empréstimos
+      if (fator < 0 && Number(prod.quantidade) < qtd) {
+        const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
+        throw new Error(`Saldo insuficiente para o ${op} de "${prod.nome}". Saldo atual: ${prod.quantidade}, solicitado: ${qtd}.`);
       }
 
-      const fator = tipo === 'ENTRADA' ? 1 : -1;
       const novoSaldo = Number(prod.quantidade) + (qtd * fator);
 
-      await supabase.from('produtos').update({ quantidade: novoSaldo }).eq('id', produto_id);
+      // Atualiza saldo do produto se a operação afetar estoque
+      if (fator !== 0) {
+        await supabase.from('produtos').update({ quantidade: novoSaldo }).eq('id', produto_id);
+      }
 
-      const { data: mov, error: errMov } = await supabase.from('movimentacoes').insert({
+      // Se for devolução e tiver origem vinculada, atualiza o empréstimo original
+      if (tipo === 'DEVOLUCAO' && movimentacao_origem_id) {
+        try {
+          await supabase.from('movimentacoes').update({
+            status_emprestimo: 'DEVOLVIDO',
+            data_devolucao: new Date().toISOString()
+          }).eq('id', parseInt(movimentacao_origem_id, 10));
+        } catch (e) {
+          console.warn('Aviso ao atualizar empréstimo de origem no Supabase:', e.message);
+        }
+      }
+
+      const payloadMov = {
         produto_id,
         tipo,
         quantidade: qtd,
-        motivo: motivo ? motivo.trim() : (tipo === 'ENTRADA' ? 'Entrada no estoque' : 'Baixa de material'),
-        responsavel: responsavel ? responsavel.trim() : 'Não informado',
+        motivo: motivo ? motivo.trim() : `Lançamento de ${tipo.toLowerCase()} no balcão`,
+        responsavel: responsavelFinal,
         documento_ref: documento_ref ? documento_ref.trim() : null
-      }).select().single();
-
-      if (errMov) throw new Error('Falha ao registrar movimentação no Supabase: ' + errMov.message);
-
-      return {
-        id: mov.id,
-        produto_id,
-        produto_nome: prod.nome,
-        novo_saldo: novoSaldo
       };
+
+      // Tenta inserir com as novas colunas
+      try {
+        const { data: mov, error: errMov } = await supabase.from('movimentacoes').insert({
+          ...payloadMov,
+          colaborador: colaboradorFinal,
+          status_emprestimo: statusFinal,
+          movimentacao_origem_id: movimentacao_origem_id ? parseInt(movimentacao_origem_id, 10) : null
+        }).select().single();
+
+        if (errMov) throw errMov;
+
+        return {
+          id: mov.id,
+          produto_id,
+          produto_nome: prod.nome,
+          novo_saldo: novoSaldo
+        };
+      } catch (errSupabase) {
+        // Fallback caso colunas ainda não existam no Supabase
+        const { data: mov2, error: errMov2 } = await supabase.from('movimentacoes').insert({
+          ...payloadMov,
+          motivo: `${payloadMov.motivo} [Colaborador: ${colaboradorFinal}]`
+        }).select().single();
+
+        if (errMov2) throw new Error('Falha ao registrar movimentação no Supabase: ' + errMov2.message);
+
+        return {
+          id: mov2.id,
+          produto_id,
+          produto_nome: prod.nome,
+          novo_saldo: novoSaldo
+        };
+      }
     }
 
     if (!db) throw new Error('Banco de dados não disponível');
@@ -194,24 +260,37 @@ class Movimentacao {
         throw new Error('Produto selecionado não existe.');
       }
 
-      if (tipo === 'SAIDA' && produto.quantidade < qtd) {
-        throw new Error(`Saldo insuficiente para o produto "${produto.nome}". Saldo atual: ${produto.quantidade}, solicitado: ${qtd}.`);
+      if (fator < 0 && produto.quantidade < qtd) {
+        const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
+        throw new Error(`Saldo insuficiente para o ${op} de "${produto.nome}". Saldo atual: ${produto.quantidade}, solicitado: ${qtd}.`);
       }
 
-      const fator = tipo === 'ENTRADA' ? 1 : -1;
       const novoSaldo = produto.quantidade + (qtd * fator);
 
-      db.prepare(`
-        UPDATE produtos 
-        SET quantidade = ?, atualizado_em = datetime('now', 'localtime') 
-        WHERE id = ?
-      `).run(novoSaldo, produto_id);
+      if (fator !== 0) {
+        db.prepare(`
+          UPDATE produtos 
+          SET quantidade = ?, atualizado_em = datetime('now', 'localtime') 
+          WHERE id = ?
+        `).run(novoSaldo, produto_id);
+      }
+
+      // Se for devolução e houver empréstimo vinculado, dá baixa no original
+      if (tipo === 'DEVOLUCAO' && movimentacao_origem_id) {
+        db.prepare(`
+          UPDATE movimentacoes 
+          SET status_emprestimo = 'DEVOLVIDO', data_devolucao = datetime('now', 'localtime')
+          WHERE id = ?
+        `).run(parseInt(movimentacao_origem_id, 10));
+      }
 
       const insertStmt = db.prepare(`
         INSERT INTO movimentacoes (
-          produto_id, tipo, quantidade, motivo, responsavel, documento_ref
+          produto_id, tipo, quantidade, motivo, responsavel, documento_ref,
+          colaborador, status_emprestimo, movimentacao_origem_id
         ) VALUES (
-          @produto_id, @tipo, @quantidade, @motivo, @responsavel, @documento_ref
+          @produto_id, @tipo, @quantidade, @motivo, @responsavel, @documento_ref,
+          @colaborador, @status_emprestimo, @movimentacao_origem_id
         )
       `);
 
@@ -219,9 +298,12 @@ class Movimentacao {
         produto_id,
         tipo,
         quantidade: qtd,
-        motivo: motivo ? motivo.trim() : (tipo === 'ENTRADA' ? 'Entrada no estoque' : 'Baixa de material'),
-        responsavel: responsavel ? responsavel.trim() : 'Não informado',
-        documento_ref: documento_ref ? documento_ref.trim() : null
+        motivo: motivo ? motivo.trim() : `Lançamento de ${tipo.toLowerCase()} no balcão`,
+        responsavel: responsavelFinal,
+        documento_ref: documento_ref ? documento_ref.trim() : null,
+        colaborador: colaboradorFinal,
+        status_emprestimo: statusFinal,
+        movimentacao_origem_id: movimentacao_origem_id ? parseInt(movimentacao_origem_id, 10) : null
       });
 
       return {
@@ -236,17 +318,149 @@ class Movimentacao {
   }
 
   /**
+   * Dá baixa direta em um empréstimo ativo (registra DEVOLUCAO e restaura estoque)
+   */
+  static async devolverEmprestimo(movimentacaoId, { responsavel, motivo, documento_ref } = {}) {
+    const id = parseInt(movimentacaoId, 10);
+    const emprestimo = await Movimentacao.findById(id);
+
+    if (!emprestimo) {
+      throw new Error('Registro de empréstimo não encontrado.');
+    }
+
+    if (emprestimo.tipo !== 'EMPRESTIMO') {
+      throw new Error('Esta movimentação não é um empréstimo.');
+    }
+
+    if (emprestimo.status_emprestimo === 'DEVOLVIDO') {
+      throw new Error('Este empréstimo já foi devolvido anteriormente.');
+    }
+
+    return await Movimentacao.registrar({
+      produto_id: emprestimo.produto_id,
+      tipo: 'DEVOLUCAO',
+      quantidade: emprestimo.quantidade,
+      motivo: motivo || `Devolução de ferramenta emprestada (Ref: MOV-${String(id).padStart(4, '0')})`,
+      responsavel: responsavel || 'Balcão de Atendimento',
+      colaborador: emprestimo.colaborador || emprestimo.responsavel,
+      documento_ref: documento_ref || `DEV-MOV-${String(id).padStart(4, '0')}`,
+      movimentacao_origem_id: id
+    });
+  }
+
+  /**
+   * Lista todos os empréstimos pendentes de devolução
+   */
+  static async findEmprestimosPendentes() {
+    if (useSupabase && supabase) {
+      const { data, error } = await supabase
+        .from('movimentacoes')
+        .select('*, produtos(nome, sku, unidade_medida, marca, categoria)')
+        .eq('tipo', 'EMPRESTIMO')
+        .or('status_emprestimo.eq.PENDENTE,status_emprestimo.is.null')
+        .order('id', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar empréstimos no Supabase:', error);
+        return [];
+      }
+
+      return (data || []).map(m => ({
+        ...m,
+        produto_nome: m.produtos ? m.produtos.nome : 'Item',
+        produto_sku: m.produtos ? m.produtos.sku : '',
+        produto_unidade: m.produtos ? m.produtos.unidade_medida : 'UN',
+        produto_marca: m.produtos ? m.produtos.marca : '',
+        produto_categoria: m.produtos ? m.produtos.categoria : ''
+      }));
+    }
+
+    if (!db) return [];
+
+    const sql = `
+      SELECT 
+        m.*,
+        p.nome as produto_nome,
+        p.sku as produto_sku,
+        p.unidade_medida as produto_unidade,
+        p.marca as produto_marca,
+        p.categoria as produto_categoria
+      FROM movimentacoes m
+      JOIN produtos p ON m.produto_id = p.id
+      WHERE m.tipo = 'EMPRESTIMO' 
+        AND (m.status_emprestimo = 'PENDENTE' OR m.status_emprestimo IS NULL)
+      ORDER BY m.id DESC
+    `;
+
+    return db.prepare(sql).all();
+  }
+
+  /**
+   * Retorna estatísticas rápidas para o painel do Balcão
+   */
+  static async getEstatisticasBalcao() {
+    const hojeYMD = new Date().toISOString().split('T')[0];
+
+    if (useSupabase && supabase) {
+      const { data: todasMovs } = await supabase.from('movimentacoes').select('tipo, quantidade, status_emprestimo, criado_em');
+      const list = todasMovs || [];
+
+      const emprestimosAtivos = list.filter(m => m.tipo === 'EMPRESTIMO' && (m.status_emprestimo === 'PENDENTE' || !m.status_emprestimo)).length;
+      const movsHoje = list.filter(m => (m.criado_em || '').startsWith(hojeYMD));
+
+      const totalAtendimentosHoje = movsHoje.length;
+      const entradasHoje = movsHoje.filter(m => m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO').reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
+      const saidasHoje = movsHoje.filter(m => m.tipo === 'SAIDA' || m.tipo === 'EMPRESTIMO').reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
+
+      return {
+        emprestimosAtivos,
+        totalAtendimentosHoje,
+        entradasHoje,
+        saidasHoje
+      };
+    }
+
+    if (!db) {
+      return { emprestimosAtivos: 0, totalAtendimentosHoje: 0, entradasHoje: 0, saidasHoje: 0 };
+    }
+
+    const empCount = db.prepare(`
+      SELECT COUNT(*) as t 
+      FROM movimentacoes 
+      WHERE tipo = 'EMPRESTIMO' AND (status_emprestimo = 'PENDENTE' OR status_emprestimo IS NULL)
+    `).get()?.t || 0;
+
+    const statsHoje = db.prepare(`
+      SELECT 
+        COUNT(*) as total_atendimentos,
+        COALESCE(SUM(CASE WHEN tipo IN ('ENTRADA', 'DEVOLUCAO') THEN quantidade ELSE 0 END), 0) as entradas_hoje,
+        COALESCE(SUM(CASE WHEN tipo IN ('SAIDA', 'EMPRESTIMO') THEN quantidade ELSE 0 END), 0) as saidas_hoje
+      FROM movimentacoes 
+      WHERE date(criado_em) = date('now', 'localtime')
+    `).get();
+
+    return {
+      emprestimosAtivos: empCount,
+      totalAtendimentosHoje: statsHoje?.total_atendimentos || 0,
+      entradasHoje: statsHoje?.entradas_hoje || 0,
+      saidasHoje: statsHoje?.saidas_hoje || 0
+    };
+  }
+
+  /**
    * Edita uma movimentação existente e recalcula o inventário
    */
-  static async update(id, { produto_id, tipo, quantidade, motivo, responsavel, documento_ref }) {
+  static async update(id, { produto_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador }) {
     const novaQtd = parseInt(quantidade, 10);
     if (!novaQtd || novaQtd <= 0) {
       throw new Error('A quantidade deve ser um número maior que zero.');
     }
 
-    if (!['ENTRADA', 'SAIDA'].includes(tipo)) {
-      throw new Error('Tipo de movimentação inválido. Deve ser ENTRADA ou SAIDA.');
+    if (!TIPOS_VALIDOS.includes(tipo)) {
+      throw new Error(`Tipo de movimentação inválido (${tipo}).`);
     }
+
+    const novoFator = getFatorTipo(tipo);
 
     if (useSupabase && supabase) {
       const { data: movAntiga, error: errMov } = await supabase.from('movimentacoes').select('*').eq('id', id).single();
@@ -258,11 +472,13 @@ class Movimentacao {
       const novoProdutoId = produto_id ? parseInt(produto_id, 10) : movAntiga.produto_id;
       const mesmoProduto = (novoProdutoId === movAntiga.produto_id);
 
-      const estornoAntigo = (movAntiga.tipo === 'ENTRADA') ? -Number(movAntiga.quantidade) : Number(movAntiga.quantidade);
+      const antigoFator = getFatorTipo(movAntiga.tipo);
+      // Reverte efeito antigo: se fator era 1 (+qtd), estorno é -qtd; se fator era -1 (-qtd), estorno é +qtd
+      const estornoAntigo = -antigoFator * Number(movAntiga.quantidade);
       const saldoProdAntigoRevertido = Number(prodAntigo.quantidade) + estornoAntigo;
 
       if (mesmoProduto) {
-        const efeitoNovo = (tipo === 'ENTRADA') ? novaQtd : -novaQtd;
+        const efeitoNovo = novoFator * novaQtd;
         const saldoFinal = saldoProdAntigoRevertido + efeitoNovo;
         if (saldoFinal < 0) {
           throw new Error(`Esta alteração deixaria o estoque de "${prodAntigo.nome}" negativo (${saldoFinal}). Operação não permitida.`);
@@ -277,7 +493,7 @@ class Movimentacao {
         const { data: prodNovo, error: errProdNovo } = await supabase.from('produtos').select('*').eq('id', novoProdutoId).single();
         if (errProdNovo || !prodNovo) throw new Error('Novo produto selecionado não encontrado.');
 
-        const efeitoNovo = (tipo === 'ENTRADA') ? novaQtd : -novaQtd;
+        const efeitoNovo = novoFator * novaQtd;
         const saldoNovoFinal = Number(prodNovo.quantidade) + efeitoNovo;
         if (saldoNovoFinal < 0) {
           throw new Error(`Esta alteração deixaria o estoque de "${prodNovo.nome}" negativo (${saldoNovoFinal}). Operação não permitida.`);
@@ -291,6 +507,7 @@ class Movimentacao {
         quantidade: novaQtd,
         motivo: motivo ? motivo.trim() : '',
         responsavel: responsavel ? responsavel.trim() : 'Não informado',
+        colaborador: colaborador ? colaborador.trim() : (responsavel || 'Não informado'),
         documento_ref: documento_ref ? documento_ref.trim() : null
       }).eq('id', id);
 
@@ -309,11 +526,12 @@ class Movimentacao {
       const novoProdutoId = produto_id ? parseInt(produto_id, 10) : movAntiga.produto_id;
       const mesmoProduto = (novoProdutoId === movAntiga.produto_id);
 
-      const estornoAntigo = (movAntiga.tipo === 'ENTRADA') ? -movAntiga.quantidade : movAntiga.quantidade;
+      const antigoFator = getFatorTipo(movAntiga.tipo);
+      const estornoAntigo = -antigoFator * movAntiga.quantidade;
       const saldoProdAntigoRevertido = prodAntigo.quantidade + estornoAntigo;
 
       if (mesmoProduto) {
-        const efeitoNovo = (tipo === 'ENTRADA') ? novaQtd : -novaQtd;
+        const efeitoNovo = novoFator * novaQtd;
         const saldoFinal = saldoProdAntigoRevertido + efeitoNovo;
         if (saldoFinal < 0) {
           throw new Error(`Esta alteração deixaria o estoque de "${prodAntigo.nome}" negativo (${saldoFinal}). Operação não permitida.`);
@@ -330,7 +548,7 @@ class Movimentacao {
         const prodNovo = db.prepare('SELECT id, nome, quantidade FROM produtos WHERE id = ?').get(novoProdutoId);
         if (!prodNovo) throw new Error('Novo produto selecionado não encontrado.');
 
-        const efeitoNovo = (tipo === 'ENTRADA') ? novaQtd : -novaQtd;
+        const efeitoNovo = novoFator * novaQtd;
         const saldoNovoFinal = prodNovo.quantidade + efeitoNovo;
         if (saldoNovoFinal < 0) {
           throw new Error(`Esta alteração deixaria o estoque de "${prodNovo.nome}" negativo (${saldoNovoFinal}). Operação não permitida.`);
@@ -346,6 +564,7 @@ class Movimentacao {
           quantidade = @quantidade,
           motivo = @motivo,
           responsavel = @responsavel,
+          colaborador = @colaborador,
           documento_ref = @documento_ref
         WHERE id = @id
       `).run({
@@ -355,6 +574,7 @@ class Movimentacao {
         quantidade: novaQtd,
         motivo: motivo ? motivo.trim() : '',
         responsavel: responsavel ? responsavel.trim() : 'Não informado',
+        colaborador: colaborador ? colaborador.trim() : (responsavel || 'Não informado'),
         documento_ref: documento_ref ? documento_ref.trim() : null
       });
 
@@ -375,14 +595,28 @@ class Movimentacao {
       const { data: prod, error: errProd } = await supabase.from('produtos').select('id, nome, quantidade').eq('id', mov.produto_id).single();
       if (errProd || !prod) throw new Error('Produto associado não encontrado.');
 
-      const estorno = (mov.tipo === 'ENTRADA') ? -Number(mov.quantidade) : Number(mov.quantidade);
+      const fator = getFatorTipo(mov.tipo);
+      const estorno = -fator * Number(mov.quantidade);
       const novoSaldo = Number(prod.quantidade) + estorno;
 
       if (novoSaldo < 0) {
         throw new Error(`A exclusão desta movimentação deixaria o estoque de "${prod.nome}" negativo (${novoSaldo}). Operação cancelada.`);
       }
 
-      await supabase.from('produtos').update({ quantidade: novoSaldo }).eq('id', prod.id);
+      if (fator !== 0) {
+        await supabase.from('produtos').update({ quantidade: novoSaldo }).eq('id', prod.id);
+      }
+
+      // Se for devolução e tiver origem vinculada, reabre o empréstimo
+      if (mov.tipo === 'DEVOLUCAO' && mov.movimentacao_origem_id) {
+        try {
+          await supabase.from('movimentacoes').update({
+            status_emprestimo: 'PENDENTE',
+            data_devolucao: null
+          }).eq('id', mov.movimentacao_origem_id);
+        } catch (e) {}
+      }
+
       await supabase.from('movimentacoes').delete().eq('id', id);
 
       return {
@@ -402,15 +636,26 @@ class Movimentacao {
       const prod = db.prepare('SELECT id, nome, quantidade FROM produtos WHERE id = ?').get(mov.produto_id);
       if (!prod) throw new Error('Produto associado não encontrado.');
 
-      const estorno = (mov.tipo === 'ENTRADA') ? -mov.quantidade : mov.quantidade;
+      const fator = getFatorTipo(mov.tipo);
+      const estorno = -fator * mov.quantidade;
       const novoSaldo = prod.quantidade + estorno;
 
       if (novoSaldo < 0) {
         throw new Error(`A exclusão desta movimentação deixaria o estoque de "${prod.nome}" negativo (${novoSaldo}). Operação cancelada.`);
       }
 
-      db.prepare("UPDATE produtos SET quantidade = ?, atualizado_em = datetime('now', 'localtime') WHERE id = ?")
-        .run(novoSaldo, prod.id);
+      if (fator !== 0) {
+        db.prepare("UPDATE produtos SET quantidade = ?, atualizado_em = datetime('now', 'localtime') WHERE id = ?")
+          .run(novoSaldo, prod.id);
+      }
+
+      if (mov.tipo === 'DEVOLUCAO' && mov.movimentacao_origem_id) {
+        db.prepare(`
+          UPDATE movimentacoes 
+          SET status_emprestimo = 'PENDENTE', data_devolucao = NULL 
+          WHERE id = ?
+        `).run(mov.movimentacao_origem_id);
+      }
 
       db.prepare('DELETE FROM movimentacoes WHERE id = ?').run(id);
 

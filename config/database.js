@@ -36,15 +36,61 @@ function initDatabase() {
     CREATE TABLE IF NOT EXISTS movimentacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       produto_id INTEGER NOT NULL,
-      tipo TEXT NOT NULL CHECK(tipo IN ('ENTRADA', 'SAIDA')),
+      tipo TEXT NOT NULL CHECK(tipo IN ('ENTRADA', 'SAIDA', 'EMPRESTIMO', 'DEVOLUCAO', 'TROCA')),
       quantidade INTEGER NOT NULL CHECK(quantidade > 0),
       motivo TEXT,
       responsavel TEXT,
       documento_ref TEXT,
+      colaborador TEXT,
+      status_emprestimo TEXT,
+      data_devolucao DATETIME,
+      movimentacao_origem_id INTEGER,
       criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
       FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE
     );
   `);
+
+  // Migração segura para atualizar constraint e colunas de movimentações
+  const movSql = db.prepare("SELECT sql FROM sqlite_master WHERE name = 'movimentacoes'").get()?.sql || '';
+  if (movSql && !movSql.includes('EMPRESTIMO')) {
+    db.exec(`
+      PRAGMA foreign_keys = OFF;
+      CREATE TABLE movimentacoes_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        produto_id INTEGER NOT NULL,
+        tipo TEXT NOT NULL CHECK(tipo IN ('ENTRADA', 'SAIDA', 'EMPRESTIMO', 'DEVOLUCAO', 'TROCA')),
+        quantidade INTEGER NOT NULL CHECK(quantidade > 0),
+        motivo TEXT,
+        responsavel TEXT,
+        documento_ref TEXT,
+        colaborador TEXT,
+        status_emprestimo TEXT,
+        data_devolucao DATETIME,
+        movimentacao_origem_id INTEGER,
+        criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
+        FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE
+      );
+      INSERT INTO movimentacoes_new (id, produto_id, tipo, quantidade, motivo, responsavel, documento_ref, criado_em)
+      SELECT id, produto_id, tipo, quantidade, motivo, responsavel, documento_ref, criado_em FROM movimentacoes;
+      DROP TABLE movimentacoes;
+      ALTER TABLE movimentacoes_new RENAME TO movimentacoes;
+      PRAGMA foreign_keys = ON;
+    `);
+  }
+
+  // Garante colunas de movimentações caso tabela já tenha sido criada sem elas
+  const colsMovExistentes = db.prepare('PRAGMA table_info(movimentacoes)').all().map(c => c.name);
+  const colunasMovNecessarias = [
+    { nome: 'colaborador', tipo: 'TEXT' },
+    { nome: 'status_emprestimo', tipo: 'TEXT' },
+    { nome: 'data_devolucao', tipo: 'DATETIME' },
+    { nome: 'movimentacao_origem_id', tipo: 'INTEGER' }
+  ];
+  colunasMovNecessarias.forEach(col => {
+    if (!colsMovExistentes.includes(col.nome)) {
+      db.exec(`ALTER TABLE movimentacoes ADD COLUMN ${col.nome} ${col.tipo}`);
+    }
+  });
 
   // Migração segura para adicionar novas colunas caso o banco já exista
   const colunasNecessarias = [

@@ -11,6 +11,7 @@ const upload = multer({
 const ProdutoController = require('../controllers/ProdutoController');
 const EstoqueController = require('../controllers/EstoqueController');
 const BuscaController = require('../controllers/BuscaController');
+const BalcaoController = require('../controllers/BalcaoController');
 
 // --- PÁGINA INICIAL (Direciona diretamente para o Inventário) ---
 router.get('/', (req, res) => {
@@ -31,6 +32,11 @@ router.get('/produtos/:id/detalhes', ProdutoController.detalhes);
 router.get('/produtos/:id/editar', ProdutoController.edit);
 router.post('/produtos/:id/editar', ProdutoController.update);
 router.post('/produtos/:id/excluir', ProdutoController.delete);
+
+// --- BALCÃO (ATENDIMENTO, LANÇAMENTOS E EMPRÉSTIMOS) ---
+router.get('/balcao', BalcaoController.index);
+router.post('/balcao/registrar', BalcaoController.registrar);
+router.post('/balcao/devolver/:id', BalcaoController.devolver);
 
 // --- MOVIMENTAÇÕES (HISTÓRICO E GESTÃO) ---
 router.get('/movimentacoes', EstoqueController.index);

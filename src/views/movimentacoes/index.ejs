@@ -87,6 +87,9 @@
           <option value="">Todos os Tipos</option>
           <option value="ENTRADA" <%= filtros.tipo === 'ENTRADA' ? 'selected' : '' %>>Entradas (Inbound)</option>
           <option value="SAIDA" <%= filtros.tipo === 'SAIDA' ? 'selected' : '' %>>Baixas (Outbound)</option>
+          <option value="EMPRESTIMO" <%= filtros.tipo === 'EMPRESTIMO' ? 'selected' : '' %>>Empréstimos (Ferramentas)</option>
+          <option value="DEVOLUCAO" <%= filtros.tipo === 'DEVOLUCAO' ? 'selected' : '' %>>Devoluções</option>
+          <option value="TROCA" <%= filtros.tipo === 'TROCA' ? 'selected' : '' %>>Trocas / Substituições</option>
         </select>
       </div>
 
@@ -148,35 +151,85 @@
           <% movimentacoes.forEach(m => { %>
             <tr style="cursor: pointer;" onclick="abrirModalMovimentacao(<%= m.id %>)" title="Clique para ver detalhes, editar ou estornar a movimentação MOV-<%= String(m.id).padStart(4, '0') %>">
               <td>
-                <div style="display: flex; align-items: center;">
-                  <span class="direction-circle <%= m.tipo === 'ENTRADA' ? 'inbound' : 'outbound' %>">
-                    <i class="fa-solid <%= m.tipo === 'ENTRADA' ? 'fa-arrow-down' : 'fa-arrow-up' %>"></i>
-                  </span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <% if (m.tipo === 'ENTRADA') { %>
+                    <span class="direction-circle inbound" title="Entrada / Inbound">
+                      <i class="fa-solid fa-arrow-down"></i>
+                    </span>
+                  <% } else if (m.tipo === 'SAIDA') { %>
+                    <span class="direction-circle outbound" title="Baixa / Saída">
+                      <i class="fa-solid fa-arrow-up"></i>
+                    </span>
+                  <% } else if (m.tipo === 'EMPRESTIMO') { %>
+                    <span class="direction-circle" style="background: #FEF3C7; color: #D97706;" title="Empréstimo de Ferramenta">
+                      <i class="fa-solid fa-hand-holding-hand"></i>
+                    </span>
+                  <% } else if (m.tipo === 'DEVOLUCAO') { %>
+                    <span class="direction-circle" style="background: #DBEAFE; color: #2563EB;" title="Devolução de Ferramenta">
+                      <i class="fa-solid fa-rotate-left"></i>
+                    </span>
+                  <% } else { %>
+                    <span class="direction-circle" style="background: #EDE9FE; color: #7C3AED;" title="Troca / Substituição">
+                      <i class="fa-solid fa-repeat"></i>
+                    </span>
+                  <% } %>
                   <strong style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-main);">
                     MOV-<%= String(m.id).padStart(4, '0') %>
                   </strong>
                 </div>
               </td>
               <td>
-                <span class="status-pill <%= m.tipo === 'ENTRADA' ? 'in-stock' : 'low-stock' %>">
-                  <span class="status-dot-sm"></span> <%= m.tipo === 'ENTRADA' ? 'Entrada' : 'Baixa' %>
-                </span>
+                <% if (m.tipo === 'ENTRADA') { %>
+                  <span class="status-pill in-stock">
+                    <span class="status-dot-sm"></span> Entrada
+                  </span>
+                <% } else if (m.tipo === 'SAIDA') { %>
+                  <span class="status-pill low-stock">
+                    <span class="status-dot-sm"></span> Saída
+                  </span>
+                <% } else if (m.tipo === 'EMPRESTIMO') { %>
+                  <span class="status-pill" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D;">
+                    <i class="fa-solid fa-hand-holding-hand" style="font-size: 0.7rem;"></i> Empréstimo
+                    <% if (m.status_emprestimo === 'PENDENTE') { %>
+                      <small style="font-weight: 700; color: #B45309;">(Pendente)</small>
+                    <% } else if (m.status_emprestimo === 'DEVOLVIDO') { %>
+                      <small style="font-weight: 700; color: #059669;">(Devolvido)</small>
+                    <% } %>
+                  </span>
+                <% } else if (m.tipo === 'DEVOLUCAO') { %>
+                  <span class="status-pill" style="background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE;">
+                    <i class="fa-solid fa-rotate-left" style="font-size: 0.7rem;"></i> Devolução
+                  </span>
+                <% } else { %>
+                  <span class="status-pill" style="background: #EDE9FE; color: #5B21B6; border: 1px solid #DDD6FE;">
+                    <i class="fa-solid fa-repeat" style="font-size: 0.7rem;"></i> Troca
+                  </span>
+                <% } %>
               </td>
               <td>
                 <div style="font-weight: 600; color: var(--text-main); font-size: 0.88rem;"><%= m.produto_nome %></div>
                 <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim);"><%= m.produto_sku %></div>
               </td>
               <td>
-                <strong style="color: <%= m.tipo === 'ENTRADA' ? 'var(--teal)' : 'var(--text-main)' %>;">
-                  <%= m.tipo === 'ENTRADA' ? '+' : '-' %><%= m.quantidade %>
-                </strong> 
+                <% if (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO') { %>
+                  <strong style="color: var(--teal);">+<%= m.quantidade %></strong>
+                <% } else if (m.tipo === 'SAIDA' || m.tipo === 'EMPRESTIMO') { %>
+                  <strong style="color: var(--danger);">-<%= m.quantidade %></strong>
+                <% } else { %>
+                  <strong style="color: #7C3AED;">±<%= m.quantidade %></strong>
+                <% } %>
                 <small style="color: var(--text-muted); font-size: 0.75rem;"><%= m.produto_unidade %></small>
               </td>
               <td>
                 <span style="font-size: 0.82rem; color: var(--text-muted);"><%= formatDate(m.criado_em) %></span>
               </td>
               <td>
-                <span style="font-size: 0.82rem; color: var(--text-body);"><%= m.responsavel %></span>
+                <div style="font-size: 0.82rem; color: var(--text-main); font-weight: 600;"><%= m.responsavel %></div>
+                <% if (m.colaborador && m.colaborador !== m.responsavel) { %>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);">
+                    <i class="fa-solid fa-user-tag" style="font-size: 0.68rem;"></i> <%= m.colaborador %>
+                  </div>
+                <% } %>
               </td>
               <td>
                 <% if (m.documento_ref) { %>
@@ -266,8 +319,18 @@
           </div>
 
           <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Colaborador / Retirante</div>
+            <div id="mov-view-colaborador" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
             <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Documento / NF / O.S.</div>
             <div id="mov-view-doc" style="font-size: 0.95rem; font-family: var(--font-mono); font-weight: 600; color: var(--text-main); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);" id="mov-view-status-wrap">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Status / Situação</div>
+            <div id="mov-view-status-emprestimo" style="font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-top: 2px;">-</div>
           </div>
 
           <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md); grid-column: 1 / -1;">
@@ -293,14 +356,26 @@
             <!-- Tipo -->
             <div class="form-group full-width">
               <label class="form-label">Natureza da Operação</label>
-              <div style="display: flex; gap: 1rem;">
-                <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--teal);">
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--teal);">
                   <input type="radio" name="tipo" id="modal-edit-tipo-entrada" value="ENTRADA">
-                  <i class="fa-solid fa-arrow-down"></i> Entrada / Reposição
+                  <i class="fa-solid fa-arrow-down"></i> Entrada
                 </label>
-                <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--danger);">
+                <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--danger);">
                   <input type="radio" name="tipo" id="modal-edit-tipo-saida" value="SAIDA">
                   <i class="fa-solid fa-arrow-up"></i> Baixa / Saída
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #D97706;">
+                  <input type="radio" name="tipo" id="modal-edit-tipo-emprestimo" value="EMPRESTIMO">
+                  <i class="fa-solid fa-hand-holding-hand"></i> Empréstimo
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #2563EB;">
+                  <input type="radio" name="tipo" id="modal-edit-tipo-devolucao" value="DEVOLUCAO">
+                  <i class="fa-solid fa-rotate-left"></i> Devolução
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #7C3AED;">
+                  <input type="radio" name="tipo" id="modal-edit-tipo-troca" value="TROCA">
+                  <i class="fa-solid fa-repeat"></i> Troca
                 </label>
               </div>
             </div>
@@ -323,8 +398,14 @@
 
             <!-- Responsável -->
             <div class="form-group">
-              <label class="form-label" for="modal-edit-mov-resp">Responsável</label>
+              <label class="form-label" for="modal-edit-mov-resp">Responsável (Almoxarife)</label>
               <input type="text" id="modal-edit-mov-resp" name="responsavel" class="form-control" required>
+            </div>
+
+            <!-- Colaborador / Retirante -->
+            <div class="form-group full-width">
+              <label class="form-label" for="modal-edit-mov-colab">Colaborador / Solicitante</label>
+              <input type="text" id="modal-edit-mov-colab" name="colaborador" class="form-control" placeholder="Nome do colaborador que retirou ou utilizou">
             </div>
 
             <!-- Motivo -->
@@ -409,32 +490,73 @@
 
     const codFormatado = `MOV-${String(m.id).padStart(4, '0')}`;
     document.getElementById('modal-mov-title').textContent = codFormatado;
-    document.getElementById('modal-mov-subtitle').textContent = m.tipo === 'ENTRADA' ? 'Entrada no estoque' : 'Baixa de estoque';
 
     const iconDiv = document.getElementById('modal-mov-icon');
     const badgeDiv = document.getElementById('mov-view-badge');
     const volumeDiv = document.getElementById('mov-view-volume');
+    const statusWrap = document.getElementById('mov-view-status-wrap');
+    const statusDiv = document.getElementById('mov-view-status-emprestimo');
 
     if (m.tipo === 'ENTRADA') {
+      document.getElementById('modal-mov-subtitle').textContent = 'Entrada / Reposição de estoque';
       iconDiv.style.background = 'var(--success-bg)';
       iconDiv.style.color = 'var(--teal)';
       iconDiv.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
       badgeDiv.innerHTML = '<span class="status-pill in-stock"><span class="status-dot-sm"></span> Entrada (Inbound)</span>';
       volumeDiv.style.color = 'var(--teal)';
       volumeDiv.textContent = `+${m.quantidade} ${m.produto_unidade || 'UN'}`;
-    } else {
+      if (statusWrap) statusWrap.style.display = 'none';
+    } else if (m.tipo === 'SAIDA') {
+      document.getElementById('modal-mov-subtitle').textContent = 'Baixa / Consumo de estoque';
       iconDiv.style.background = 'var(--danger-bg)';
       iconDiv.style.color = 'var(--danger)';
       iconDiv.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
       badgeDiv.innerHTML = '<span class="status-pill low-stock"><span class="status-dot-sm"></span> Baixa (Outbound)</span>';
       volumeDiv.style.color = 'var(--danger)';
       volumeDiv.textContent = `-${m.quantidade} ${m.produto_unidade || 'UN'}`;
+      if (statusWrap) statusWrap.style.display = 'none';
+    } else if (m.tipo === 'EMPRESTIMO') {
+      document.getElementById('modal-mov-subtitle').textContent = 'Empréstimo de ferramenta';
+      iconDiv.style.background = '#FEF3C7';
+      iconDiv.style.color = '#D97706';
+      iconDiv.innerHTML = '<i class="fa-solid fa-hand-holding-hand"></i>';
+      badgeDiv.innerHTML = '<span class="status-pill" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D;"><i class="fa-solid fa-hand-holding-hand"></i> Empréstimo</span>';
+      volumeDiv.style.color = '#D97706';
+      volumeDiv.textContent = `-${m.quantidade} ${m.produto_unidade || 'UN'}`;
+      if (statusWrap) {
+        statusWrap.style.display = 'block';
+        statusDiv.innerHTML = m.status_emprestimo === 'PENDENTE' 
+          ? '<span style="color: #D97706;"><i class="fa-solid fa-clock"></i> Pendente de Devolução</span>' 
+          : '<span style="color: #059669;"><i class="fa-solid fa-circle-check"></i> Devolvido</span>';
+      }
+    } else if (m.tipo === 'DEVOLUCAO') {
+      document.getElementById('modal-mov-subtitle').textContent = 'Devolução de ferramenta emprestada';
+      iconDiv.style.background = '#DBEAFE';
+      iconDiv.style.color = '#2563EB';
+      iconDiv.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
+      badgeDiv.innerHTML = '<span class="status-pill" style="background:#DBEAFE; color:#1E40AF; border:1px solid #BFDBFE;"><i class="fa-solid fa-rotate-left"></i> Devolução</span>';
+      volumeDiv.style.color = '#2563EB';
+      volumeDiv.textContent = `+${m.quantidade} ${m.produto_unidade || 'UN'}`;
+      if (statusWrap) {
+        statusWrap.style.display = 'block';
+        statusDiv.innerHTML = '<span style="color: #2563EB;"><i class="fa-solid fa-circle-check"></i> Baixado com Sucesso</span>';
+      }
+    } else { // TROCA
+      document.getElementById('modal-mov-subtitle').textContent = 'Troca / Substituição física';
+      iconDiv.style.background = '#EDE9FE';
+      iconDiv.style.color = '#7C3AED';
+      iconDiv.innerHTML = '<i class="fa-solid fa-repeat"></i>';
+      badgeDiv.innerHTML = '<span class="status-pill" style="background:#EDE9FE; color:#5B21B6; border:1px solid #DDD6FE;"><i class="fa-solid fa-repeat"></i> Troca</span>';
+      volumeDiv.style.color = '#7C3AED';
+      volumeDiv.textContent = `±${m.quantidade} ${m.produto_unidade || 'UN'}`;
+      if (statusWrap) statusWrap.style.display = 'none';
     }
 
     document.getElementById('mov-view-data').textContent = m.criado_em || '-';
     document.getElementById('mov-view-produto').textContent = m.produto_nome || '-';
     document.getElementById('mov-view-sku').textContent = `SKU: ${m.produto_sku || '-'}`;
     document.getElementById('mov-view-responsavel').textContent = m.responsavel || '-';
+    document.getElementById('mov-view-colaborador').textContent = m.colaborador || m.responsavel || '-';
     document.getElementById('mov-view-doc').textContent = m.documento_ref || '-';
     document.getElementById('mov-view-motivo').textContent = m.motivo || 'Nenhum motivo informado';
 
@@ -458,13 +580,20 @@
 
     if (m.tipo === 'ENTRADA') {
       document.getElementById('modal-edit-tipo-entrada').checked = true;
-    } else {
+    } else if (m.tipo === 'SAIDA') {
       document.getElementById('modal-edit-tipo-saida').checked = true;
+    } else if (m.tipo === 'EMPRESTIMO') {
+      document.getElementById('modal-edit-tipo-emprestimo').checked = true;
+    } else if (m.tipo === 'DEVOLUCAO') {
+      document.getElementById('modal-edit-tipo-devolucao').checked = true;
+    } else if (m.tipo === 'TROCA') {
+      document.getElementById('modal-edit-tipo-troca').checked = true;
     }
 
     document.getElementById('modal-edit-produto-id').value = m.produto_id;
     document.getElementById('modal-edit-mov-qtd').value = m.quantidade;
     document.getElementById('modal-edit-mov-resp').value = m.responsavel || '';
+    document.getElementById('modal-edit-mov-colab').value = m.colaborador || '';
     document.getElementById('modal-edit-mov-motivo').value = m.motivo || '';
     document.getElementById('modal-edit-mov-doc').value = m.documento_ref || '';
 

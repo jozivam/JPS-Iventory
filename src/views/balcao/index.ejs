@@ -1,0 +1,666 @@
+<%- include('../layouts/header') %>
+
+<% if (typeof sucesso !== 'undefined' && sucesso) { %>
+  <div class="alert alert-success">
+    <div><i class="fa-solid fa-circle-check"></i> <%= sucesso %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+  <div class="alert alert-danger">
+    <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<!-- Cabeçalho do Balcão -->
+<div class="page-header-flex">
+  <div class="page-title-wrap">
+    <h2>Balcão de Atendimento</h2>
+    <p>Lançamentos operacionais rápidos de entradas, saídas, trocas e controle de empréstimo de ferramentas.</p>
+  </div>
+
+  <div class="page-actions-group">
+    <a href="/movimentacoes" class="btn btn-outline" title="Ver histórico completo de movimentações">
+      <i class="fa-solid fa-clock-rotate-left"></i> Histórico Completo
+    </a>
+  </div>
+</div>
+
+<!-- Cards de Indicadores do Balcão -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+  
+  <!-- Empréstimos Ativos -->
+  <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #F59E0B;">
+    <div style="width: 44px; height: 44px; border-radius: 10px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+      <i class="fa-solid fa-hand-holding-hand"></i>
+    </div>
+    <div>
+      <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Empréstimos Ativos</div>
+      <div style="font-size: 1.4rem; font-weight: 800; color: #B45309; line-height: 1.2;">
+        <%= estatisticas.emprestimosAtivos %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">ferramenta(s)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Atendimentos Hoje -->
+  <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid var(--primary);">
+    <div style="width: 44px; height: 44px; border-radius: 10px; background: #EEF2FF; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+      <i class="fa-solid fa-bolt"></i>
+    </div>
+    <div>
+      <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Atendimentos Hoje</div>
+      <div style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); line-height: 1.2;">
+        <%= estatisticas.totalAtendimentosHoje %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">registro(s)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entradas / Reposições Hoje -->
+  <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #10B981;">
+    <div style="width: 44px; height: 44px; border-radius: 10px; background: #D1FAE5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+      <i class="fa-solid fa-arrow-down"></i>
+    </div>
+    <div>
+      <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Entradas Hoje</div>
+      <div style="font-size: 1.4rem; font-weight: 800; color: #047857; line-height: 1.2;">
+        +<%= estatisticas.entradasHoje %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">unidades</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saídas / Empréstimos Hoje -->
+  <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #EF4444;">
+    <div style="width: 44px; height: 44px; border-radius: 10px; background: #FEE2E2; color: #DC2626; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+      <i class="fa-solid fa-arrow-up"></i>
+    </div>
+    <div>
+      <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Saídas / Baixas Hoje</div>
+      <div style="font-size: 1.4rem; font-weight: 800; color: #B91C1C; line-height: 1.2;">
+        -<%= estatisticas.saidasHoje %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">unidades</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Grade Principal: Formulário de Lançamento (Esquerda) vs Empréstimos Ativos (Direita) -->
+<div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem; align-items: flex-start; margin-bottom: 2rem;">
+  
+  <!-- COLUNA 1: FORMULÁRIO DE ATENDIMENTO E LANÇAMENTO -->
+  <div class="table-card" style="padding: 1.5rem;">
+    <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+      <i class="fa-solid fa-cash-register" style="color: var(--primary);"></i> Novo Lançamento no Balcão
+    </h3>
+
+    <form action="/balcao/registrar" method="POST" id="form-balcao">
+      
+      <!-- Seletor Interativo dos 5 Tipos de Operação -->
+      <div style="margin-bottom: 1.25rem;">
+        <label class="form-label" style="margin-bottom: 0.5rem; display: block;">
+          Natureza da Operação:
+        </label>
+        
+        <input type="hidden" name="tipo" id="input-tipo-operacao" value="<%= tipoPreSelecionado %>">
+        
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.4rem;" id="grid-tipos-operacao">
+          
+          <!-- Saída -->
+          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'SAIDA' ? 'ativo' : '' %>" data-tipo="SAIDA" data-cor="#EF4444" data-titulo="Saída de Consumo" onclick="selecionarTipo('SAIDA', this)">
+            <i class="fa-solid fa-arrow-up"></i>
+            <span>Saída</span>
+          </button>
+
+          <!-- Empréstimo -->
+          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'EMPRESTIMO' ? 'ativo' : '' %>" data-tipo="EMPRESTIMO" data-cor="#F59E0B" data-titulo="Empréstimo de Ferramenta" onclick="selecionarTipo('EMPRESTIMO', this)">
+            <i class="fa-solid fa-hand-holding-hand"></i>
+            <span>Empréstimo</span>
+          </button>
+
+          <!-- Devolução -->
+          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'DEVOLUCAO' ? 'ativo' : '' %>" data-tipo="DEVOLUCAO" data-cor="#06B6D4" data-titulo="Devolução de Ferramenta" onclick="selecionarTipo('DEVOLUCAO', this)">
+            <i class="fa-solid fa-rotate-left"></i>
+            <span>Devolução</span>
+          </button>
+
+          <!-- Entrada -->
+          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'ENTRADA' ? 'ativo' : '' %>" data-tipo="ENTRADA" data-cor="#10B981" data-titulo="Entrada / Reposição" onclick="selecionarTipo('ENTRADA', this)">
+            <i class="fa-solid fa-arrow-down"></i>
+            <span>Entrada</span>
+          </button>
+
+          <!-- Troca -->
+          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'TROCA' ? 'ativo' : '' %>" data-tipo="TROCA" data-cor="#8B5CF6" data-titulo="Troca de Produto" onclick="selecionarTipo('TROCA', this)">
+            <i class="fa-solid fa-repeat"></i>
+            <span>Troca</span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Banner Informativo da Operação Selecionada -->
+      <div id="banner-tipo-info" style="padding: 0.65rem 0.85rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;">
+        <i class="fa-solid fa-circle-info" id="icone-banner-info"></i>
+        <span id="texto-banner-info">Saída de material do almoxarifado (consumo, requisição de obra ou descarte).</span>
+      </div>
+
+      <!-- Atalho Rápido para Devolução de Empréstimos Ativos -->
+      <div id="box-atalho-devolucao" style="display: <%= tipoPreSelecionado === 'DEVOLUCAO' ? 'block' : 'none' %>; margin-bottom: 1.25rem; padding: 0.85rem; background: #ECFEFF; border: 1px solid #A5F3FC; border-radius: 8px;">
+        <label class="form-label" style="color: #0E7490; font-weight: 700; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+          <i class="fa-solid fa-list-check"></i> Selecione o Empréstimo Ativo a ser Devolvido (Opcional):
+        </label>
+        <% if (emprestimosPendentes && emprestimosPendentes.length > 0) { %>
+          <select id="select-emprestimo-origem" class="form-select" onchange="preencherDevolucao(this.value)">
+            <option value="">-- Selecione para preencher automaticamente --</option>
+            <% emprestimosPendentes.forEach(emp => { %>
+              <option value="<%= emp.id %>" data-prodid="<%= emp.produto_id %>" data-qtd="<%= emp.quantidade %>" data-colab="<%= emp.colaborador || emp.responsavel %>" data-doc="DEV-MOV-<%= String(emp.id).padStart(4, '0') %>">
+                [MOV-<%= String(emp.id).padStart(4, '0') %>] <%= emp.produto_nome %> • <%= emp.quantidade %> UN com <%= emp.colaborador || emp.responsavel %>
+              </option>
+            <% }) %>
+          </select>
+        <% } else { %>
+          <div style="font-size: 0.8rem; color: #0E7490;">
+            Não há ferramentas emprestadas em aberto no momento. Você pode registrar uma devolução manual avulsa abaixo.
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Seleção do Produto / Material -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label class="form-label" for="balcao-produto-select">
+          Produto / Ferramenta <span style="color: var(--danger);">*</span>
+        </label>
+        <select id="balcao-produto-select" name="produto_id" class="form-select" required onchange="atualizarInfoProduto(this)">
+          <option value="">-- Selecione o item no inventário --</option>
+          <% produtos.forEach(p => { %>
+            <option 
+              value="<%= p.id %>" 
+              data-sku="<%= p.sku %>" 
+              data-qtd="<%= p.quantidade %>" 
+              data-unidade="<%= p.unidade_medida || 'UN' %>"
+              data-marca="<%= p.marca || '' %>"
+              data-categoria="<%= p.categoria %>"
+              <%= (produtoPreSelecionado && produtoPreSelecionado.id === p.id) ? 'selected' : '' %>
+            >
+              [<%= p.sku %>] <%= p.nome %> <%= p.marca ? `(${p.marca})` : '' %> — Saldo: <%= p.quantidade %> <%= p.unidade_medida || 'UN' %>
+            </option>
+          <% }) %>
+        </select>
+
+        <!-- Detalhe do Produto Selecionado -->
+        <div id="detalhe-produto-box" style="display: <%= produtoPreSelecionado ? 'flex' : 'none' %>; align-items: center; justify-content: space-between; margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-main); border-radius: 6px; border: 1px solid var(--border-light); font-size: 0.8rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span id="detalhe-produto-sku" class="badge" style="background: var(--bg-surface); border: 1px solid var(--border-light); font-weight: 700;">
+              <%= produtoPreSelecionado ? produtoPreSelecionado.sku : '' %>
+            </span>
+            <span id="detalhe-produto-cat" style="color: var(--text-muted);">
+              <%= produtoPreSelecionado ? produtoPreSelecionado.categoria : '' %>
+            </span>
+          </div>
+          <div>
+            Saldo Atual: <strong id="detalhe-produto-saldo" style="color: var(--primary); font-size: 0.95rem;">
+              <%= produtoPreSelecionado ? produtoPreSelecionado.quantidade : 0 %> <%= produtoPreSelecionado ? (produtoPreSelecionado.unidade_medida || 'UN') : '' %>
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quantidade e Botões Rápidos -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label class="form-label" for="balcao-quantidade-input">
+          Quantidade a Movimentar <span style="color: var(--danger);">*</span>
+        </label>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <input 
+            type="number" 
+            id="balcao-quantidade-input" 
+            name="quantidade" 
+            class="form-control" 
+            min="1" 
+            value="1" 
+            required 
+            style="font-size: 1.1rem; font-weight: 700; width: 140px; text-align: center;"
+          >
+          <!-- Botões Rápidos -->
+          <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(1)">+1</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(2)">+2</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(5)">+5</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="ajustarQtd(10)">+10</button>
+        </div>
+      </div>
+
+      <!-- Colaborador e Responsável -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-group">
+          <label class="form-label" for="balcao-colaborador-input" id="label-colaborador">
+            Colaborador / Solicitante <span style="color: var(--danger);">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="balcao-colaborador-input" 
+            name="colaborador" 
+            class="form-control" 
+            placeholder="Ex: Carlos Pereira (Eletricista)"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="balcao-responsavel-input">
+            Atendente do Almoxarifado
+          </label>
+          <input 
+            type="text" 
+            id="balcao-responsavel-input" 
+            name="responsavel" 
+            class="form-control" 
+            value="Jozivam Silva"
+            placeholder="Nome do almoxarife"
+          >
+        </div>
+      </div>
+
+      <!-- Motivo e Documento de Referência -->
+      <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="form-group">
+          <label class="form-label" for="balcao-motivo-input">
+            Motivo / Justificativa / Finalidade
+          </label>
+          <input 
+            type="text" 
+            id="balcao-motivo-input" 
+            name="motivo" 
+            class="form-control" 
+            placeholder="Ex: Manutenção no canteiro de obras, uso na sala técnica..."
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="balcao-doc-input">
+            Nº Documento / O.S / Requisição
+          </label>
+          <input 
+            type="text" 
+            id="balcao-doc-input" 
+            name="documento_ref" 
+            class="form-control" 
+            placeholder="Ex: OS-2026-08, REQ-44..."
+          >
+        </div>
+      </div>
+
+      <input type="hidden" name="movimentacao_origem_id" id="balcao-origem-id" value="">
+
+      <!-- Botão de Ação -->
+      <button type="submit" class="btn btn-primary" id="btn-submit-balcao" style="width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+        <i class="fa-solid fa-check"></i> <span id="btn-submit-texto">Confirmar Saída no Balcão</span>
+      </button>
+
+    </form>
+  </div>
+
+  <!-- COLUNA 2: PAINEL DE FERRAMENTAS EMPRESTADAS (EM ABERTO) -->
+  <div class="table-card" style="padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+      <h3 style="font-size: 1.05rem; font-weight: 700; color: #B45309; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-hand-holding-hand" style="color: #F59E0B;"></i> Empréstimos Ativos
+      </h3>
+      <span class="badge" style="background: #FEF3C7; color: #B45309; font-weight: 700; font-size: 0.75rem;">
+        <%= emprestimosPendentes.length %> pendente(s)
+      </span>
+    </div>
+
+    <% if (emprestimosPendentes && emprestimosPendentes.length > 0) { %>
+      <div style="display: flex; flex-direction: column; gap: 0.85rem; max-height: 580px; overflow-y: auto; padding-right: 0.25rem;">
+        <% emprestimosPendentes.forEach(emp => { %>
+          <div style="padding: 0.95rem; border: 1px solid #FDE68A; background: #FFFBEB; border-radius: 8px; transition: all 0.2s ease;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.35rem;">
+              <strong style="color: #92400E; font-size: 0.92rem; line-height: 1.3;">
+                <%= emp.produto_nome %>
+              </strong>
+              <span class="badge" style="background: #ffffff; color: #B45309; border: 1px solid #FCD34D; font-size: 0.72rem; white-space: nowrap;">
+                <%= emp.quantidade %> <%= emp.produto_unidade || 'UN' %>
+              </span>
+            </div>
+
+            <div style="font-size: 0.78rem; color: #78350F; margin-bottom: 0.6rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <span><i class="fa-solid fa-barcode"></i> <%= emp.produto_sku %></span>
+              <span><i class="fa-solid fa-user"></i> <strong><%= emp.colaborador || emp.responsavel %></strong></span>
+              <span><i class="fa-regular fa-clock"></i> <%= formatDate(emp.criado_em) %></span>
+            </div>
+
+            <% if (emp.motivo) { %>
+              <div style="font-size: 0.75rem; color: #92400E; font-style: italic; margin-bottom: 0.65rem;">
+                "<%= emp.motivo %>"
+              </div>
+            <% } %>
+
+            <!-- Botão de Devolução Rápida -->
+            <form action="/balcao/devolver/<%= emp.id %>" method="POST" onsubmit="return confirm('Confirmar a devolução de <%= emp.quantidade %>x <%= emp.produto_nome %> entregue por <%= emp.colaborador || emp.responsavel %>? O saldo será restaurado no inventário.')">
+              <input type="hidden" name="responsavel" value="Jozivam Silva">
+              <button type="submit" class="btn btn-sm" style="width: 100%; background: #059669; color: #ffffff; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.4rem; border: none; padding: 0.45rem;">
+                <i class="fa-solid fa-rotate-left"></i> Dar Baixa (Devolver ao Estoque)
+              </button>
+            </form>
+
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+        <div style="font-size: 2.5rem; color: #10B981; margin-bottom: 0.75rem;">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <strong style="color: var(--text-main); font-size: 0.95rem; display: block; margin-bottom: 0.25rem;">
+          Nenhuma ferramenta emprestada em aberto!
+        </strong>
+        <p style="font-size: 0.8rem; margin: 0;">
+          Todas as ferramentas estão guardadas e disponíveis no inventário físico do almoxarifado.
+        </p>
+      </div>
+    <% } %>
+
+  </div>
+
+</div>
+
+<!-- Histórico Recente de Atendimentos no Balcão -->
+<div class="table-card">
+  <div style="padding: 1.25rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center;">
+    <h3 style="font-size: 0.98rem; font-weight: 700; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+      <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i> Últimos Atendimentos no Balcão
+    </h3>
+    <a href="/movimentacoes" class="btn btn-outline btn-sm">Ver Extrato Completo</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="fixoria-table">
+      <thead>
+        <tr>
+          <th>CÓDIGO</th>
+          <th>TIPO DE OPERAÇÃO</th>
+          <th>MATERIAL / ITEM</th>
+          <th>QUANTIDADE</th>
+          <th>COLABORADOR / RESPONSÁVEL</th>
+          <th>DATA & HORA</th>
+          <th>DOC / NOTA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (ultimosAtendimentos && ultimosAtendimentos.length > 0) { %>
+          <% ultimosAtendimentos.forEach(m => { %>
+            <tr>
+              <td>
+                <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--text-main);">
+                  MOV-<%= String(m.id).padStart(4, '0') %>
+                </span>
+              </td>
+              <td>
+                <% if (m.tipo === 'ENTRADA') { %>
+                  <span class="status-pill in-stock"><span class="status-dot-sm"></span> Entrada</span>
+                <% } else if (m.tipo === 'SAIDA') { %>
+                  <span class="status-pill out-of-stock"><span class="status-dot-sm"></span> Saída</span>
+                <% } else if (m.tipo === 'EMPRESTIMO') { %>
+                  <span class="status-pill" style="background: #FEF3C7; color: #B45309; border: 1px solid #FCD34D;">
+                    <i class="fa-solid fa-hand-holding-hand" style="font-size: 0.7rem;"></i> Empréstimo
+                  </span>
+                <% } else if (m.tipo === 'DEVOLUCAO') { %>
+                  <span class="status-pill" style="background: #CFFAFE; color: #0E7490; border: 1px solid #A5F3FC;">
+                    <i class="fa-solid fa-rotate-left" style="font-size: 0.7rem;"></i> Devolução
+                  </span>
+                <% } else if (m.tipo === 'TROCA') { %>
+                  <span class="status-pill" style="background: #EDE9FE; color: #6D28D9; border: 1px solid #DDD6FE;">
+                    <i class="fa-solid fa-repeat" style="font-size: 0.7rem;"></i> Troca
+                  </span>
+                <% } else { %>
+                  <span class="status-pill"><%= m.tipo %></span>
+                <% } %>
+              </td>
+              <td>
+                <div style="font-weight: 600; color: var(--text-main); font-size: 0.88rem;"><%= m.produto_nome %></div>
+                <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim);"><%= m.produto_sku %></div>
+              </td>
+              <td>
+                <% if (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO') { %>
+                  <strong style="color: #059669;">+<%= m.quantidade %></strong>
+                <% } else if (m.tipo === 'SAIDA' || m.tipo === 'EMPRESTIMO') { %>
+                  <strong style="color: #DC2626;">-<%= m.quantidade %></strong>
+                <% } else { %>
+                  <strong><%= m.quantidade %></strong>
+                <% } %>
+                <small style="color: var(--text-muted);"><%= m.produto_unidade %></small>
+              </td>
+              <td>
+                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">
+                  <%= m.colaborador || m.responsavel %>
+                </div>
+                <% if (m.colaborador && m.responsavel && m.colaborador !== m.responsavel) { %>
+                  <div style="font-size: 0.72rem; color: var(--text-dim);">Atendido por: <%= m.responsavel %></div>
+                <% } %>
+              </td>
+              <td>
+                <span style="font-size: 0.82rem; color: var(--text-muted);"><%= formatDate(m.criado_em) %></span>
+              </td>
+              <td>
+                <% if (m.documento_ref) { %>
+                  <span style="font-family: var(--font-mono); font-size: 0.75rem; background: var(--bg-surface); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-light);">
+                    <%= m.documento_ref %>
+                  </span>
+                <% } else { %>
+                  <span style="color: var(--text-dim);">-</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              Nenhum atendimento registrado recentemente no balcão.
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  /* Botões dos 5 Tipos de Operação */
+  .btn-tipo-op {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.75rem 0.4rem;
+    background: #ffffff;
+    border: 1.5px solid var(--border-light);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-tipo-op i {
+    font-size: 1.15rem;
+  }
+  .btn-tipo-op:hover {
+    background: var(--bg-main);
+    color: var(--text-main);
+    transform: translateY(-1px);
+  }
+  .btn-tipo-op.ativo {
+    color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  }
+  .btn-tipo-op[data-tipo="SAIDA"].ativo { background: #EF4444 !important; }
+  .btn-tipo-op[data-tipo="EMPRESTIMO"].ativo { background: #F59E0B !important; }
+  .btn-tipo-op[data-tipo="DEVOLUCAO"].ativo { background: #06B6D4 !important; }
+  .btn-tipo-op[data-tipo="ENTRADA"].ativo { background: #10B981 !important; }
+  .btn-tipo-op[data-tipo="TROCA"].ativo { background: #8B5CF6 !important; }
+</style>
+
+<script>
+  const configTipos = {
+    'SAIDA': {
+      bg: '#FEF2F2',
+      color: '#991B1B',
+      border: '#FECACA',
+      icone: 'fa-arrow-up',
+      texto: 'Saída de material do almoxarifado (consumo de equipe, requisição de obra ou descarte).',
+      btnTexto: 'Confirmar Saída no Balcão',
+      btnCor: '#EF4444',
+      labelColab: 'Colaborador / Solicitante *'
+    },
+    'EMPRESTIMO': {
+      bg: '#FFFBEB',
+      color: '#92400E',
+      border: '#FDE68A',
+      icone: 'fa-hand-holding-hand',
+      texto: 'Empréstimo de ferramenta ou equipamento para colaborador. Ficará em aberto até a devolução.',
+      btnTexto: 'Confirmar Empréstimo de Ferramenta',
+      btnCor: '#F59E0B',
+      labelColab: 'Colaborador que Retirou a Ferramenta *'
+    },
+    'DEVOLUCAO': {
+      bg: '#ECFEFF',
+      color: '#0E7490',
+      border: '#A5F3FC',
+      icone: 'fa-rotate-left',
+      texto: 'Retorno de ferramenta emprestada. O estoque do almoxarifado será reabastecido.',
+      btnTexto: 'Confirmar Devolução ao Estoque',
+      btnCor: '#06B6D4',
+      labelColab: 'Colaborador que Devolveu *'
+    },
+    'ENTRADA': {
+      bg: '#ECFDF5',
+      color: '#065F46',
+      border: '#A7F3D0',
+      icone: 'fa-arrow-down',
+      texto: 'Entrada ou reposição de mercadoria no almoxarifado (compras, nota fiscal ou recebimento).',
+      btnTexto: 'Confirmar Entrada / Reposição',
+      btnCor: '#10B981',
+      labelColab: 'Fornecedor / Responsável pela Entrega *'
+    },
+    'TROCA': {
+      bg: '#F5F3FF',
+      color: '#5B21B6',
+      border: '#DDD6FE',
+      icone: 'fa-repeat',
+      texto: 'Troca de item defeituoso/avariado ou substituição de especificação/tamanho para o colaborador.',
+      btnTexto: 'Confirmar Registro de Troca',
+      btnCor: '#8B5CF6',
+      labelColab: 'Colaborador que Solicitou a Troca *'
+    }
+  };
+
+  function selecionarTipo(tipo, btn) {
+    document.getElementById('input-tipo-operacao').value = tipo;
+    
+    // Atualiza botões
+    document.querySelectorAll('.btn-tipo-op').forEach(b => b.classList.remove('ativo'));
+    btn.classList.add('ativo');
+
+    const cfg = configTipos[tipo] || configTipos['SAIDA'];
+
+    // Atualiza Banner
+    const banner = document.getElementById('banner-tipo-info');
+    banner.style.background = cfg.bg;
+    banner.style.color = cfg.color;
+    banner.style.borderColor = cfg.border;
+    document.getElementById('icone-banner-info').className = `fa-solid ${cfg.icone}`;
+    document.getElementById('texto-banner-info').textContent = cfg.texto;
+
+    // Atualiza Botão Submit
+    const btnSubmit = document.getElementById('btn-submit-balcao');
+    btnSubmit.style.background = cfg.btnCor;
+    btnSubmit.style.borderColor = cfg.btnCor;
+    document.getElementById('btn-submit-texto').textContent = cfg.btnTexto;
+
+    // Atualiza Label Colaborador
+    document.getElementById('label-colaborador').innerHTML = `${cfg.labelColab}`;
+
+    // Exibe/Oculta caixa de atalho para devolução
+    const boxDev = document.getElementById('box-atalho-devolucao');
+    if (boxDev) {
+      boxDev.style.display = (tipo === 'DEVOLUCAO') ? 'block' : 'none';
+    }
+  }
+
+  function ajustarQtd(delta) {
+    const input = document.getElementById('balcao-quantidade-input');
+    const atual = parseInt(input.value, 10) || 0;
+    input.value = Math.max(1, atual + delta);
+  }
+
+  function atualizarInfoProduto(select) {
+    const opt = select.options[select.selectedIndex];
+    const box = document.getElementById('detalhe-produto-box');
+    
+    if (!opt || !opt.value) {
+      box.style.display = 'none';
+      return;
+    }
+
+    const sku = opt.getAttribute('data-sku') || '';
+    const qtd = opt.getAttribute('data-qtd') || '0';
+    const unidade = opt.getAttribute('data-unidade') || 'UN';
+    const cat = opt.getAttribute('data-categoria') || '';
+    const marca = opt.getAttribute('data-marca') || '';
+
+    document.getElementById('detalhe-produto-sku').textContent = sku;
+    document.getElementById('detalhe-produto-cat').textContent = `${cat}${marca ? ' • ' + marca : ''}`;
+    document.getElementById('detalhe-produto-saldo').textContent = `${qtd} ${unid}`;
+
+    box.style.display = 'flex';
+  }
+
+  function preencherDevolucao(emprestimoId) {
+    if (!emprestimoId) return;
+
+    const select = document.getElementById('select-emprestimo-origem');
+    const opt = select.options[select.selectedIndex];
+    if (!opt) return;
+
+    const prodId = opt.getAttribute('data-prodid');
+    const qtd = opt.getAttribute('data-qtd');
+    const colab = opt.getAttribute('data-colab');
+    const doc = opt.getAttribute('data-doc');
+
+    if (prodId) {
+      const selectProd = document.getElementById('balcao-produto-select');
+      selectProd.value = prodId;
+      atualizarInfoProduto(selectProd);
+    }
+
+    if (qtd) {
+      document.getElementById('balcao-quantidade-input').value = qtd;
+    }
+
+    if (colab) {
+      document.getElementById('balcao-colaborador-input').value = colab;
+    }
+
+    if (doc) {
+      document.getElementById('balcao-doc-input').value = doc;
+    }
+
+    document.getElementById('balcao-origem-id').value = emprestimoId;
+    document.getElementById('balcao-motivo-input').value = `Devolução de ferramenta emprestada (Ref: MOV-${String(emprestimoId).padStart(4, '0')})`;
+  }
+
+  // Inicializa visual do tipo pré-selecionado
+  window.addEventListener('DOMContentLoaded', () => {
+    const tipoAtual = document.getElementById('input-tipo-operacao').value || 'SAIDA';
+    const btnAtual = document.querySelector(`.btn-tipo-op[data-tipo="${tipoAtual}"]`);
+    if (btnAtual) {
+      selecionarTipo(tipoAtual, btnAtual);
+    }
+  });
+</script>
+
+<%- include('../layouts/footer') %>

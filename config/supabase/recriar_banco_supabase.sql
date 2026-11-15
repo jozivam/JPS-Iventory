@@ -49,15 +49,19 @@ CREATE TRIGGER trigger_update_produtos_atualizado_em
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- 4. TABELA: MOVIMENTACOES (HISTÓRICO E AUDITORIA)
+-- 4. TABELA: MOVIMENTACOES (HISTÓRICO, BALCÃO E AUDITORIA)
 CREATE TABLE movimentacoes (
     id BIGSERIAL PRIMARY KEY,
     produto_id BIGINT NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
-    tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('ENTRADA', 'SAIDA')),
+    tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('ENTRADA', 'SAIDA', 'EMPRESTIMO', 'DEVOLUCAO', 'TROCA')),
     quantidade NUMERIC(14, 2) NOT NULL CHECK (quantidade > 0),
     motivo TEXT,
     responsavel VARCHAR(150),
     documento_ref VARCHAR(100),
+    colaborador VARCHAR(150),
+    status_emprestimo VARCHAR(50) DEFAULT 'PENDENTE',
+    data_devolucao TIMESTAMPTZ,
+    movimentacao_origem_id BIGINT REFERENCES movimentacoes(id) ON DELETE SET NULL,
     criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -67,6 +71,8 @@ CREATE INDEX idx_produtos_categoria ON produtos(categoria);
 CREATE INDEX idx_produtos_nome ON produtos(nome);
 CREATE INDEX idx_movimentacoes_produto_id ON movimentacoes(produto_id);
 CREATE INDEX idx_movimentacoes_tipo ON movimentacoes(tipo);
+CREATE INDEX idx_movimentacoes_status_emprestimo ON movimentacoes(status_emprestimo);
+CREATE INDEX idx_movimentacoes_colaborador ON movimentacoes(colaborador);
 CREATE INDEX idx_movimentacoes_criado_em ON movimentacoes(criado_em);
 
 -- 6. CARGA INICIAL DE DADOS (SINCRONIZAÇÃO DO BANCO LOCAL)

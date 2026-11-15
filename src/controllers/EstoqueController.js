@@ -148,7 +148,7 @@ class EstoqueController {
   static async update(req, res) {
     try {
       const { id } = req.params;
-      const { produto_id, tipo, quantidade, motivo, responsavel, documento_ref } = req.body;
+      const { produto_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador } = req.body;
 
       await Movimentacao.update(id, {
         produto_id,
@@ -156,7 +156,8 @@ class EstoqueController {
         quantidade,
         motivo,
         responsavel,
-        documento_ref
+        documento_ref,
+        colaborador
       });
 
       res.redirect('/movimentacoes?sucesso=' + encodeURIComponent(`Movimentação MOV-${String(id).padStart(4, '0')} atualizada com sucesso! O inventário foi recalculado automaticamente.`));
