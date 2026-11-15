@@ -28,6 +28,7 @@ router.get('/produtos', ProdutoController.index);
 router.get('/produtos/novo', ProdutoController.create);
 router.post('/produtos', ProdutoController.store);
 router.get('/produtos/sugestoes', ProdutoController.sugestoesNome);
+router.get('/produtos/modelo/excel', ProdutoController.baixarModelo);
 router.get('/produtos/exportar/excel', ProdutoController.exportarExcel);
 router.post('/produtos/importar/excel', upload.single('planilha'), ProdutoController.importarExcel);
 router.get('/produtos/:id/detalhes', ProdutoController.detalhes);

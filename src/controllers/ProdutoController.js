@@ -329,6 +329,105 @@ class ProdutoController {
   }
 
   /**
+   * Baixa a Planilha Modelo oficial de Importação com cabeçalhos e exemplos
+   */
+  static async baixarModelo(req, res) {
+    try {
+      const colunasCabecalho = [
+        'SKU', 'Nome do Produto', 'Categoria', 'Quantidade', 'Estoque Mínimo', 
+        'Unidade', 'Marca', 'Localização', 'TAG', 'Patrimônio', 'C.A (EPI)', 
+        'Número de Série', 'Tamanho', 'Cor', 'Peso'
+      ];
+
+      const linhasExemplo = [
+        {
+          'SKU': 'FER-ALC-001',
+          'Nome do Produto': 'Alicate Universal 8 Polegadas Isolado 1000V (Exemplo)',
+          'Categoria': 'Ferramentas',
+          'Quantidade': 10,
+          'Estoque Mínimo': 3,
+          'Unidade': 'UN',
+          'Marca': 'Tramontina Pro',
+          'Localização': 'Bancada B-01',
+          'TAG': 'FER-01',
+          'Patrimônio': 'PAT-0012',
+          'C.A (EPI)': '',
+          'Número de Série': 'SN-84721',
+          'Tamanho': '8 polegadas',
+          'Cor': 'Amarelo/Vermelho',
+          'Peso': '350g'
+        },
+        {
+          'SKU': 'EPI-CAP-001',
+          'Nome do Produto': 'Capacete de Segurança com Jugular Azul (Exemplo)',
+          'Categoria': 'EPI / Segurança',
+          'Quantidade': 15,
+          'Estoque Mínimo': 5,
+          'Unidade': 'UN',
+          'Marca': 'MSA',
+          'Localização': 'Prateleira A-01',
+          'TAG': '',
+          'Patrimônio': '',
+          'C.A (EPI)': '31469',
+          'Número de Série': '',
+          'Tamanho': 'Único',
+          'Cor': 'Azul',
+          'Peso': '310g'
+        },
+        {
+          'SKU': 'ELE-CAB-001',
+          'Nome do Produto': 'Cabo de Rede UTP Cat6 100% Cobre (Exemplo)',
+          'Categoria': 'Elétrica e TI',
+          'Quantidade': 4,
+          'Estoque Mínimo': 2,
+          'Unidade': 'CX',
+          'Marca': 'Furukawa',
+          'Localização': 'Depósito D-02',
+          'TAG': 'TI-09',
+          'Patrimônio': '',
+          'C.A (EPI)': '',
+          'Número de Série': 'BOB-2026',
+          'Tamanho': 'Bobina 305m',
+          'Cor': 'Azul',
+          'Peso': '12.5kg'
+        }
+      ];
+
+      const ws = xlsx.utils.json_to_sheet(linhasExemplo, { header: colunasCabecalho });
+
+      const wscols = [
+        { wch: 16 }, // SKU
+        { wch: 48 }, // Nome do Produto
+        { wch: 20 }, // Categoria
+        { wch: 14 }, // Quantidade
+        { wch: 16 }, // Estoque Mínimo
+        { wch: 10 }, // Unidade
+        { wch: 18 }, // Marca
+        { wch: 20 }, // Localização
+        { wch: 14 }, // TAG
+        { wch: 16 }, // Patrimônio
+        { wch: 14 }, // C.A (EPI)
+        { wch: 18 }, // Número de Série
+        { wch: 16 }, // Tamanho
+        { wch: 16 }, // Cor
+        { wch: 14 }  // Peso
+      ];
+      ws['!cols'] = wscols;
+
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, 'Modelo Importação');
+
+      const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="modelo_importacao_inventario.xlsx"');
+      res.send(buffer);
+    } catch (error) {
+      console.error('Erro ao gerar modelo Excel:', error);
+      res.redirect('/produtos?erro=' + encodeURIComponent('Falha ao baixar modelo: ' + error.message));
+    }
+  }
+
+  /**
    * Exporta todo o inventário atual para uma planilha Excel (.xlsx)
    */
   static async exportarExcel(req, res) {
@@ -336,27 +435,79 @@ class ProdutoController {
       const { busca, categoria, status } = req.query;
       const produtos = await Produto.findAll({ busca, categoria, status });
 
-      const dadosFormatados = produtos.map(p => ({
-        'SKU': p.sku || '',
-        'Nome do Produto': p.nome || '',
-        'Categoria': p.categoria || 'Geral',
-        'Marca': p.marca || '',
-        'Quantidade': p.quantidade !== undefined ? p.quantidade : 0,
-        'Unidade': p.unidade_medida || 'UN',
-        'Estoque Mínimo': p.estoque_minimo !== undefined ? p.estoque_minimo : 0,
-        'Status Estoque': p.status_estoque || 'NORMAL',
-        'Localização': p.localizacao || '',
-        'TAG': p.tag || '',
-        'Patrimônio': p.patrimonio || '',
-        'C.A (EPI)': p.ca || '',
-        'Número de Série': p.numero_serie || '',
-        'Tamanho': p.tamanho || '',
-        'Cor': p.cor || '',
-        'Peso': p.peso || '',
-        'Última Atualização': p.atualizado_em || ''
-      }));
+      let dadosParaExportar = [];
+      const colunasCabecalho = [
+        'SKU', 'Nome do Produto', 'Categoria', 'Marca', 'Quantidade', 
+        'Unidade', 'Estoque Mínimo', 'Status Estoque', 'Localização', 
+        'TAG', 'Patrimônio', 'C.A (EPI)', 'Número de Série', 'Tamanho', 
+        'Cor', 'Peso', 'Última Atualização'
+      ];
 
-      const ws = xlsx.utils.json_to_sheet(dadosFormatados);
+      if (produtos && produtos.length > 0) {
+        dadosParaExportar = produtos.map(p => ({
+          'SKU': p.sku || '',
+          'Nome do Produto': p.nome || '',
+          'Categoria': p.categoria || 'Geral',
+          'Marca': p.marca || '',
+          'Quantidade': p.quantidade !== undefined ? p.quantidade : 0,
+          'Unidade': p.unidade_medida || 'UN',
+          'Estoque Mínimo': p.estoque_minimo !== undefined ? p.estoque_minimo : 0,
+          'Status Estoque': p.status_estoque || 'NORMAL',
+          'Localização': p.localizacao || '',
+          'TAG': p.tag || '',
+          'Patrimônio': p.patrimonio || '',
+          'C.A (EPI)': p.ca || '',
+          'Número de Série': p.numero_serie || '',
+          'Tamanho': p.tamanho || '',
+          'Cor': p.cor || '',
+          'Peso': p.peso || '',
+          'Última Atualização': p.atualizado_em || ''
+        }));
+      } else {
+        // Se o inventário estiver vazio, exporta os cabeçalhos com exemplos práticos
+        dadosParaExportar = [
+          {
+            'SKU': 'FER-ALC-001',
+            'Nome do Produto': 'Alicate Universal 8 Polegadas Isolado 1000V (Exemplo)',
+            'Categoria': 'Ferramentas',
+            'Marca': 'Tramontina Pro',
+            'Quantidade': 10,
+            'Unidade': 'UN',
+            'Estoque Mínimo': 3,
+            'Status Estoque': 'NORMAL',
+            'Localização': 'Bancada B-01',
+            'TAG': 'FER-01',
+            'Patrimônio': 'PAT-0012',
+            'C.A (EPI)': '',
+            'Número de Série': 'SN-84721',
+            'Tamanho': '8 polegadas',
+            'Cor': 'Amarelo/Vermelho',
+            'Peso': '350g',
+            'Última Atualização': ''
+          },
+          {
+            'SKU': 'EPI-CAP-001',
+            'Nome do Produto': 'Capacete de Segurança com Jugular Azul (Exemplo)',
+            'Categoria': 'EPI / Segurança',
+            'Marca': 'MSA',
+            'Quantidade': 15,
+            'Unidade': 'UN',
+            'Estoque Mínimo': 5,
+            'Status Estoque': 'NORMAL',
+            'Localização': 'Prateleira A-01',
+            'TAG': '',
+            'Patrimônio': '',
+            'C.A (EPI)': '31469',
+            'Número de Série': '',
+            'Tamanho': 'Único',
+            'Cor': 'Azul',
+            'Peso': '310g',
+            'Última Atualização': ''
+          }
+        ];
+      }
+
+      const ws = xlsx.utils.json_to_sheet(dadosParaExportar, { header: colunasCabecalho });
 
       // Larguras automáticas de colunas
       const wscols = [
@@ -438,8 +589,9 @@ class ProdutoController {
         const cor = (row['Cor'] || '').toString().trim() || null;
         const peso = (row['Peso'] || '').toString().trim() || null;
 
-        // Pula linhas totalmente vazias
+        // Pula linhas totalmente vazias ou linhas de exemplo
         if (!sku && !nome) continue;
+        if (nome.toLowerCase().includes('(exemplo)') || nome.toLowerCase().startsWith('exemplo:')) continue;
 
         // Verifica se o SKU ou Nome exato já existe no banco para evitar duplicações
         let produtoExistente = null;
