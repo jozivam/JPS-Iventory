@@ -39,4 +39,33 @@ router.post('/movimentacoes', EstoqueController.registrar);
 router.post('/movimentacoes/:id/editar', EstoqueController.update);
 router.post('/movimentacoes/:id/excluir', EstoqueController.delete);
 
+// --- ROTA DE DIAGNÓSTICO (Health Check) ---
+router.get('/api/diagnostico', async (req, res) => {
+  const { supabase } = require('../../config/supabase');
+  let prodsCount = 0;
+  let movsCount = 0;
+  let erro = null;
+  try {
+    if (supabase) {
+      const { data: p, error: ep } = await supabase.from('produtos').select('id');
+      const { data: m, error: em } = await supabase.from('movimentacoes').select('id');
+      if (ep) erro = ep.message;
+      else if (em) erro = em.message;
+      prodsCount = p ? p.length : 0;
+      movsCount = m ? m.length : 0;
+    }
+  } catch (e) {
+    erro = e.message;
+  }
+  res.json({
+    status: erro ? 'erro' : 'ok',
+    ambiente: process.env.VERCEL ? 'vercel-production' : 'local-development',
+    driver: process.env.DB_DRIVER || 'padrao',
+    supabaseAtivo: !!supabase,
+    produtosNoSupabase: prodsCount,
+    movimentacoesNoSupabase: movsCount,
+    erro
+  });
+});
+
 module.exports = router;

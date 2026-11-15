@@ -7,7 +7,7 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://nhomnkckccszanrqpnki.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_qjAVZBF5uy_G14Xaxgr_qw_REe9z-Sw';
 const databaseUrl = process.env.DATABASE_URL || '';
 
 // 1. Cliente Supabase JS SDK (para chamadas REST, Auth, Storage e RPC)
