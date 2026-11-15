@@ -25,15 +25,10 @@ class FichaController {
         totalSaidasRegistradas
       };
 
-      // 2. Determina qual colaborador está com a ficha aberta
-      let colaboradorIdAlvo = colaborador_id;
-      if (!colaboradorIdAlvo && colaboradoresComResumo.length > 0) {
-        // Se houver alguém com ferramentas em posse (pendência ativa), prioriza ele para visualização imediata
-        const prioritario = colaboradoresComResumo.find(c => c.temPendencia) || colaboradoresComResumo[0];
-        colaboradorIdAlvo = prioritario.id;
-      }
-
+      // 2. Determina se uma ficha individual específica foi aberta
+      let colaboradorIdAlvo = colaborador_id ? String(colaborador_id).trim() : null;
       let dadosFicha = null;
+
       if (colaboradorIdAlvo) {
         dadosFicha = await Colaborador.getFicha(colaboradorIdAlvo);
 
@@ -57,7 +52,7 @@ class FichaController {
       }
 
       res.render('fichas/index', {
-        title: 'Controle de Ficha de Colaboradores',
+        title: (dadosFicha && dadosFicha.colaborador) ? `Ficha de ${dadosFicha.colaborador.nome} - Almoxarifado` : 'Controle de Ficha de Colaboradores',
         currentPage: 'fichas',
         colaboradores: colaboradoresComResumo,
         colaboradorAtual: dadosFicha ? dadosFicha.colaborador : null,
