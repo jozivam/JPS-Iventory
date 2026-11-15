@@ -88,19 +88,59 @@
             >
           </div>
 
-          <!-- Nome / Descrição -->
-          <div class="form-group full-width">
+          <!-- Nome / Descrição com Autocomplete e Detecção Inteligente de Duplicidade -->
+          <div class="form-group full-width" style="position: relative;">
             <label class="form-label" for="produto-nome-input">
               Nome do Produto / Descrição
             </label>
-            <input 
-              type="text" 
-              id="produto-nome-input" 
-              name="nome" 
-              class="form-control" 
-              placeholder="Ex: Alicate Universal 8 Polegadas Isolado" 
-              value="<%= produto.nome || '' %>"
-            >
+            <div style="position: relative;">
+              <input 
+                type="text" 
+                id="produto-nome-input" 
+                name="nome" 
+                class="form-control" 
+                placeholder="Ex: Alicate Universal 8 Polegadas Isolado" 
+                value="<%= produto.nome || '' %>"
+                autocomplete="off"
+              >
+              <div id="loading-sugestoes" style="display: none; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+              </div>
+            </div>
+
+            <!-- Caixa de Alerta de Nome Idêntico (Bloqueio Automático) -->
+            <div id="alerta-nome-identico" style="display: none; margin-top: 0.75rem; padding: 1rem; border-radius: 8px; background: #FEF2F2; border: 1.5px solid #F87171;">
+              <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                <div style="color: #DC2626; font-size: 1.3rem; margin-top: 2px;">
+                  <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div style="flex: 1;">
+                  <div style="font-weight: 700; color: #991B1B; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                    Produto já cadastrado com este mesmo nome!
+                  </div>
+                  <p style="color: #7F1D1D; font-size: 0.85rem; margin: 0 0 0.75rem 0;" id="texto-alerta-identico">
+                    Já existe um item com esse nome exato. Para evitar duplicidades, o cadastro direto está bloqueado.
+                  </p>
+                  <div style="display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;">
+                    <a id="link-editar-identico" href="#" class="btn btn-sm" style="background: #DC2626; color: #fff; text-decoration: none; font-weight: 600;">
+                      <i class="fa-solid fa-pen-to-square"></i> Editar Produto Cadastrado
+                    </a>
+                    <span style="font-size: 0.8rem; color: #991B1B;">
+                      <i class="fa-solid fa-circle-info"></i> Ou altere o nome no campo acima para cadastrar um produto diferente.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dropdown Flutuante de Itens Parecidos / Autocomplete -->
+            <div id="dropdown-sugestoes" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1px solid var(--border-light); border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.06); z-index: 1000; overflow: hidden; max-height: 290px; overflow-y: auto;">
+              <div style="padding: 0.5rem 0.85rem; background: #F8FAFC; border-bottom: 1px solid var(--border-light); font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-lightbulb" style="color: #F59E0B;"></i> Itens com nome parecido no almoxarifado:</span>
+                <span id="contador-similares" style="font-size: 0.72rem; color: var(--text-muted);"></span>
+              </div>
+              <div id="lista-similares"></div>
+            </div>
           </div>
 
           <!-- Quantidade -->
@@ -327,6 +367,203 @@
     const num = Math.floor(1000 + Math.random() * 9000);
     document.getElementById('produto-sku-input').value = `${prefixo}-${num}`;
   });
+
+  // --- AUTOCOMPLETE E DETECÇÃO INTELIGENTE DE PRODUTO DUPLICADO ---
+  const inputNome = document.getElementById('produto-nome-input');
+  const dropdownSugestoes = document.getElementById('dropdown-sugestoes');
+  const listaSimilares = document.getElementById('lista-similares');
+  const contadorSimilares = document.getElementById('contador-similares');
+  const alertaIdentico = document.getElementById('alerta-nome-identico');
+  const textoAlertaIdentico = document.getElementById('texto-alerta-identico');
+  const linkEditarIdentico = document.getElementById('link-editar-identico');
+  const loadingSugestoes = document.getElementById('loading-sugestoes');
+  const btnSalvar = document.getElementById('btn-salvar-produto');
+  const formProduto = document.getElementById('form-produto');
+
+  let debounceTimer = null;
+  let itemExatoAtual = null;
+
+  async function verificarNome(termo) {
+    const nomeLimpo = (termo || '').trim();
+
+    if (nomeLimpo.length < 2) {
+      ocultarSugestoes();
+      return;
+    }
+
+    if (loadingSugestoes) loadingSugestoes.style.display = 'block';
+
+    try {
+      const res = await fetch('/produtos/sugestoes?nome=' + encodeURIComponent(nomeLimpo));
+      const data = await res.json();
+
+      if (loadingSugestoes) loadingSugestoes.style.display = 'none';
+
+      // Verifica se o texto digitado ainda é o mesmo da requisição
+      if (inputNome.value.trim().toLowerCase() !== nomeLimpo.toLowerCase()) {
+        return;
+      }
+
+      // CASO 1: Nome IDÊNTICO (Bloqueia cadastro e alerta)
+      if (data.exato && data.exato.nome.trim().toLowerCase() === nomeLimpo.toLowerCase()) {
+        itemExatoAtual = data.exato;
+        bloquearPorNomeIdentico(data.exato);
+        ocultarDropdown();
+        return;
+      }
+
+      // Se não for idêntico, libera o salvar e limpa alerta
+      liberarSalvar();
+
+      // CASO 2: Nomes PARECIDOS (Mostra dropdown de sugestões)
+      if (data.similares && data.similares.length > 0) {
+        renderizarSimilares(data.similares, nomeLimpo);
+      } else {
+        // CASO 3: Produto NOVO / Inédito (Some a lista e considera o digitado)
+        ocultarDropdown();
+      }
+    } catch (e) {
+      console.error('Erro ao verificar similaridade de nome:', e);
+      if (loadingSugestoes) loadingSugestoes.style.display = 'none';
+    }
+  }
+
+  function bloquearPorNomeIdentico(item) {
+    const qtd = item.quantidade !== undefined ? item.quantidade : 0;
+    const unid = item.unidade_medida || 'UN';
+    const marcaInfo = item.marca ? ` • Marca: ${item.marca}` : '';
+
+    textoAlertaIdentico.innerHTML = `O produto <strong>"${item.nome}"</strong> já está cadastrado com o código <strong>${item.sku}</strong> (${item.categoria}${marcaInfo}) e saldo atual de <strong>${qtd} ${unid}</strong>.`;
+    linkEditarIdentico.href = `/produtos/${item.id}/editar`;
+    
+    alertaIdentico.style.display = 'block';
+    inputNome.style.borderColor = '#DC2626';
+    inputNome.style.boxShadow = '0 0 0 3px rgba(220, 38, 38, 0.15)';
+
+    btnSalvar.disabled = true;
+    btnSalvar.style.opacity = '0.45';
+    btnSalvar.style.cursor = 'not-allowed';
+    btnSalvar.title = 'Altere o nome para poder cadastrar este item.';
+  }
+
+  function liberarSalvar() {
+    alertaIdentico.style.display = 'none';
+    inputNome.style.borderColor = '';
+    inputNome.style.boxShadow = '';
+
+    btnSalvar.disabled = false;
+    btnSalvar.style.opacity = '';
+    btnSalvar.style.cursor = '';
+    btnSalvar.title = '';
+    itemExatoAtual = null;
+  }
+
+  function ocultarDropdown() {
+    dropdownSugestoes.style.display = 'none';
+    listaSimilares.innerHTML = '';
+  }
+
+  function ocultarSugestoes() {
+    ocultarDropdown();
+    liberarSalvar();
+  }
+
+  function renderizarSimilares(itens, termoBuscado) {
+    contadorSimilares.textContent = `${itens.length} encontrado(s)`;
+    listaSimilares.innerHTML = '';
+
+    itens.forEach(item => {
+      const divItem = document.createElement('div');
+      divItem.className = 'sugestao-item';
+      divItem.style.padding = '0.65rem 0.85rem';
+      divItem.style.borderBottom = '1px solid var(--border-light)';
+      divItem.style.cursor = 'pointer';
+      divItem.style.display = 'flex';
+      divItem.style.alignItems = 'center';
+      divItem.style.justifyContent = 'space-between';
+      divItem.style.transition = 'background 0.15s ease';
+
+      divItem.onmouseenter = () => divItem.style.background = '#F1F5F9';
+      divItem.onmouseleave = () => divItem.style.background = '#ffffff';
+
+      const marcaTxt = item.marca ? ` • ${item.marca}` : '';
+      const qtdTxt = `${item.quantidade || 0} ${item.unidade_medida || 'UN'}`;
+
+      divItem.innerHTML = `
+        <div style="flex: 1; min-width: 0; padding-right: 0.75rem;">
+          <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${item.nome}
+          </div>
+          <div style="font-size: 0.76rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; margin-top: 2px;">
+            <span class="badge" style="background: var(--bg-main); font-weight: 600; border: 1px solid var(--border-light); font-size: 0.72rem; padding: 1px 6px;">
+              ${item.sku}
+            </span>
+            <span>${item.categoria}${marcaTxt}</span>
+            <span>• Saldo: <strong>${qtdTxt}</strong></span>
+          </div>
+        </div>
+        <div>
+          <a href="/produtos/${item.id}/editar" class="btn btn-sm btn-outline" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; text-decoration: none;" title="Abrir edição deste produto">
+            <i class="fa-solid fa-pen-to-square"></i> Editar
+          </a>
+        </div>
+      `;
+
+      // Ao clicar no item, preenche o nome e verifica
+      divItem.addEventListener('click', (e) => {
+        if (e.target.closest('a')) return;
+        inputNome.value = item.nome;
+        verificarNome(item.nome);
+      });
+
+      listaSimilares.appendChild(divItem);
+    });
+
+    dropdownSugestoes.style.display = 'block';
+  }
+
+  inputNome.addEventListener('input', (e) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      verificarNome(e.target.value);
+    }, 200);
+  });
+
+  inputNome.addEventListener('focus', () => {
+    if (inputNome.value.trim().length >= 2 && !itemExatoAtual && listaSimilares.children.length > 0) {
+      dropdownSugestoes.style.display = 'block';
+    }
+  });
+
+  // Fecha dropdown ao clicar fora
+  document.addEventListener('click', (e) => {
+    if (!dropdownSugestoes.contains(e.target) && e.target !== inputNome) {
+      dropdownSugestoes.style.display = 'none';
+    }
+  });
+
+  // Impede submit se o nome for idêntico
+  formProduto.addEventListener('submit', (e) => {
+    if (itemExatoAtual) {
+      e.preventDefault();
+      bloquearPorNomeIdentico(itemExatoAtual);
+      inputNome.focus();
+      return false;
+    }
+  });
+
+  // Se já veio com erro de produto duplicado do servidor
+  <% if (typeof produtoDuplicado !== 'undefined' && produtoDuplicado) { %>
+    bloquearPorNomeIdentico({
+      id: <%= produtoDuplicado.id %>,
+      nome: "<%= produtoDuplicado.nome %>",
+      sku: "<%= produtoDuplicado.sku %>",
+      categoria: "<%= produtoDuplicado.categoria %>",
+      marca: "<%= produtoDuplicado.marca || '' %>",
+      quantidade: <%= produtoDuplicado.quantidade || 0 %>,
+      unidade_medida: "<%= produtoDuplicado.unidade_medida || 'UN' %>"
+    });
+  <% } %>
 </script>
 
 <%- include('../layouts/footer') %>

@@ -135,6 +135,53 @@ class Produto {
   }
 
   /**
+   * Busca produto por nome exato (case-insensitive e sem espaços extras nas pontas)
+   */
+  static async findByNomeExato(nome) {
+    if (!nome || !nome.trim()) return null;
+    const nomeTrim = nome.trim();
+
+    if (useSupabase && supabase) {
+      const { data } = await supabase
+        .from('produtos')
+        .select('*')
+        .ilike('nome', nomeTrim)
+        .limit(1);
+      return (data && data.length > 0) ? data[0] : null;
+    }
+
+    if (!db) return null;
+    return db.prepare('SELECT * FROM produtos WHERE UPPER(TRIM(nome)) = UPPER(?)').get(nomeTrim);
+  }
+
+  /**
+   * Busca produtos com nomes parecidos/similares para autocomplete
+   */
+  static async buscarSimilares(termo, limite = 6) {
+    if (!termo || !termo.trim()) return [];
+    const t = termo.trim();
+
+    if (useSupabase && supabase) {
+      const { data } = await supabase
+        .from('produtos')
+        .select('id, sku, nome, categoria, marca, quantidade, unidade_medida, estoque_minimo')
+        .ilike('nome', `%${t}%`)
+        .order('id', { ascending: false })
+        .limit(limite);
+      return data || [];
+    }
+
+    if (!db) return [];
+    return db.prepare(`
+      SELECT id, sku, nome, categoria, marca, quantidade, unidade_medida, estoque_minimo
+      FROM produtos 
+      WHERE nome LIKE @t
+      ORDER BY id DESC 
+      LIMIT @limite
+    `).all({ t: `%${t}%`, limite });
+  }
+
+  /**
    * Cadastra um novo produto
    */
   static async create(dados) {

@@ -100,6 +100,22 @@ class ProdutoController {
         }
       }
 
+      // Verifica duplicidade por Nome Exato do Produto
+      if (nome && nome.trim()) {
+        const produtoMesmoNome = await Produto.findByNomeExato(nome.trim());
+        if (produtoMesmoNome) {
+          const categorias = await Produto.getCategorias();
+          return res.render('produtos/create', {
+            title: 'Novo Produto',
+            currentPage: 'produtos',
+            categorias,
+            produto: req.body,
+            produtoDuplicado: produtoMesmoNome,
+            erro: `Já existe um produto cadastrado com o nome "${produtoMesmoNome.nome}" (Código: ${produtoMesmoNome.sku}). Você pode editar o item existente ou registrá-lo com um nome diferente.`
+          });
+        }
+      }
+
       const qtdInicial = parseInt(quantidade, 10) || 0;
 
       // Cria produto
@@ -245,6 +261,34 @@ class ProdutoController {
         categorias,
         erro: 'Falha ao atualizar produto: ' + error.message
       });
+    }
+  }
+
+  /**
+   * Endpoint JSON de Autocomplete e verificação de similaridade de nome
+   * GET /produtos/sugestoes?nome=...
+   */
+  static async sugestoesNome(req, res) {
+    try {
+      const { nome } = req.query;
+      if (!nome || !nome.trim() || nome.trim().length < 2) {
+        return res.json({ termo: '', similares: [], exato: null });
+      }
+
+      const nomeTrim = nome.trim();
+      const [similares, exato] = await Promise.all([
+        Produto.buscarSimilares(nomeTrim, 8),
+        Produto.findByNomeExato(nomeTrim)
+      ]);
+
+      res.json({
+        termo: nomeTrim,
+        exato: exato || null,
+        similares: similares || []
+      });
+    } catch (error) {
+      console.error('Erro ao buscar sugestões de produtos:', error);
+      res.status(500).json({ erro: error.message });
     }
   }
 
