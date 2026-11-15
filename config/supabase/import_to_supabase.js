@@ -1,6 +1,7 @@
 /**
  * Script de Deploy Automático para o Supabase
- * Executa o Schema DDL e os dados exportados diretamente no Supabase PostgreSQL.
+ * Executa o script completo de recriação limpa (recriar_banco_supabase.sql)
+ * diretamente no Supabase PostgreSQL.
  * Requer DATABASE_URL configurada no .env
  */
 require('dotenv').config();
@@ -9,73 +10,58 @@ const path = require('path');
 const { pgPool, testConnection } = require('../supabase');
 
 async function executarMigracao() {
-  console.log('--- MIGRAÇÃO DE BANCO DE DADOS: JPS ALMOXARIFADO -> SUPABASE ---');
+  console.log('--- RECRIAÇÃO E MIGRAÇÃO DO BANCO DE DADOS NO SUPABASE ---');
 
   const dbUrl = process.env.DATABASE_URL || '';
 
   if (!dbUrl || dbUrl.includes('[YOUR-PASSWORD]') || dbUrl.includes('[SUA-SENHA-AQUI]')) {
     console.error('\n[ATENÇÃO] A sua senha do banco de dados ainda não foi inserida na DATABASE_URL!');
-    console.log('\nNo seu arquivo .env, substitua [SUA-SENHA-AQUI] pela senha que você criou para o projeto Supabase:');
-    console.log('Exemplo: DATABASE_URL=postgresql://postgres:SuaSenhaReal123@db.nhomnkckccszanrqpnki.supabase.co:5432/postgres\n');
-    console.log('💡 DICA: Se você não lembra a senha criada no Supabase, você pode:');
-    console.log(' 1. No Supabase, clicar no ícone de Engrenagem (Project Settings) -> Database -> "Reset Database Password".');
-    console.log(' OU');
-    console.log(' 2. Subir sem precisar de senha pelo navegador usando o SQL Editor do Supabase em 2 cliques:');
-    console.log('    - Abra o SQL Editor no painel do Supabase');
-    console.log('    - Cole o conteúdo de config/supabase/schema_supabase.sql e clique em RUN');
-    console.log('    - Cole o conteúdo de config/supabase/dados_supabase.sql e clique em RUN');
+    console.log('\n💡 Você pode subir sem precisar de senha pelo navegador usando o SQL Editor do Supabase em 1 clique:');
+    console.log('    1. Abra o painel do Supabase -> SQL Editor -> New Query');
+    console.log('    2. Cole o conteúdo de config/supabase/recriar_banco_supabase.sql e clique em RUN');
     process.exit(1);
   }
 
   const test = await testConnection();
   if (!test.conectado) {
-    console.error('\nErro ao conectar ao Supabase:', test.mensagem);
+    console.error('\nErro ao conectar ao Supabase via DATABASE_URL:', test.mensagem);
+    console.log('\n💡 Como alternativa recomendada:');
+    console.log('    Abra o SQL Editor no painel do Supabase, cole o conteúdo de:');
+    console.log('    config/supabase/recriar_banco_supabase.sql e clique em RUN.');
     process.exit(1);
   }
 
   console.log('✓ ' + test.mensagem);
 
-  const schemaPath = path.resolve(__dirname, 'schema_supabase.sql');
-  const dadosPath = path.resolve(__dirname, 'dados_supabase.sql');
+  const sqlPath = path.resolve(__dirname, 'recriar_banco_supabase.sql');
+  if (!fs.existsSync(sqlPath)) {
+    console.error('Arquivo SQL de migração não encontrado em:', sqlPath);
+    process.exit(1);
+  }
 
   try {
     const client = await pgPool.connect();
     try {
-      // 1. Executa Schema DDL
-      console.log('\n[Passo 1/2] Aplicando Schema DDL no Supabase (Tabelas, Triggers, Índices)...');
-      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-      await client.query(schemaSql);
-      console.log('✓ Schema DDL aplicado com sucesso!');
-
-      // 2. Executa Carga de Dados
-      if (fs.existsSync(dadosPath)) {
-        console.log('\n[Passo 2/2] Migrando dados do SQLite para o Supabase...');
-        const dadosSql = fs.readFileSync(dadosPath, 'utf8');
-        await client.query(dadosSql);
-        console.log('✓ Dados migrados com sucesso!');
-      }
+      console.log('\n[Passo 1/1] Aplicando Schema limpo e importando dados no Supabase...');
+      const sqlCompleto = fs.readFileSync(sqlPath, 'utf8');
+      await client.query(sqlCompleto);
+      console.log('✓ Banco de dados recriado e sincronizado com sucesso no Supabase!');
 
       // Validação final de contagem
-      console.log('\n--- RESUMO DA MIGRAÇÃO NO SUPABASE ---');
-      const resAlmox = await client.query('SELECT COUNT(*) FROM almoxarifados');
+      console.log('\n--- RESUMO DO BANCO NO SUPABASE ---');
       const resProds = await client.query('SELECT COUNT(*) FROM produtos');
-      const resEst = await client.query('SELECT COUNT(*) FROM estoques WHERE quantidade > 0');
       const resMov = await client.query('SELECT COUNT(*) FROM movimentacoes');
-      const resReq = await client.query('SELECT COUNT(*) FROM requisicoes_obras');
 
-      console.log(`• Almoxarifados / Canteiros: ${resAlmox.rows[0].count}`);
-      console.log(`• Produtos no Catálogo: ${resProds.rows[0].count}`);
-      console.log(`• Estoques com Saldo Ativo: ${resEst.rows[0].count}`);
+      console.log(`• Produtos no Inventário: ${resProds.rows[0].count}`);
       console.log(`• Movimentações Registradas: ${resMov.rows[0].count}`);
-      console.log(`• Requisições de Obras: ${resReq.rows[0].count}`);
-      console.log('\n✓ MIGRAÇÃO CONCLUÍDA COM SUCESSO NO SUPABASE!');
+      console.log('\n✓ OPERAÇÃO CONCLUÍDA COM SUCESSO NO SUPABASE!');
     } finally {
       client.release();
     }
   } catch (error) {
-    console.error('\nErro durante a execução do script no Supabase:', error);
+    console.error('\nErro durante a execução no Supabase:', error);
   } finally {
-    await pgPool.end();
+    if (pgPool) await pgPool.end();
   }
 }
 
