@@ -98,11 +98,11 @@
                     <% } %>
                   </td>
                   <td style="text-align: right; white-space: nowrap;">
-                    <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Dar Baixa">
-                      <i class="fa-solid fa-arrow-down" style="color: var(--danger);"></i>
+                    <a href="/balcao?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Baixa no Balcão">
+                      <i class="fa-solid fa-arrow-up" style="color: var(--danger);"></i>
                     </a>
-                    <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=ENTRADA" class="action-more-btn" title="Nova Entrada">
-                      <i class="fa-solid fa-arrow-up" style="color: var(--teal);"></i>
+                    <a href="/balcao?produto_id=<%= p.id %>&tipo=ENTRADA" class="action-more-btn" title="Entrada no Balcão">
+                      <i class="fa-solid fa-arrow-down" style="color: var(--teal);"></i>
                     </a>
                     <a href="/produtos/<%= p.id %>/editar" class="action-more-btn" title="Editar">
                       <i class="fa-solid fa-pen-to-square"></i>

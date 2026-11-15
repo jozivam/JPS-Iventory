@@ -166,40 +166,67 @@
         <% } %>
       </div>
 
-      <!-- Seleção do Produto / Material -->
-      <div class="form-group" style="margin-bottom: 1rem;">
-        <label class="form-label" for="balcao-produto-select">
+      <!-- Seleção do Produto com Campo de Busca e Digitação Rápida -->
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label class="form-label" for="balcao-produto-busca">
           Produto / Ferramenta <span style="color: var(--danger);">*</span>
+          <small style="color: var(--text-muted); font-weight: normal; margin-left: 0.25rem;">(Digite para autocompletar e filtrar)</small>
         </label>
-        <select id="balcao-produto-select" name="produto_id" class="form-select" required onchange="atualizarInfoProduto(this)">
-          <option value="">-- Selecione o item no inventário --</option>
-          <% produtos.forEach(p => { %>
-            <option 
-              value="<%= p.id %>" 
-              data-sku="<%= p.sku %>" 
-              data-qtd="<%= p.quantidade %>" 
-              data-unidade="<%= p.unidade_medida || 'UN' %>"
-              data-marca="<%= p.marca || '' %>"
-              data-categoria="<%= p.categoria %>"
-              <%= (produtoPreSelecionado && produtoPreSelecionado.id === p.id) ? 'selected' : '' %>
+        
+        <div style="position: relative;" id="balcao-combobox-wrapper">
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; color: var(--text-dim); pointer-events: none; z-index: 2;"></i>
+            
+            <input 
+              type="text" 
+              id="balcao-produto-busca" 
+              class="form-control" 
+              placeholder="Digite o nome, código SKU ou marca para buscar..." 
+              autocomplete="off"
+              style="padding-left: 2.5rem; padding-right: 2.5rem; font-weight: 600; height: 46px;"
+              value="<%= produtoPreSelecionado ? `[${produtoPreSelecionado.sku}] ${produtoPreSelecionado.nome}${produtoPreSelecionado.marca ? ' (' + produtoPreSelecionado.marca + ')' : ''}` : '' %>"
+              required
             >
-              [<%= p.sku %>] <%= p.nome %> <%= p.marca ? `(${p.marca})` : '' %> — Saldo: <%= p.quantidade %> <%= p.unidade_medida || 'UN' %>
-            </option>
-          <% }) %>
-        </select>
+
+            <button 
+              type="button" 
+              id="btn-limpar-produto-busca" 
+              title="Limpar seleção e buscar outro item"
+              onclick="limparProdutoSelecionado()"
+              style="position: absolute; right: 0.6rem; background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: <%= produtoPreSelecionado ? 'flex' : 'none' %>; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 50%;"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Dropdown Flutuante de Resultados -->
+          <div id="balcao-produto-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 12px 28px rgba(0,0,0,0.12); max-height: 290px; overflow-y: auto; z-index: 1050; padding: 0.35rem 0;">
+            <!-- Itens filtrados serão injetados aqui -->
+          </div>
+
+          <!-- Input oculto com o produto_id selecionado -->
+          <input type="hidden" name="produto_id" id="balcao-produto-id" value="<%= produtoPreSelecionado ? produtoPreSelecionado.id : '' %>" required>
+        </div>
 
         <!-- Detalhe do Produto Selecionado -->
-        <div id="detalhe-produto-box" style="display: <%= produtoPreSelecionado ? 'flex' : 'none' %>; align-items: center; justify-content: space-between; margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-main); border-radius: 6px; border: 1px solid var(--border-light); font-size: 0.8rem;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <span id="detalhe-produto-sku" class="badge" style="background: var(--bg-surface); border: 1px solid var(--border-light); font-weight: 700;">
+        <div id="detalhe-produto-box" style="display: <%= produtoPreSelecionado ? 'flex' : 'none' %>; align-items: center; justify-content: space-between; margin-top: 0.5rem; padding: 0.65rem 0.85rem; background: var(--bg-main); border-radius: 6px; border: 1px solid var(--border-light); font-size: 0.82rem;">
+          <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+            <span id="detalhe-produto-sku" class="badge" style="background: var(--bg-surface); border: 1px solid var(--border-light); font-weight: 700; font-family: var(--font-mono);">
               <%= produtoPreSelecionado ? produtoPreSelecionado.sku : '' %>
             </span>
             <span id="detalhe-produto-cat" style="color: var(--text-muted);">
-              <%= produtoPreSelecionado ? produtoPreSelecionado.categoria : '' %>
+              <%= produtoPreSelecionado ? produtoPreSelecionado.categoria : '' %><%= (produtoPreSelecionado && produtoPreSelecionado.marca) ? ` • ${produtoPreSelecionado.marca}` : '' %>
             </span>
+            <% if (produtoPreSelecionado && produtoPreSelecionado.localizacao) { %>
+              <span id="detalhe-produto-loc" style="color: var(--text-dim); font-size: 0.78rem;">
+                <i class="fa-solid fa-location-dot" style="color: var(--primary);"></i> <%= produtoPreSelecionado.localizacao %>
+              </span>
+            <% } else { %>
+              <span id="detalhe-produto-loc" style="color: var(--text-dim); font-size: 0.78rem; display: none;"></span>
+            <% } %>
           </div>
           <div>
-            Saldo Atual: <strong id="detalhe-produto-saldo" style="color: var(--primary); font-size: 0.95rem;">
+            Saldo Atual: <strong id="detalhe-produto-saldo" style="color: var(--primary); font-size: 1rem;">
               <%= produtoPreSelecionado ? produtoPreSelecionado.quantidade : 0 %> <%= produtoPreSelecionado ? (produtoPreSelecionado.unidade_medida || 'UN') : '' %>
             </strong>
           </div>
@@ -668,27 +695,181 @@
     input.value = Math.max(1, atual + delta);
   }
 
-  function atualizarInfoProduto(select) {
-    const opt = select.options[select.selectedIndex];
-    const box = document.getElementById('detalhe-produto-box');
+  // =========================================================================
+  // SELETOR DE PRODUTOS INTELIGENTE COM BUSCA / AUTOCOMPLETE (COMBOBOX)
+  // =========================================================================
+  const LISTA_PRODUTOS = <%- JSON.stringify(produtos) %>;
+  let itemFocadoIndex = -1;
+  let itensFiltradosAtuais = [];
+
+  const inputBusca = document.getElementById('balcao-produto-busca');
+  const dropdown = document.getElementById('balcao-produto-dropdown');
+  const inputHiddenId = document.getElementById('balcao-produto-id');
+  const btnLimpar = document.getElementById('btn-limpar-produto-busca');
+  const boxDetalhe = document.getElementById('detalhe-produto-box');
+
+  function renderizarDropdownProdutos(termo = '') {
+    const q = termo.trim().toLowerCase();
     
-    if (!opt || !opt.value) {
-      box.style.display = 'none';
+    if (!q) {
+      itensFiltradosAtuais = LISTA_PRODUTOS;
+    } else {
+      itensFiltradosAtuais = LISTA_PRODUTOS.filter(p => {
+        const nome = (p.nome || '').toLowerCase();
+        const sku = (p.sku || '').toLowerCase();
+        const marca = (p.marca || '').toLowerCase();
+        const cat = (p.categoria || '').toLowerCase();
+        const loc = (p.localizacao || '').toLowerCase();
+        const tag = (p.tag || '').toLowerCase();
+        const pat = (p.patrimonio || '').toLowerCase();
+        return nome.includes(q) || sku.includes(q) || marca.includes(q) || cat.includes(q) || loc.includes(q) || tag.includes(q) || pat.includes(q);
+      });
+    }
+
+    itemFocadoIndex = -1;
+
+    if (itensFiltradosAtuais.length === 0) {
+      dropdown.innerHTML = `
+        <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+          <i class="fa-solid fa-magnifying-glass" style="margin-bottom: 0.35rem; display: block; font-size: 1.2rem; color: var(--border-color);"></i>
+          Nenhum produto encontrado para "<strong>${termo}</strong>"
+        </div>
+      `;
+      dropdown.style.display = 'block';
       return;
     }
 
-    const sku = opt.getAttribute('data-sku') || '';
-    const qtd = opt.getAttribute('data-qtd') || '0';
-    const unidade = opt.getAttribute('data-unidade') || 'UN';
-    const cat = opt.getAttribute('data-categoria') || '';
-    const marca = opt.getAttribute('data-marca') || '';
+    const html = itensFiltradosAtuais.map((p, idx) => {
+      const temEstoque = Number(p.quantidade) > 0;
+      return `
+        <div class="combobox-item" data-index="${idx}" data-id="${p.id}" onclick="selecionarProdutoCombobox(${p.id})" style="padding: 0.65rem 0.95rem; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.12s ease;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+            <div style="flex: 1;">
+              <div style="font-weight: 700; color: var(--text-main); font-size: 0.9rem;">
+                ${p.nome}
+                ${p.marca ? `<span style="font-size: 0.72rem; font-weight: 600; color: var(--primary); background: var(--primary-light); padding: 1px 6px; border-radius: 4px; margin-left: 0.3rem;">${p.marca}</span>` : ''}
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+                <span style="font-family: var(--font-mono); font-weight: 700; color: var(--text-body); background: var(--bg-surface); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border-color);">${p.sku}</span>
+                <span>• ${p.categoria}</span>
+                ${p.localizacao ? `<span>• <i class="fa-solid fa-location-dot" style="color: var(--primary);"></i> ${p.localizacao}</span>` : ''}
+              </div>
+            </div>
+            <div style="text-align: right; flex-shrink: 0;">
+              <span class="badge" style="background: ${temEstoque ? '#D1FAE5' : '#FEE2E2'}; color: ${temEstoque ? '#065F46' : '#991B1B'}; font-weight: 700; font-size: 0.78rem;">
+                ${p.quantidade} ${p.unidade_medida || 'UN'}
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
 
-    document.getElementById('detalhe-produto-sku').textContent = sku;
-    document.getElementById('detalhe-produto-cat').textContent = `${cat}${marca ? ' • ' + marca : ''}`;
-    document.getElementById('detalhe-produto-saldo').textContent = `${qtd} ${unid}`;
-
-    box.style.display = 'flex';
+    dropdown.innerHTML = html;
+    dropdown.style.display = 'block';
   }
+
+  function selecionarProdutoCombobox(produtoId) {
+    const prod = LISTA_PRODUTOS.find(p => p.id === produtoId);
+    if (!prod) return;
+
+    inputHiddenId.value = prod.id;
+    inputBusca.value = `[${prod.sku}] ${prod.nome}${prod.marca ? ' (' + prod.marca + ')' : ''}`;
+    btnLimpar.style.display = 'flex';
+    dropdown.style.display = 'none';
+
+    // Atualiza caixa de detalhes abaixo
+    document.getElementById('detalhe-produto-sku').textContent = prod.sku;
+    document.getElementById('detalhe-produto-cat').textContent = `${prod.categoria}${prod.marca ? ' • ' + prod.marca : ''}`;
+    
+    const locSpan = document.getElementById('detalhe-produto-loc');
+    if (prod.localizacao) {
+      locSpan.innerHTML = `<i class="fa-solid fa-location-dot" style="color: var(--primary);"></i> ${prod.localizacao}`;
+      locSpan.style.display = 'inline-flex';
+    } else {
+      locSpan.style.display = 'none';
+    }
+
+    const saldoEl = document.getElementById('detalhe-produto-saldo');
+    saldoEl.textContent = `${prod.quantidade} ${prod.unidade_medida || 'UN'}`;
+    saldoEl.style.color = prod.quantidade <= 0 ? 'var(--danger)' : 'var(--primary)';
+
+    boxDetalhe.style.display = 'flex';
+  }
+
+  function limparProdutoSelecionado() {
+    inputHiddenId.value = '';
+    inputBusca.value = '';
+    btnLimpar.style.display = 'none';
+    boxDetalhe.style.display = 'none';
+    inputBusca.focus();
+    renderizarDropdownProdutos('');
+  }
+
+  // Interatividade com o input de busca
+  inputBusca?.addEventListener('focus', () => {
+    renderizarDropdownProdutos(inputHiddenId.value ? '' : inputBusca.value);
+  });
+
+  inputBusca?.addEventListener('input', (e) => {
+    if (inputHiddenId.value) {
+      inputHiddenId.value = '';
+      boxDetalhe.style.display = 'none';
+    }
+    btnLimpar.style.display = e.target.value.trim() ? 'flex' : 'none';
+    renderizarDropdownProdutos(e.target.value);
+  });
+
+  inputBusca?.addEventListener('keydown', (e) => {
+    if (dropdown.style.display === 'none') {
+      if (e.key === 'ArrowDown') {
+        renderizarDropdownProdutos(inputBusca.value);
+      }
+      return;
+    }
+
+    const items = dropdown.querySelectorAll('.combobox-item');
+    if (items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      itemFocadoIndex = (itemFocadoIndex + 1) % items.length;
+      atualizarFocoCombobox(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      itemFocadoIndex = (itemFocadoIndex - 1 + items.length) % items.length;
+      atualizarFocoCombobox(items);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (itemFocadoIndex >= 0 && items[itemFocadoIndex]) {
+        const id = parseInt(items[itemFocadoIndex].getAttribute('data-id'), 10);
+        selecionarProdutoCombobox(id);
+      } else if (itensFiltradosAtuais.length > 0) {
+        selecionarProdutoCombobox(itensFiltradosAtuais[0].id);
+      }
+    } else if (e.key === 'Escape') {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  function atualizarFocoCombobox(items) {
+    items.forEach((it, idx) => {
+      if (idx === itemFocadoIndex) {
+        it.style.background = '#f1f5f9';
+        it.scrollIntoView({ block: 'nearest' });
+      } else {
+        it.style.background = '#ffffff';
+      }
+    });
+  }
+
+  // Fecha dropdown ao clicar fora
+  document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('balcao-combobox-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
 
   function preencherDevolucao(emprestimoId) {
     if (!emprestimoId) return;
@@ -703,9 +884,7 @@
     const doc = opt.getAttribute('data-doc');
 
     if (prodId) {
-      const selectProd = document.getElementById('balcao-produto-select');
-      selectProd.value = prodId;
-      atualizarInfoProduto(selectProd);
+      selecionarProdutoCombobox(parseInt(prodId, 10));
     }
 
     if (qtd) {

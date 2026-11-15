@@ -41,7 +41,11 @@ router.post('/balcao/devolver/:id', BalcaoController.devolver);
 // --- MOVIMENTAÇÕES (HISTÓRICO E GESTÃO) ---
 router.get('/movimentacoes', EstoqueController.index);
 router.get('/movimentacoes/exportar/excel', EstoqueController.exportarExcel);
-router.get('/movimentacoes/nova', EstoqueController.create);
+// Redireciona criação de movimentação para o Balcão unificado
+router.get('/movimentacoes/nova', (req, res) => {
+  const q = new URLSearchParams(req.query).toString();
+  res.redirect('/balcao' + (q ? '?' + q : ''));
+});
 router.post('/movimentacoes', EstoqueController.registrar);
 router.post('/movimentacoes/:id/editar', EstoqueController.update);
 router.post('/movimentacoes/:id/excluir', EstoqueController.delete);

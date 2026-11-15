@@ -240,13 +240,13 @@
               <!-- Ações -->
               <td style="text-align: right; white-space: nowrap;" onclick="event.stopPropagation()">
                 <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
-                  <!-- Dar Baixa (Saída) -->
-                  <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Dar Baixa (Saída)">
-                    <i class="fa-solid fa-arrow-down" style="color: var(--danger);"></i>
+                  <!-- Baixa no Balcão -->
+                  <a href="/balcao?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Baixa no Balcão">
+                    <i class="fa-solid fa-arrow-up" style="color: var(--danger);"></i>
                   </a>
-                  <!-- Entrada de Mercadoria -->
-                  <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=ENTRADA" class="action-more-btn" title="Nova Entrada">
-                    <i class="fa-solid fa-arrow-up" style="color: var(--teal);"></i>
+                  <!-- Entrada no Balcão -->
+                  <a href="/balcao?produto_id=<%= p.id %>&tipo=ENTRADA" class="action-more-btn" title="Entrada no Balcão">
+                    <i class="fa-solid fa-arrow-down" style="color: var(--teal);"></i>
                   </a>
                   <!-- Editar -->
                   <a href="/produtos/<%= p.id %>/editar" class="action-more-btn" title="Editar Produto">
@@ -342,13 +342,13 @@
 
           <!-- Botões de Ação Rápidos com Toque Confortável -->
           <div class="inventory-mobile-actions" onclick="event.stopPropagation()">
-            <!-- Entrada Rápida -->
-            <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=ENTRADA" class="btn btn-outline" style="color: var(--teal); border-color: var(--teal); font-weight: 600;" title="Nova Entrada">
+            <!-- Entrada Rápida no Balcão -->
+            <a href="/balcao?produto_id=<%= p.id %>&tipo=ENTRADA" class="btn btn-outline" style="color: var(--teal); border-color: var(--teal); font-weight: 600;" title="Entrada no Balcão">
               <i class="fa-solid fa-plus"></i> Entrada
             </a>
             
-            <!-- Baixa Rápida -->
-            <a href="/movimentacoes/nova?produto_id=<%= p.id %>&tipo=SAIDA" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); font-weight: 600;" title="Dar Baixa">
+            <!-- Baixa Rápida no Balcão -->
+            <a href="/balcao?produto_id=<%= p.id %>&tipo=SAIDA" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); font-weight: 600;" title="Baixa no Balcão">
               <i class="fa-solid fa-minus"></i> Baixa
             </a>
 
@@ -653,13 +653,16 @@
     <!-- Rodapé do Modal -->
     <div class="modal-footer" style="background: var(--bg-surface); display: flex; align-items: center; justify-content: space-between;">
       
-      <!-- Lado Esquerdo: Ações Rápidas de Movimentação (Modo Visualização) -->
-      <div id="modal-footer-acoes-mov" style="display: flex; gap: 0.5rem;">
-        <a id="modal-link-baixa" href="#" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);">
-          <i class="fa-solid fa-arrow-down"></i> Dar Baixa
+      <!-- Lado Esquerdo: Ações Rápidas no Balcão (Modo Visualização) -->
+      <div id="modal-footer-acoes-mov" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a id="modal-link-baixa" href="#" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);" title="Lançar Baixa / Consumo no Balcão">
+          <i class="fa-solid fa-arrow-up"></i> Baixa (Balcão)
         </a>
-        <a id="modal-link-entrada" href="#" class="btn btn-outline btn-sm" style="color: var(--teal); border-color: var(--teal);">
-          <i class="fa-solid fa-arrow-up"></i> Nova Entrada
+        <a id="modal-link-entrada" href="#" class="btn btn-outline btn-sm" style="color: var(--teal); border-color: var(--teal);" title="Lançar Entrada / Reposição no Balcão">
+          <i class="fa-solid fa-arrow-down"></i> Entrada (Balcão)
+        </a>
+        <a id="modal-link-emprestimo" href="#" class="btn btn-outline btn-sm" style="color: #D97706; border-color: #FCD34D; background: #FFFBEB;" title="Lançar Empréstimo de Ferramenta no Balcão">
+          <i class="fa-solid fa-hand-holding-hand"></i> Empréstimo
         </a>
       </div>
 
@@ -736,9 +739,12 @@
     document.getElementById('view-criado-em').textContent = p.criado_em || '-';
     document.getElementById('view-atualizado-em').textContent = p.atualizado_em || '-';
 
-    // Links de movimentação rápida
-    document.getElementById('modal-link-baixa').href = `/movimentacoes/nova?produto_id=${p.id}&tipo=SAIDA`;
-    document.getElementById('modal-link-entrada').href = `/movimentacoes/nova?produto_id=${p.id}&tipo=ENTRADA`;
+    // Links de movimentação rápida via Balcão
+    document.getElementById('modal-link-baixa').href = `/balcao?produto_id=${p.id}&tipo=SAIDA`;
+    document.getElementById('modal-link-entrada').href = `/balcao?produto_id=${p.id}&tipo=ENTRADA`;
+    if (document.getElementById('modal-link-emprestimo')) {
+      document.getElementById('modal-link-emprestimo').href = `/balcao?produto_id=${p.id}&tipo=EMPRESTIMO`;
+    }
 
     // Reseta para o modo de visualização
     cancelarEdicaoModal();
