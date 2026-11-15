@@ -331,7 +331,7 @@
           <!-- Badge Interativo: Ficha Vinculada -->
           <div id="badge-ficha-vinculada" style="margin-top: 0.4rem; font-size: 0.78rem; display: <%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? 'flex' : 'none' %>; align-items: center; justify-content: space-between; background: #EEF2FF; border: 1px solid #C7D2FE; padding: 0.35rem 0.65rem; border-radius: 6px; color: #3730A3;">
             <span><i class="fa-solid fa-file-invoice"></i> Vinculado à <strong>Ficha de <span id="nome-colaborador-ficha-badge"><%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? colaboradorPreSelecionado.nome : '' %></span></strong></span>
-            <a href="<%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? '/colaboradores/' + colaboradorPreSelecionado.id + '/ficha' : '#' %>" id="link-ver-ficha-balcao" target="_blank" style="font-weight: 700; color: #4F46E5; text-decoration: underline;">
+            <a href="<%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? '/fichas?colaborador_id=' + colaboradorPreSelecionado.id : '#' %>" id="link-ver-ficha-balcao" target="_blank" style="font-weight: 700; color: #4F46E5; text-decoration: underline;">
               Ver Ficha <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem;"></i>
             </a>
           </div>
@@ -1186,7 +1186,7 @@
       if (hiddenColabId) hiddenColabId.value = colab.id;
       if (badgeFicha) badgeFicha.style.display = 'flex';
       if (nomeColabFicha) nomeColabFicha.textContent = colab.nome;
-      if (linkFichaBalcao) linkFichaBalcao.href = `/colaboradores/${colab.id}/ficha`;
+      if (linkFichaBalcao) linkFichaBalcao.href = `/fichas?colaborador_id=${colab.id}`;
     } else {
       if (hiddenColabId) hiddenColabId.value = '';
       if (badgeFicha) badgeFicha.style.display = 'none';

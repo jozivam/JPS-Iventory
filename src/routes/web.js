@@ -13,6 +13,7 @@ const EstoqueController = require('../controllers/EstoqueController');
 const BuscaController = require('../controllers/BuscaController');
 const BalcaoController = require('../controllers/BalcaoController');
 const ColaboradorController = require('../controllers/ColaboradorController');
+const FichaController = require('../controllers/FichaController');
 
 // --- PÁGINA INICIAL (Direciona diretamente para o Inventário) ---
 router.get('/', (req, res) => {
@@ -51,10 +52,14 @@ router.post('/movimentacoes', EstoqueController.registrar);
 router.post('/movimentacoes/:id/editar', EstoqueController.update);
 router.post('/movimentacoes/:id/excluir', EstoqueController.delete);
 
+// --- CONTROLE DE FICHAS DE COLABORADORES ---
+router.get('/fichas', FichaController.index);
+router.get('/fichas/:colaborador_id', (req, res) => res.redirect('/fichas?colaborador_id=' + req.params.colaborador_id));
+
 // --- COLABORADORES E USUÁRIOS DO SISTEMA ---
 router.get('/colaboradores', ColaboradorController.index);
 router.post('/colaboradores', ColaboradorController.store);
-router.get('/colaboradores/:id/ficha', ColaboradorController.ficha);
+router.get('/colaboradores/:id/ficha', (req, res) => res.redirect('/fichas?colaborador_id=' + req.params.id));
 router.get('/colaboradores/:id/detalhes', ColaboradorController.detalhes);
 router.post('/colaboradores/:id/editar', ColaboradorController.update);
 router.post('/colaboradores/:id/nivel-acesso', ColaboradorController.updateNivelAcesso);

@@ -232,6 +232,53 @@ class Colaborador {
   }
 
   /**
+   * Lista todos os colaboradores acompanhados do resumo de sua ficha (ferramentas em posse, etc)
+   */
+  static async listarComResumoFicha() {
+    const colaboradores = await this.findAll();
+
+    let pendencias = [];
+
+    if (useSupabase && supabase) {
+      const { data: p } = await supabase
+        .from('movimentacoes')
+        .select('colaborador_id, colaborador, tipo, status_emprestimo, quantidade');
+      pendencias = p || [];
+    } else if (db) {
+      pendencias = db.prepare('SELECT colaborador_id, colaborador, tipo, status_emprestimo, quantidade FROM movimentacoes').all();
+    }
+
+    return colaboradores.map(c => {
+      // Movimentações vinculadas a este colaborador
+      const movsDoColab = pendencias.filter(m => 
+        (m.colaborador_id && String(m.colaborador_id) === String(c.id)) ||
+        (m.colaborador && m.colaborador.toLowerCase() === c.nome.toLowerCase())
+      );
+
+      const ferramentasEmAberto = movsDoColab
+        .filter(m => m.tipo === 'EMPRESTIMO' && m.status_emprestimo === 'PENDENTE')
+        .reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
+
+      const totalSaidas = movsDoColab
+        .filter(m => m.tipo === 'SAIDA')
+        .reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
+
+      const totalDevolucoes = movsDoColab
+        .filter(m => m.tipo === 'DEVOLUCAO' || (m.tipo === 'EMPRESTIMO' && m.status_emprestimo === 'DEVOLVIDO'))
+        .reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
+
+      return {
+        ...c,
+        ferramentasEmAberto,
+        totalSaidas,
+        totalDevolucoes,
+        totalLancamentos: movsDoColab.length,
+        temPendencia: ferramentasEmAberto > 0
+      };
+    });
+  }
+
+  /**
    * Cadastra novo colaborador ou usuário do sistema
    */
   static async create({

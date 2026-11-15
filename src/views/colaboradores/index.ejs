@@ -249,7 +249,7 @@
               <!-- Ações -->
               <td style="text-align: right;" onclick="event.stopPropagation()">
                 <div style="display: inline-flex; gap: 0.35rem;">
-                  <a href="/colaboradores/<%= c.id %>/ficha" class="btn btn-outline btn-sm" title="Ver Ficha Individual de Movimentações" style="color: #4F46E5; border-color: #C7D2FE; font-weight: 700;">
+                  <a href="/fichas?colaborador_id=<%= c.id %>" class="btn btn-outline btn-sm" title="Ver Ficha Individual de Movimentações" style="color: #4F46E5; border-color: #C7D2FE; font-weight: 700;">
                     <i class="fa-solid fa-file-invoice"></i> Ficha
                   </a>
                   <button type="button" class="btn btn-outline btn-sm" title="Ver Detalhes e Nível de Acesso" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
@@ -327,7 +327,7 @@
             </div>
 
             <div style="display: flex; gap: 0.4rem;" onclick="event.stopPropagation()">
-              <a href="/colaboradores/<%= c.id %>/ficha" class="btn btn-outline btn-sm" style="color: #4F46E5; border-color: #C7D2FE; font-weight: 700;">
+              <a href="/fichas?colaborador_id=<%= c.id %>" class="btn btn-outline btn-sm" style="color: #4F46E5; border-color: #C7D2FE; font-weight: 700;">
                 <i class="fa-solid fa-file-invoice"></i> Ficha
               </a>
               <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
@@ -756,7 +756,7 @@
     document.getElementById('modal-view-avatar').textContent = (c.nome || 'JS').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
     
     const linkFicha = document.getElementById('link-modal-ver-ficha');
-    if (linkFicha) linkFicha.href = `/colaboradores/${c.id}/ficha`;
+    if (linkFicha) linkFicha.href = `/fichas?colaborador_id=${c.id}`;
     
     const statusPill = document.getElementById('modal-view-status-pill');
     if (c.status === 'ATIVO') {

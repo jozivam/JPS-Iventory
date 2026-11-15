@@ -172,56 +172,10 @@ class ColaboradorController {
   }
 
   /**
-   * Página da Ficha Completa e Isolada do Colaborador
+   * Redireciona para a nova página de Controle de Fichas
    */
   static async ficha(req, res) {
-    try {
-      const { id } = req.params;
-      const { tipo, status_emprestimo, busca, sucesso, erro } = req.query;
-
-      const dadosFicha = await Colaborador.getFicha(id);
-
-      let movimentacoes = dadosFicha.movimentacoes;
-
-      // Filtros opcionais dentro da própria ficha
-      if (tipo && tipo.trim()) {
-        movimentacoes = movimentacoes.filter(m => m.tipo === tipo.trim());
-      }
-
-      if (status_emprestimo && status_emprestimo.trim()) {
-        movimentacoes = movimentacoes.filter(m => m.status_emprestimo === status_emprestimo.trim());
-      }
-
-      if (busca && busca.trim()) {
-        const b = busca.trim().toLowerCase();
-        movimentacoes = movimentacoes.filter(m => 
-          (m.produto_nome && m.produto_nome.toLowerCase().includes(b)) ||
-          (m.produto_sku && m.produto_sku.toLowerCase().includes(b)) ||
-          (m.motivo && m.motivo.toLowerCase().includes(b)) ||
-          (m.documento_ref && m.documento_ref.toLowerCase().includes(b)) ||
-          (m.responsavel && m.responsavel.toLowerCase().includes(b))
-        );
-      }
-
-      res.render('colaboradores/ficha', {
-        title: `Ficha Individual - ${dadosFicha.colaborador.nome}`,
-        currentPage: 'colaboradores',
-        colaborador: dadosFicha.colaborador,
-        estatisticasFicha: dadosFicha.estatisticasFicha,
-        emprestimosAtivos: dadosFicha.emprestimosAtivos,
-        movimentacoes,
-        filtros: {
-          tipo: tipo || '',
-          status_emprestimo: status_emprestimo || '',
-          busca: busca || ''
-        },
-        sucesso: sucesso || null,
-        erro: erro || null
-      });
-    } catch (error) {
-      console.error('Erro ao carregar ficha do colaborador:', error);
-      res.redirect('/colaboradores?erro=' + encodeURIComponent(error.message));
-    }
+    return res.redirect('/fichas?colaborador_id=' + req.params.id);
   }
 
   /**
