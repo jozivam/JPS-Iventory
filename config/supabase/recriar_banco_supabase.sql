@@ -1,7 +1,7 @@
 -- =============================================================================
 -- JPS ALMOXARIFADO - RECRIAÇÃO LIMPA DO BANCO DE DADOS NO SUPABASE
 -- Versão: Completa (Inventário + Balcão/Movimentações + Colaboradores/Usuários)
--- Data de Geração: 15/11/2026, 17:31:19
+-- Data de Geração: 15/11/2026, 18:07:37
 -- =============================================================================
 
 -- 1. LIMPEZA SEGURA DE TABELAS LEGADAS E ATUAIS
@@ -115,7 +115,7 @@ INSERT INTO produtos (id, sku, nome, categoria, marca, unidade_medida, quantidad
 INSERT INTO produtos (id, sku, nome, categoria, marca, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, tamanho, cor, peso, numero_serie, ca, patrimonio, tag, criado_em, atualizado_em) VALUES (4, 'ELE-DIS-031', 'Disjuntor Bipolar Din 32A Curva C', 'Elétrica e TI', 'Schneider Electric', 'UN', 30, 10, 28.75, 'Gaveteiro E-08', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-11-14 19:04:19', '2026-11-14 20:42:28');
 INSERT INTO produtos (id, sku, nome, categoria, marca, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, tamanho, cor, peso, numero_serie, ca, patrimonio, tag, criado_em, atualizado_em) VALUES (5, 'FER-CHV-010', 'Jogo de Chaves de Fenda e Phillips 6 Peças', 'Ferramentas', 'Gedore', 'JG', 8, 3, 68, 'Bancada B-04', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-11-14 19:04:19', '2026-11-14 20:42:28');
 INSERT INTO produtos (id, sku, nome, categoria, marca, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, tamanho, cor, peso, numero_serie, ca, patrimonio, tag, criado_em, atualizado_em) VALUES (6, 'EPI-LUV-002', 'Luva de Vaqueta Mista Tamanho G', 'EPI / Segurança', 'Danny', 'PAR', 2, 15, 18.9, 'Prateleira A-03', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-11-14 19:04:19', '2026-11-15 17:03:27');
-INSERT INTO produtos (id, sku, nome, categoria, marca, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, tamanho, cor, peso, numero_serie, ca, patrimonio, tag, criado_em, atualizado_em) VALUES (7, 'SUP-FIT-005', 'Fita Isolante 3M Imperial 19mm x 20m', 'Elétrica e TI', '3M', 'UN', 45, 10, 9.8, 'Gaveteiro E-01', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-11-14 19:04:19', '2026-11-14 20:42:28');
+INSERT INTO produtos (id, sku, nome, categoria, marca, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, tamanho, cor, peso, numero_serie, ca, patrimonio, tag, criado_em, atualizado_em) VALUES (7, 'SUP-FIT-005', 'Fita Isolante 3M Imperial 19mm x 20m', 'Elétrica e TI', '3M', 'UN', 44, 10, 9.8, 'Gaveteiro E-01', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-11-14 19:04:19', '2026-11-15 18:02:02');
 INSERT INTO produtos (id, sku, nome, categoria, marca, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, tamanho, cor, peso, numero_serie, ca, patrimonio, tag, criado_em, atualizado_em) VALUES (8, 'FER-TRN-003', 'Trena Métrica Profissional 8 Metros Emborrachada', 'Ferramentas', 'Lufkin', 'UN', 0, 5, 35, 'Bancada B-01', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-11-14 19:04:19', '2026-11-15 15:41:17');
 INSERT INTO produtos (id, sku, nome, categoria, marca, unidade_medida, quantidade, estoque_minimo, preco_unitario, localizacao, tamanho, cor, peso, numero_serie, ca, patrimonio, tag, criado_em, atualizado_em) VALUES (12, 'FER-6795', 'Testes', 'Ferramentas', 'Testes', 'UN', 25, 2, 0, NULL, '55', 'Laranja', '5', '123456', '64236', '888888', '555555', '2026-11-14 20:42:28', '2026-11-14 20:42:28');
 
@@ -132,7 +132,7 @@ INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, tele
 -- Atualização da sequência de IDs de colaboradores
 SELECT setval(pg_get_serial_sequence('colaboradores', 'id'), COALESCE((SELECT MAX(id) FROM colaboradores), 1));
 
--- Movimentações registradas (11 registros)
+-- Movimentações registradas (12 registros)
 INSERT INTO movimentacoes (id, produto_id, colaborador_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, status_emprestimo, data_devolucao, movimentacao_origem_id, criado_em) VALUES (1, 1, NULL, 'ENTRADA', 12, 'Carga inicial do inventario', 'Jozivam Silva', 'IMPLANTACAO-01', NULL, NULL, NULL, NULL, '2026-11-14 19:04:19');
 INSERT INTO movimentacoes (id, produto_id, colaborador_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, status_emprestimo, data_devolucao, movimentacao_origem_id, criado_em) VALUES (2, 2, NULL, 'ENTRADA', 2, 'Estoque inicial / Carga do almoxarifado', 'Jozivam Silva', 'IMPLANTACAO-01', NULL, NULL, NULL, NULL, '2026-11-14 19:04:19');
 INSERT INTO movimentacoes (id, produto_id, colaborador_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, status_emprestimo, data_devolucao, movimentacao_origem_id, criado_em) VALUES (3, 3, NULL, 'ENTRADA', 18, 'Estoque inicial / Carga do almoxarifado', 'Jozivam Silva', 'IMPLANTACAO-01', NULL, NULL, NULL, NULL, '2026-11-14 19:04:19');
@@ -144,6 +144,7 @@ INSERT INTO movimentacoes (id, produto_id, colaborador_id, tipo, quantidade, mot
 INSERT INTO movimentacoes (id, produto_id, colaborador_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, status_emprestimo, data_devolucao, movimentacao_origem_id, criado_em) VALUES (18, 1, 2, 'EMPRESTIMO', 1, 'Manutenção no quadro de distribuição QGBT', 'Jozivam Silva', 'OS-2026-088', 'Carlos Pereira', 'DEVOLVIDO', '2026-11-15 17:03:49', NULL, '2026-11-15 17:02:54');
 INSERT INTO movimentacoes (id, produto_id, colaborador_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, status_emprestimo, data_devolucao, movimentacao_origem_id, criado_em) VALUES (19, 6, 2, 'SAIDA', 2, 'EPI para trabalho em altura', 'Jozivam Silva', 'REQ-EPI-019', 'Carlos Pereira', NULL, NULL, NULL, '2026-11-15 17:03:27');
 INSERT INTO movimentacoes (id, produto_id, colaborador_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, status_emprestimo, data_devolucao, movimentacao_origem_id, criado_em) VALUES (20, 1, 2, 'DEVOLUCAO', 1, 'Devolução de ferramenta ao término do serviço', 'Jozivam Silva', 'DEV-001', 'Carlos Pereira', 'CONCLUIDO', NULL, 18, '2026-11-15 17:03:49');
+INSERT INTO movimentacoes (id, produto_id, colaborador_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, status_emprestimo, data_devolucao, movimentacao_origem_id, criado_em) VALUES (21, 7, NULL, 'SAIDA', 1, 'Lançamento de saida no balcão', 'Jozivam Silva', NULL, 'Balcão', NULL, NULL, NULL, '2026-11-15 18:02:02');
 
 -- Atualização da sequência de IDs de movimentações
 SELECT setval(pg_get_serial_sequence('movimentacoes', 'id'), COALESCE((SELECT MAX(id) FROM movimentacoes), 1));
