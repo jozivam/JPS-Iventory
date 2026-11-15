@@ -62,11 +62,13 @@ class BalcaoController {
         throw new Error('A quantidade deve ser um número maior que zero.');
       }
 
+      const colabFinal = (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão';
+
       const resultado = await Movimentacao.registrar({
         produto_id: parseInt(produto_id, 10),
         tipo,
         quantidade: qtd,
-        colaborador: colaborador ? colaborador.trim() : null,
+        colaborador: colabFinal,
         responsavel: responsavel ? responsavel.trim() : 'Almoxarife',
         motivo: motivo ? motivo.trim() : null,
         documento_ref: documento_ref ? documento_ref.trim() : null
@@ -74,7 +76,7 @@ class BalcaoController {
 
       let textoSucesso = '';
       if (tipo === 'EMPRESTIMO') {
-        textoSucesso = `Empréstimo de ${qtd} item(ns) de "${resultado.produto_nome}" registrado com sucesso para ${colaborador || 'o colaborador'}!`;
+        textoSucesso = `Empréstimo de ${qtd} item(ns) de "${resultado.produto_nome}" registrado com sucesso para ${colabFinal}!`;
       } else if (tipo === 'DEVOLUCAO') {
         textoSucesso = `Devolução de ${qtd} item(ns) de "${resultado.produto_nome}" registrada com sucesso! Saldo restaurado: ${resultado.novo_saldo}.`;
       } else if (tipo === 'ENTRADA') {

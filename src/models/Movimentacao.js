@@ -173,7 +173,7 @@ class Movimentacao {
     }
 
     const fator = getFatorTipo(tipo);
-    const colaboradorFinal = colaborador ? colaborador.trim() : (responsavel ? responsavel.trim() : 'Não informado');
+    const colaboradorFinal = (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão';
     const responsavelFinal = responsavel ? responsavel.trim() : 'Almoxarife';
     const statusFinal = status_emprestimo || (tipo === 'EMPRESTIMO' ? 'PENDENTE' : (tipo === 'DEVOLUCAO' ? 'CONCLUIDO' : null));
 
@@ -507,7 +507,7 @@ class Movimentacao {
         quantidade: novaQtd,
         motivo: motivo ? motivo.trim() : '',
         responsavel: responsavel ? responsavel.trim() : 'Não informado',
-        colaborador: colaborador ? colaborador.trim() : (responsavel || 'Não informado'),
+        colaborador: (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão',
         documento_ref: documento_ref ? documento_ref.trim() : null
       }).eq('id', id);
 
@@ -574,7 +574,7 @@ class Movimentacao {
         quantidade: novaQtd,
         motivo: motivo ? motivo.trim() : '',
         responsavel: responsavel ? responsavel.trim() : 'Não informado',
-        colaborador: colaborador ? colaborador.trim() : (responsavel || 'Não informado'),
+        colaborador: (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão',
         documento_ref: documento_ref ? documento_ref.trim() : null
       });
 

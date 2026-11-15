@@ -268,15 +268,14 @@
       <div class="form-row-responsive">
         <div class="form-group">
           <label class="form-label" for="balcao-colaborador-input" id="label-colaborador">
-            Colaborador / Solicitante <span style="color: var(--danger);">*</span>
+            Colaborador / Solicitante <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Opcional - Padrão: Balcão)</span>
           </label>
           <input 
             type="text" 
             id="balcao-colaborador-input" 
             name="colaborador" 
             class="form-control" 
-            placeholder="Ex: Carlos Pereira (Eletricista)"
-            required
+            placeholder="Ex: Carlos Pereira (ou deixe em branco para Balcão)"
           >
         </div>
 
@@ -612,7 +611,7 @@
       texto: 'Saída de material do almoxarifado (consumo de equipe, requisição de obra ou descarte).',
       btnTexto: 'Confirmar Saída no Balcão',
       btnCor: '#EF4444',
-      labelColab: 'Colaborador / Solicitante *'
+      labelColab: 'Colaborador / Solicitante <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Opcional - Padrão: Balcão)</span>'
     },
     'EMPRESTIMO': {
       bg: '#FFFBEB',
@@ -622,7 +621,7 @@
       texto: 'Empréstimo de ferramenta ou equipamento para colaborador. Ficará em aberto até a devolução.',
       btnTexto: 'Confirmar Empréstimo de Ferramenta',
       btnCor: '#F59E0B',
-      labelColab: 'Colaborador que Retirou a Ferramenta *'
+      labelColab: 'Colaborador que Retirou a Ferramenta <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Opcional - Padrão: Balcão)</span>'
     },
     'DEVOLUCAO': {
       bg: '#ECFEFF',
@@ -632,7 +631,7 @@
       texto: 'Retorno de ferramenta emprestada. O estoque do almoxarifado será reabastecido.',
       btnTexto: 'Confirmar Devolução ao Estoque',
       btnCor: '#06B6D4',
-      labelColab: 'Colaborador que Devolveu *'
+      labelColab: 'Colaborador que Devolveu <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Opcional - Padrão: Balcão)</span>'
     },
     'ENTRADA': {
       bg: '#ECFDF5',
@@ -642,7 +641,7 @@
       texto: 'Entrada ou reposição de mercadoria no almoxarifado (compras, nota fiscal ou recebimento).',
       btnTexto: 'Confirmar Entrada / Reposição',
       btnCor: '#10B981',
-      labelColab: 'Fornecedor / Responsável pela Entrega *'
+      labelColab: 'Fornecedor / Responsável pela Entrega <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Opcional - Padrão: Balcão)</span>'
     },
     'TROCA': {
       bg: '#F5F3FF',
@@ -652,7 +651,7 @@
       texto: 'Troca de item defeituoso/avariado ou substituição de especificação/tamanho para o colaborador.',
       btnTexto: 'Confirmar Registro de Troca',
       btnCor: '#8B5CF6',
-      labelColab: 'Colaborador que Solicitou a Troca *'
+      labelColab: 'Colaborador que Solicitou a Troca <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Opcional - Padrão: Balcão)</span>'
     }
   };
 
