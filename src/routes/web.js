@@ -22,9 +22,11 @@ router.get('/produtos/:id/editar', ProdutoController.edit);
 router.post('/produtos/:id/editar', ProdutoController.update);
 router.post('/produtos/:id/excluir', ProdutoController.delete);
 
-// --- MOVIMENTAÇÕES (ENTRADAS E SAÍDAS) ---
+// --- MOVIMENTAÇÕES (HISTÓRICO E GESTÃO) ---
 router.get('/movimentacoes', EstoqueController.index);
 router.get('/movimentacoes/nova', EstoqueController.create);
 router.post('/movimentacoes', EstoqueController.registrar);
+router.post('/movimentacoes/:id/editar', EstoqueController.update);
+router.post('/movimentacoes/:id/excluir', EstoqueController.delete);
 
 module.exports = router;

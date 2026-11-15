@@ -3,24 +3,51 @@ const Produto = require('../models/Produto');
 
 class EstoqueController {
   /**
-   * Histórico de Movimentações (Entradas e Saídas)
+   * Histórico de Movimentações (Acompanhamento e Auditoria com Filtros)
    */
   static async index(req, res) {
     try {
-      const { produto_id, tipo, data_inicio, data_fim, sucesso, erro } = req.query;
+      const { produto_id, tipo, data_inicio, data_fim, periodo, sucesso, erro } = req.query;
+
+      let dtInicio = data_inicio ? data_inicio.trim() : '';
+      let dtFim = data_fim ? data_fim.trim() : '';
+
+      // Atalhos rápidos de período
+      const hoje = new Date();
+      const formatYMD = (d) => d.toISOString().split('T')[0];
+
+      if (periodo === 'hoje') {
+        dtInicio = formatYMD(hoje);
+        dtFim = formatYMD(hoje);
+      } else if (periodo === '7dias') {
+        const d7 = new Date();
+        d7.setDate(d7.getDate() - 7);
+        dtInicio = formatYMD(d7);
+        dtFim = formatYMD(hoje);
+      } else if (periodo === '30dias') {
+        const d30 = new Date();
+        d30.setDate(d30.getDate() - 30);
+        dtInicio = formatYMD(d30);
+        dtFim = formatYMD(hoje);
+      } else if (periodo === 'mes') {
+        const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        dtInicio = formatYMD(primeiroDiaMes);
+        dtFim = formatYMD(hoje);
+      }
 
       const filtros = {
         produto_id: produto_id ? parseInt(produto_id, 10) : '',
         tipo: tipo || '',
-        data_inicio: data_inicio || '',
-        data_fim: data_fim || ''
+        data_inicio: dtInicio,
+        data_fim: dtFim,
+        periodo: periodo || ''
       };
 
       const movimentacoes = Movimentacao.findAll(filtros);
       const produtos = Produto.findAll();
 
       res.render('movimentacoes/index', {
-        title: 'Movimentações de Estoque',
+        title: 'Histórico de Movimentações',
         currentPage: 'movimentacoes',
         movimentacoes,
         produtos,
@@ -40,7 +67,7 @@ class EstoqueController {
   }
 
   /**
-   * Formulário de Registro de Nova Movimentação
+   * Formulário de Registro de Nova Movimentação (Acessado a partir do Inventário)
    */
   static async create(req, res) {
     try {
@@ -65,12 +92,12 @@ class EstoqueController {
       });
     } catch (error) {
       console.error('Erro ao abrir tela de movimentação:', error);
-      res.redirect('/movimentacoes?erro=' + encodeURIComponent(error.message));
+      res.redirect('/produtos?erro=' + encodeURIComponent(error.message));
     }
   }
 
   /**
-   * Processa o registro da movimentação
+   * Processa o registro de nova movimentação
    */
   static async registrar(req, res) {
     try {
@@ -85,10 +112,6 @@ class EstoqueController {
         throw new Error('A quantidade deve ser maior que zero.');
       }
 
-      if (!responsavel || !responsavel.trim()) {
-        throw new Error('Informe o nome do responsável pela movimentação.');
-      }
-
       const resultado = Movimentacao.registrar({
         produto_id: parseInt(produto_id, 10),
         tipo,
@@ -98,7 +121,7 @@ class EstoqueController {
         documento_ref
       });
 
-      const mensagemSucesso = `${tipo === 'ENTRADA' ? 'Entrada' : 'Baixa'} de ${qtd} item(ns) de "${resultado.produto_nome}" realizada com sucesso! Novo saldo: ${resultado.novo_saldo}.`;
+      const mensagemSucesso = `${tipo === 'ENTRADA' ? 'Entrada' : 'Baixa'} de ${qtd} item(ns) de "${resultado.produto_nome}" registrada com sucesso! Novo saldo: ${resultado.novo_saldo}.`;
 
       res.redirect('/movimentacoes?sucesso=' + encodeURIComponent(mensagemSucesso));
     } catch (error) {
@@ -115,6 +138,45 @@ class EstoqueController {
         retornoProdutoId: req.body.produto_id || '',
         erro: error.message
       });
+    }
+  }
+
+  /**
+   * Atualiza uma movimentação e recalcula o inventário
+   */
+  static async update(req, res) {
+    try {
+      const { id } = req.params;
+      const { produto_id, tipo, quantidade, motivo, responsavel, documento_ref } = req.body;
+
+      Movimentacao.update(id, {
+        produto_id,
+        tipo,
+        quantidade,
+        motivo,
+        responsavel,
+        documento_ref
+      });
+
+      res.redirect('/movimentacoes?sucesso=' + encodeURIComponent(`Movimentação MOV-${String(id).padStart(4, '0')} atualizada com sucesso! O inventário foi recalculado automaticamente.`));
+    } catch (error) {
+      console.error('Erro ao atualizar movimentação:', error);
+      res.redirect('/movimentacoes?erro=' + encodeURIComponent(error.message));
+    }
+  }
+
+  /**
+   * Exclui uma movimentação e reverte seu saldo no inventário
+   */
+  static async delete(req, res) {
+    try {
+      const { id } = req.params;
+      const resultado = Movimentacao.delete(id);
+
+      res.redirect('/movimentacoes?sucesso=' + encodeURIComponent(`Movimentação MOV-${String(id).padStart(4, '0')} excluída com sucesso! O saldo de "${resultado.produto_nome}" foi estornado no inventário.`));
+    } catch (error) {
+      console.error('Erro ao excluir movimentação:', error);
+      res.redirect('/movimentacoes?erro=' + encodeURIComponent(error.message));
     }
   }
 }

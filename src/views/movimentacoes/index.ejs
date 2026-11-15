@@ -14,64 +14,117 @@
   </div>
 <% } %>
 
-<!-- Cabeçalho Estilo Storaxe Timeline -->
+<!-- Cabeçalho (Apenas acompanhamento e consulta) -->
 <div class="page-header-flex">
   <div class="page-title-wrap">
-    <h2>Movimentações & Entregas</h2>
-    <p>Histórico completo de entradas de fornecedores e baixas de consumo.</p>
+    <h2>Acompanhamento de Movimentações</h2>
+    <p>Histórico completo e auditoria de entradas e baixas do almoxarifado.</p>
   </div>
 
   <div class="page-actions-group">
-    <a href="/movimentacoes/nova?tipo=SAIDA" class="btn btn-outline">
-      <i class="fa-solid fa-arrow-up" style="color: var(--primary);"></i> Dar Baixa (Outbound)
-    </a>
-    <a href="/movimentacoes/nova?tipo=ENTRADA" class="btn btn-primary">
-      <i class="fa-solid fa-arrow-down" style="color: #fff;"></i> Nova Entrada (Inbound)
-    </a>
+    <button type="button" class="btn btn-outline" onclick="window.print()" title="Imprimir extrato de movimentações">
+      <i class="fa-solid fa-print"></i> Imprimir Extrato
+    </button>
   </div>
 </div>
 
-<!-- Filtros de Linha do Tempo -->
-<div class="fixoria-filter-bar">
-  <form action="/movimentacoes" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%;">
-    <div style="min-width: 220px; flex: 1;">
-      <select name="produto_id" class="filter-select-pill" style="width: 100%;" onchange="this.form.submit()">
-        <option value="">Todos os Materiais</option>
-        <% produtos.forEach(p => { %>
-          <option value="<%= p.id %>" <%= filtros.produto_id == p.id ? 'selected' : '' %>>
-            [<%= p.sku %>] <%= p.nome %>
-          </option>
-        <% }) %>
-      </select>
+<!-- Barra de Filtros por Período, Material e Tipo -->
+<div class="fixoria-filter-bar" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
+  
+  <form id="form-filtros-mov" action="/movimentacoes" method="GET" style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
+    
+    <!-- Linha 1: Atalhos Rápidos de Período -->
+    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-light);">
+      <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+        <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-right: 0.25rem;">
+          <i class="fa-regular fa-calendar-days"></i> Período:
+        </span>
+        <button type="button" class="btn btn-sm <%= !filtros.periodo && !filtros.data_inicio && !filtros.data_fim ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodo('')">
+          Todos
+        </button>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === 'hoje' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodo('hoje')">
+          Hoje
+        </button>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === '7dias' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodo('7dias')">
+          Últimos 7 dias
+        </button>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === '30dias' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodo('30dias')">
+          Últimos 30 dias
+        </button>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === 'mes' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodo('mes')">
+          Este Mês
+        </button>
+      </div>
+
+      <input type="hidden" name="periodo" id="input-periodo" value="<%= filtros.periodo || '' %>">
+
+      <!-- Contagem de registros encontrados -->
+      <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">
+        <strong><%= movimentacoes.length %></strong> movimentação(ões) encontrada(s)
+      </div>
     </div>
 
-    <div>
-      <select name="tipo" class="filter-select-pill" onchange="this.form.submit()">
-        <option value="">Todos os Tipos</option>
-        <option value="ENTRADA" <%= filtros.tipo === 'ENTRADA' ? 'selected' : '' %>>Inbound (Entradas)</option>
-        <option value="SAIDA" <%= filtros.tipo === 'SAIDA' ? 'selected' : '' %>>Outbound (Baixas)</option>
-      </select>
+    <!-- Linha 2: Filtros Detalhados -->
+    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+      <!-- Filtro Produto -->
+      <div style="min-width: 240px; flex: 1;">
+        <select name="produto_id" class="filter-select-pill" style="width: 100%;" onchange="this.form.submit()">
+          <option value="">Todos os Materiais</option>
+          <% produtos.forEach(p => { %>
+            <option value="<%= p.id %>" <%= filtros.produto_id == p.id ? 'selected' : '' %>>
+              [<%= p.sku %>] <%= p.nome %> <%= p.marca ? `(${p.marca})` : '' %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- Filtro Tipo -->
+      <div>
+        <select name="tipo" class="filter-select-pill" onchange="this.form.submit()">
+          <option value="">Todos os Tipos</option>
+          <option value="ENTRADA" <%= filtros.tipo === 'ENTRADA' ? 'selected' : '' %>>Entradas (Inbound)</option>
+          <option value="SAIDA" <%= filtros.tipo === 'SAIDA' ? 'selected' : '' %>>Baixas (Outbound)</option>
+        </select>
+      </div>
+
+      <!-- Seletor Manual de Datas -->
+      <div style="display: flex; align-items: center; gap: 0.35rem;">
+        <input 
+          type="date" 
+          name="data_inicio" 
+          id="filtro-data-inicio" 
+          class="filter-select-pill" 
+          value="<%= filtros.data_inicio || '' %>" 
+          title="Data Inicial"
+          onchange="document.getElementById('input-periodo').value=''"
+        >
+        <span style="color: var(--text-dim); font-size: 0.8rem;">até</span>
+        <input 
+          type="date" 
+          name="data_fim" 
+          id="filtro-data-fim" 
+          class="filter-select-pill" 
+          value="<%= filtros.data_fim || '' %>" 
+          title="Data Final"
+          onchange="document.getElementById('input-periodo').value=''"
+        >
+      </div>
+
+      <button type="submit" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-filter"></i> Filtrar
+      </button>
+
+      <% if (filtros.produto_id || filtros.tipo || filtros.data_inicio || filtros.data_fim || filtros.periodo) { %>
+        <a href="/movimentacoes" class="btn btn-outline btn-sm" title="Limpar todos os filtros">
+          <i class="fa-solid fa-rotate-left"></i> Limpar
+        </a>
+      <% } %>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 0.35rem;">
-      <input type="date" name="data_inicio" class="filter-select-pill" value="<%= filtros.data_inicio || '' %>" title="Data Inicial">
-      <span style="color: var(--text-dim); font-size: 0.8rem;">até</span>
-      <input type="date" name="data_fim" class="filter-select-pill" value="<%= filtros.data_fim || '' %>" title="Data Final">
-    </div>
-
-    <button type="submit" class="btn btn-outline btn-sm">
-      <i class="fa-solid fa-filter"></i> Filtrar
-    </button>
-
-    <% if (filtros.produto_id || filtros.tipo || filtros.data_inicio || filtros.data_fim) { %>
-      <a href="/movimentacoes" class="btn btn-outline btn-sm" title="Limpar Filtros">
-        <i class="fa-solid fa-rotate-left"></i>
-      </a>
-    <% } %>
   </form>
 </div>
 
-<!-- Tabela de Movimentações Estilo Storaxe -->
+<!-- Tabela de Movimentações (Linhas clicáveis para ver/editar) -->
 <div class="table-card">
   <div class="table-responsive">
     <table class="clean-table">
@@ -84,12 +137,13 @@
           <th>DATA & HORA</th>
           <th>RESPONSÁVEL</th>
           <th>DOC / NOTA</th>
+          <th style="text-align: right;">AÇÃO</th>
         </tr>
       </thead>
       <tbody>
         <% if (movimentacoes && movimentacoes.length > 0) { %>
           <% movimentacoes.forEach(m => { %>
-            <tr>
+            <tr style="cursor: pointer;" onclick="abrirModalMovimentacao(<%= m.id %>)" title="Clique para ver detalhes, editar ou estornar a movimentação MOV-<%= String(m.id).padStart(4, '0') %>">
               <td>
                 <div style="display: flex; align-items: center;">
                   <span class="direction-circle <%= m.tipo === 'ENTRADA' ? 'inbound' : 'outbound' %>">
@@ -130,12 +184,20 @@
                   <span style="color: var(--text-dim);">-</span>
                 <% } %>
               </td>
+              <td style="text-align: right;" onclick="event.stopPropagation()">
+                <button type="button" class="action-more-btn" title="Ver detalhes ou editar" onclick="abrirModalMovimentacao(<%= m.id %>)">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+              </td>
             </tr>
           <% }) %>
         <% } else { %>
           <tr>
-            <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+            <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
               Nenhuma movimentação registrada para os filtros selecionados.
+              <div style="margin-top: 0.75rem;">
+                <a href="/movimentacoes" class="btn btn-outline btn-sm">Limpar Filtros</a>
+              </div>
             </td>
           </tr>
         <% } %>
@@ -143,5 +205,296 @@
     </table>
   </div>
 </div>
+
+<!-- ========================================================================= -->
+<!-- MODAL DE DETALHES, EDIÇÃO E ESTORNO DE MOVIMENTAÇÃO -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-detalhes-movimentacao">
+  <div class="modal-container" style="max-width: 680px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+    
+    <!-- Cabeçalho do Modal -->
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div id="modal-mov-icon" style="width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div>
+          <h3 id="modal-mov-title" style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0;">MOV-0000</h3>
+          <span id="modal-mov-subtitle" style="font-size: 0.8rem; color: var(--text-muted);"></span>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="fecharModalMovimentacao()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Corpo do Modal -->
+    <div class="modal-body" style="overflow-y: auto; padding: 1.5rem; flex: 1;">
+      
+      <!-- MODO VISUALIZAÇÃO -->
+      <div id="secao-mov-visualizacao">
+        
+        <div style="background: var(--bg-surface); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Natureza</span>
+            <div id="mov-view-badge" style="margin-top: 0.25rem;"></div>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Volume Movimentado</span>
+            <div id="mov-view-volume" style="font-size: 1.3rem; font-weight: 800;"></div>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Data do Lançamento</span>
+            <div id="mov-view-data" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 2px;"></div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+          
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md); grid-column: 1 / -1;">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Material / Produto</div>
+            <div id="mov-view-produto" style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-top: 2px;"></div>
+            <div id="mov-view-sku" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--primary); margin-top: 2px;"></div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Responsável</div>
+            <div id="mov-view-responsavel" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 2px;"></div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md);">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Documento / NF / O.S.</div>
+            <div id="mov-view-doc" style="font-size: 0.95rem; font-family: var(--font-mono); font-weight: 600; color: var(--text-main); margin-top: 2px;">-</div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md); grid-column: 1 / -1;">
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Motivo / Justificativa</div>
+            <div id="mov-view-motivo" style="font-size: 0.9rem; color: var(--text-body); margin-top: 2px;">-</div>
+          </div>
+
+        </div>
+
+        <div style="background: #f8fafc; border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 0.75rem 1rem; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-circle-info" style="color: var(--primary);"></i>
+          <span>Qualquer alteração ou exclusão nesta movimentação recalculorá automaticamente o saldo do item no inventário.</span>
+        </div>
+
+      </div>
+
+      <!-- MODO EDIÇÃO -->
+      <div id="secao-mov-edicao" style="display: none;">
+        <form id="form-modal-editar-mov" method="POST">
+          
+          <div class="form-grid">
+            
+            <!-- Tipo -->
+            <div class="form-group full-width">
+              <label class="form-label">Natureza da Operação</label>
+              <div style="display: flex; gap: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--teal);">
+                  <input type="radio" name="tipo" id="modal-edit-tipo-entrada" value="ENTRADA">
+                  <i class="fa-solid fa-arrow-down"></i> Entrada / Reposição
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--danger);">
+                  <input type="radio" name="tipo" id="modal-edit-tipo-saida" value="SAIDA">
+                  <i class="fa-solid fa-arrow-up"></i> Baixa / Saída
+                </label>
+              </div>
+            </div>
+
+            <!-- Material -->
+            <div class="form-group full-width">
+              <label class="form-label" for="modal-edit-produto-id">Material / Item</label>
+              <select id="modal-edit-produto-id" name="produto_id" class="form-select" required>
+                <% produtos.forEach(p => { %>
+                  <option value="<%= p.id %>">[<%= p.sku %>] <%= p.nome %> (Saldo atual: <%= p.quantidade %> <%= p.unidade_medida %>)</option>
+                <% }) %>
+              </select>
+            </div>
+
+            <!-- Quantidade -->
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-mov-qtd">Quantidade</label>
+              <input type="number" id="modal-edit-mov-qtd" name="quantidade" class="form-control" min="1" required>
+            </div>
+
+            <!-- Responsável -->
+            <div class="form-group">
+              <label class="form-label" for="modal-edit-mov-resp">Responsável</label>
+              <input type="text" id="modal-edit-mov-resp" name="responsavel" class="form-control" required>
+            </div>
+
+            <!-- Motivo -->
+            <div class="form-group full-width">
+              <label class="form-label" for="modal-edit-mov-motivo">Motivo / Justificativa</label>
+              <input type="text" id="modal-edit-mov-motivo" name="motivo" class="form-control">
+            </div>
+
+            <!-- Documento -->
+            <div class="form-group full-width">
+              <label class="form-label" for="modal-edit-mov-doc">Nº Documento / Nota Fiscal / O.S.</label>
+              <input type="text" id="modal-edit-mov-doc" name="documento_ref" class="form-control">
+            </div>
+
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Rodapé do Modal -->
+    <div class="modal-footer" style="background: var(--bg-surface); display: flex; align-items: center; justify-content: space-between;">
+      
+      <!-- Lado Esquerdo: Ação de Exclusão com Estorno -->
+      <div id="modal-mov-footer-delete">
+        <form id="form-modal-excluir-mov" method="POST" style="display: inline;">
+          <button type="button" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);" onclick="confirmarExclusaoMovimentacao()">
+            <i class="fa-solid fa-trash-can"></i> Excluir & Estornar
+          </button>
+        </form>
+      </div>
+
+      <!-- Lado Direito: Alternância de Telas -->
+      <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+        
+        <!-- Botões do Modo Visualização -->
+        <button type="button" class="btn btn-outline" id="btn-modal-mov-fechar" onclick="fecharModalMovimentacao()">
+          Fechar
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-modal-mov-editar" onclick="ativarEdicaoMovimentacao()">
+          <i class="fa-solid fa-pen-to-square"></i> Editar Movimentação
+        </button>
+
+        <!-- Botões do Modo Edição -->
+        <button type="button" class="btn btn-outline" id="btn-modal-mov-cancelar" style="display: none;" onclick="cancelarEdicaoMovimentacao()">
+          Cancelar
+        </button>
+        <button type="submit" form="form-modal-editar-mov" class="btn btn-primary" id="btn-modal-mov-salvar" style="display: none;">
+          <i class="fa-solid fa-check"></i> Salvar & Recalcular Estoque
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- SCRIPT DO MODAL E FILTROS -->
+<!-- ========================================================================= -->
+<script>
+  // Mapa de movimentações para acesso rápido
+  const MOVIMENTACOES_MAP = <%- JSON.stringify(movimentacoes.reduce((acc, m) => { acc[m.id] = m; return acc; }, {})) %>;
+  let movAtualModal = null;
+
+  function aplicarPeriodo(periodo) {
+    document.getElementById('input-periodo').value = periodo;
+    if (periodo === '') {
+      document.getElementById('filtro-data-inicio').value = '';
+      document.getElementById('filtro-data-fim').value = '';
+    }
+    document.getElementById('form-filtros-mov').submit();
+  }
+
+  function abrirModalMovimentacao(id) {
+    const m = MOVIMENTACOES_MAP[id];
+    if (!m) return;
+
+    movAtualModal = m;
+
+    const codFormatado = `MOV-${String(m.id).padStart(4, '0')}`;
+    document.getElementById('modal-mov-title').textContent = codFormatado;
+    document.getElementById('modal-mov-subtitle').textContent = m.tipo === 'ENTRADA' ? 'Entrada no estoque' : 'Baixa de estoque';
+
+    const iconDiv = document.getElementById('modal-mov-icon');
+    const badgeDiv = document.getElementById('mov-view-badge');
+    const volumeDiv = document.getElementById('mov-view-volume');
+
+    if (m.tipo === 'ENTRADA') {
+      iconDiv.style.background = 'var(--success-bg)';
+      iconDiv.style.color = 'var(--teal)';
+      iconDiv.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
+      badgeDiv.innerHTML = '<span class="status-pill in-stock"><span class="status-dot-sm"></span> Entrada (Inbound)</span>';
+      volumeDiv.style.color = 'var(--teal)';
+      volumeDiv.textContent = `+${m.quantidade} ${m.produto_unidade || 'UN'}`;
+    } else {
+      iconDiv.style.background = 'var(--danger-bg)';
+      iconDiv.style.color = 'var(--danger)';
+      iconDiv.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+      badgeDiv.innerHTML = '<span class="status-pill low-stock"><span class="status-dot-sm"></span> Baixa (Outbound)</span>';
+      volumeDiv.style.color = 'var(--danger)';
+      volumeDiv.textContent = `-${m.quantidade} ${m.produto_unidade || 'UN'}`;
+    }
+
+    document.getElementById('mov-view-data').textContent = m.criado_em || '-';
+    document.getElementById('mov-view-produto').textContent = m.produto_nome || '-';
+    document.getElementById('mov-view-sku').textContent = `SKU: ${m.produto_sku || '-'}`;
+    document.getElementById('mov-view-responsavel').textContent = m.responsavel || '-';
+    document.getElementById('mov-view-doc').textContent = m.documento_ref || '-';
+    document.getElementById('mov-view-motivo').textContent = m.motivo || 'Nenhum motivo informado';
+
+    // Configura formulário de exclusão
+    document.getElementById('form-modal-excluir-mov').action = `/movimentacoes/${m.id}/excluir`;
+
+    cancelarEdicaoMovimentacao();
+    window.abrirModal('modal-detalhes-movimentacao');
+  }
+
+  function fecharModalMovimentacao() {
+    window.fecharModal('modal-detalhes-movimentacao');
+  }
+
+  function ativarEdicaoMovimentacao() {
+    if (!movAtualModal) return;
+    const m = movAtualModal;
+
+    const form = document.getElementById('form-modal-editar-mov');
+    form.action = `/movimentacoes/${m.id}/editar`;
+
+    if (m.tipo === 'ENTRADA') {
+      document.getElementById('modal-edit-tipo-entrada').checked = true;
+    } else {
+      document.getElementById('modal-edit-tipo-saida').checked = true;
+    }
+
+    document.getElementById('modal-edit-produto-id').value = m.produto_id;
+    document.getElementById('modal-edit-mov-qtd').value = m.quantidade;
+    document.getElementById('modal-edit-mov-resp').value = m.responsavel || '';
+    document.getElementById('modal-edit-mov-motivo').value = m.motivo || '';
+    document.getElementById('modal-edit-mov-doc').value = m.documento_ref || '';
+
+    document.getElementById('secao-mov-visualizacao').style.display = 'none';
+    document.getElementById('secao-mov-edicao').style.display = 'block';
+
+    document.getElementById('modal-mov-footer-delete').style.display = 'none';
+    document.getElementById('btn-modal-mov-fechar').style.display = 'none';
+    document.getElementById('btn-modal-mov-editar').style.display = 'none';
+    document.getElementById('btn-modal-mov-cancelar').style.display = 'inline-block';
+    document.getElementById('btn-modal-mov-salvar').style.display = 'inline-block';
+  }
+
+  function cancelarEdicaoMovimentacao() {
+    document.getElementById('secao-mov-visualizacao').style.display = 'block';
+    document.getElementById('secao-mov-edicao').style.display = 'none';
+
+    document.getElementById('modal-mov-footer-delete').style.display = 'block';
+    document.getElementById('btn-modal-mov-fechar').style.display = 'inline-block';
+    document.getElementById('btn-modal-mov-editar').style.display = 'inline-block';
+    document.getElementById('btn-modal-mov-cancelar').style.display = 'none';
+    document.getElementById('btn-modal-mov-salvar').style.display = 'none';
+  }
+
+  function confirmarExclusaoMovimentacao() {
+    if (!movAtualModal) return;
+    const cod = `MOV-${String(movAtualModal.id).padStart(4, '0')}`;
+    const op = movAtualModal.tipo === 'ENTRADA' ? 'Entrada' : 'Baixa';
+    
+    if (confirm(`Tem certeza de que deseja excluir a movimentação ${cod} (${op} de ${movAtualModal.quantidade} itens de "${movAtualModal.produto_nome}")?\n\nO saldo do produto no inventário será estornado automaticamente!`)) {
+      document.getElementById('form-modal-excluir-mov').submit();
+    }
+  }
+</script>
 
 <%- include('../layouts/footer') %>
