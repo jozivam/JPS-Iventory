@@ -1,15 +1,14 @@
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const dbPath = path.resolve(__dirname, 'almoxarifado.sqlite');
-const db = new Database(dbPath);
+const isVercel = !!process.env.VERCEL;
+const isSupabaseDriver = process.env.DB_DRIVER === 'supabase';
 
-// Otimizações de desempenho e integridade
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+let db = null;
 
 function initDatabase() {
+  if (!db) return;
+
   // Criação exclusiva das tabelas de Produtos (Inventário) e Movimentações
   db.exec(`
     CREATE TABLE IF NOT EXISTS produtos (
@@ -74,6 +73,8 @@ function initDatabase() {
 }
 
 function seedDatabase() {
+  if (!db) return;
+
   const seedProdutos = [
     { sku: 'FER-ALC-001', nome: 'Alicate Universal 8 Polegadas Isolado 1000V', categoria: 'Ferramentas', marca: 'Tramontina Pro', unidade: 'UN', qtd: 12, min: 5, preco: 45.20, local: 'Bancada B-05', tamanho: '8"', cor: 'Amarelo/Vermelho', peso: '380g', patrimonio: 'PAT-0010', tag: 'FER-01', ca: null, numero_serie: 'SN-7841' },
     { sku: 'ELE-CAB-030', nome: 'Cabo de Rede UTP Cat6 100% Cobre (Bobina 305m)', categoria: 'Elétrica e TI', marca: 'Furukawa', unidade: 'CX', qtd: 2, min: 4, preco: 490.00, local: 'Depósito D-02', tamanho: '305m', cor: 'Azul', peso: '12.5kg', patrimonio: null, tag: 'TI-09', ca: null, numero_serie: 'BOB-2026-X' },
@@ -119,7 +120,20 @@ function seedDatabase() {
   tx();
 }
 
-// Inicializa banco de dados
-initDatabase();
+// Inicializa SQLite apenas quando rodando localmente (fora da Vercel e sem driver Supabase)
+if (!isVercel && !isSupabaseDriver) {
+  try {
+    const Database = require('better-sqlite3');
+    const dbPath = path.resolve(__dirname, 'almoxarifado.sqlite');
+    db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
+    initDatabase();
+  } catch (err) {
+    console.error('Aviso ao inicializar SQLite local:', err.message);
+  }
+} else {
+  console.log('Ambiente em nuvem/Vercel ou DB_DRIVER=supabase ativo. SQLite local desativado com segurança.');
+}
 
 module.exports = db;

@@ -1,11 +1,11 @@
+const xlsx = require('xlsx');
 const Produto = require('../models/Produto');
 const Movimentacao = require('../models/Movimentacao');
 const db = require('../../config/database');
-const xlsx = require('xlsx');
 
 class ProdutoController {
   /**
-   * Listagem de Inventário (Itens)
+   * Listagem do Inventário com Filtros e Indicadores
    */
   static async index(req, res) {
     try {
@@ -17,9 +17,9 @@ class ProdutoController {
         status: status || ''
       };
 
-      const produtos = Produto.findAll(filtros);
-      const estatisticas = Produto.getEstatisticas();
-      const categorias = Produto.getCategorias();
+      const produtos = await Produto.findAll(filtros);
+      const estatisticas = await Produto.getEstatisticas();
+      const categorias = await Produto.getCategorias();
 
       res.render('produtos/index', {
         title: 'Inventário de Produtos',
@@ -47,7 +47,7 @@ class ProdutoController {
    */
   static async create(req, res) {
     try {
-      const categorias = Produto.getCategorias();
+      const categorias = await Produto.getCategorias();
       const skuSugerido = Produto.gerarSku();
 
       res.render('produtos/create', {
@@ -69,7 +69,7 @@ class ProdutoController {
   }
 
   /**
-   * Salva novo produto no banco de dados
+   * Salva um novo produto no Inventário
    */
   static async store(req, res) {
     try {
@@ -87,9 +87,9 @@ class ProdutoController {
 
       // Verifica duplicidade de SKU se informado manualmente
       if (sku && sku.trim()) {
-        const existente = Produto.findBySku(sku.trim().toUpperCase());
+        const existente = await Produto.findBySku(sku.trim().toUpperCase());
         if (existente) {
-          const categorias = Produto.getCategorias();
+          const categorias = await Produto.getCategorias();
           return res.render('produtos/create', {
             title: 'Novo Produto',
             currentPage: 'produtos',
@@ -103,7 +103,7 @@ class ProdutoController {
       const qtdInicial = parseInt(quantidade, 10) || 0;
 
       // Cria produto
-      const produtoId = Produto.create({
+      const produtoId = await Produto.create({
         sku,
         nome: nome && nome.trim() ? nome.trim() : 'Item sem descrição',
         categoria: categoriaFinal,
@@ -123,7 +123,7 @@ class ProdutoController {
 
       // Se informou quantidade maior que 0, registra a movimentação de entrada inicial
       if (qtdInicial > 0) {
-        Movimentacao.registrar({
+        await Movimentacao.registrar({
           produto_id: produtoId,
           tipo: 'ENTRADA',
           quantidade: qtdInicial,
@@ -137,7 +137,7 @@ class ProdutoController {
       res.redirect('/produtos?sucesso=' + encodeURIComponent(`${nomeItem} cadastrado com sucesso no inventário!`));
     } catch (error) {
       console.error('Erro ao cadastrar produto:', error);
-      const categorias = Produto.getCategorias();
+      const categorias = await Produto.getCategorias();
       res.render('produtos/create', {
         title: 'Novo Produto',
         currentPage: 'produtos',
@@ -154,13 +154,13 @@ class ProdutoController {
   static async edit(req, res) {
     try {
       const { id } = req.params;
-      const produto = Produto.findById(id);
+      const produto = await Produto.findById(id);
 
       if (!produto) {
         return res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
       }
 
-      const categorias = Produto.getCategorias();
+      const categorias = await Produto.getCategorias();
 
       res.render('produtos/edit', {
         title: `Editar ${produto.nome || 'Produto'}`,
@@ -181,7 +181,7 @@ class ProdutoController {
   static async update(req, res) {
     try {
       const { id } = req.params;
-      const produtoAtual = Produto.findById(id);
+      const produtoAtual = await Produto.findById(id);
 
       if (!produtoAtual) {
         return res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
@@ -201,9 +201,9 @@ class ProdutoController {
 
       // Se alterou o SKU, verifica duplicidade com outro item
       if (sku && sku.trim().toUpperCase() !== produtoAtual.sku) {
-        const existente = Produto.findBySku(sku.trim().toUpperCase());
+        const existente = await Produto.findBySku(sku.trim().toUpperCase());
         if (existente && existente.id !== produtoAtual.id) {
-          const categorias = Produto.getCategorias();
+          const categorias = await Produto.getCategorias();
           return res.render('produtos/edit', {
             title: `Editar ${produtoAtual.nome}`,
             currentPage: 'produtos',
@@ -214,7 +214,7 @@ class ProdutoController {
         }
       }
 
-      Produto.update(id, {
+      await Produto.update(id, {
         sku,
         sku_atual: produtoAtual.sku,
         nome: nome && nome.trim() ? nome.trim() : 'Item sem descrição',
@@ -237,7 +237,7 @@ class ProdutoController {
       res.redirect('/produtos?sucesso=' + encodeURIComponent(`${nomeItem} atualizado com sucesso!`));
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
-      const categorias = Produto.getCategorias();
+      const categorias = await Produto.getCategorias();
       res.render('produtos/edit', {
         title: 'Editar Produto',
         currentPage: 'produtos',
@@ -254,7 +254,7 @@ class ProdutoController {
   static async detalhes(req, res) {
     try {
       const { id } = req.params;
-      const produto = Produto.findById(id);
+      const produto = await Produto.findById(id);
       if (!produto) {
         return res.status(404).json({ erro: 'Produto não encontrado' });
       }
@@ -270,10 +270,10 @@ class ProdutoController {
   static async delete(req, res) {
     try {
       const { id } = req.params;
-      const produto = Produto.findById(id);
+      const produto = await Produto.findById(id);
 
       if (produto) {
-        Produto.delete(id);
+        await Produto.delete(id);
         res.redirect('/produtos?sucesso=' + encodeURIComponent(`Produto "${produto.nome}" excluído com sucesso.`));
       } else {
         res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
@@ -290,7 +290,7 @@ class ProdutoController {
   static async exportarExcel(req, res) {
     try {
       const { busca, categoria, status } = req.query;
-      const produtos = Produto.findAll({ busca, categoria, status });
+      const produtos = await Produto.findAll({ busca, categoria, status });
 
       const dadosFormatados = produtos.map(p => ({
         'SKU': p.sku || '',
@@ -376,120 +376,91 @@ class ProdutoController {
       let criados = 0;
       let atualizados = 0;
 
-      const tx = db.transaction(() => {
-        linhas.forEach(row => {
-          // Normalização tolerante de cabeçalhos
-          const sku = (row['SKU'] || row['Código SKU'] || row['sku'] || row['Codigo SKU'] || '').toString().trim().toUpperCase();
-          const nome = (row['Nome do Produto'] || row['Nome'] || row['Descrição'] || row['Descricao'] || row['nome'] || '').toString().trim();
-          const categoria = (row['Categoria'] || row['categoria'] || 'Outros').toString().trim();
-          const marca = (row['Marca'] || row['Marca / Fabricante'] || row['Fabricante'] || row['marca'] || '').toString().trim() || null;
-          const unidade = (row['Unidade'] || row['Unidade de Medida'] || row['UN'] || row['unidade'] || 'UN').toString().trim().toUpperCase();
-          const quantidade = parseInt(row['Quantidade'] || row['Estoque'] || row['Qtd'] || 0, 10) || 0;
-          const estoqueMinimo = parseInt(row['Estoque Mínimo'] || row['Estoque Minimo'] || row['Mínimo'] || row['Minimo'] || 0, 10) || 0;
-          const localizacao = (row['Localização'] || row['Localizacao'] || row['Endereçamento'] || '').toString().trim() || null;
-          const tag = (row['TAG'] || row['TAG / Plaqueta'] || row['Plaqueta'] || '').toString().trim().toUpperCase() || null;
-          const patrimonio = (row['Patrimônio'] || row['Patrimonio'] || row['Nº de Patrimônio'] || '').toString().trim().toUpperCase() || null;
-          const ca = (row['C.A (EPI)'] || row['C.A'] || row['CA'] || '').toString().trim() || null;
-          const numeroSerie = (row['Número de Série'] || row['Numero de Serie'] || row['Série'] || '').toString().trim() || null;
-          const tamanho = (row['Tamanho'] || row['Tamanho / Dimensão'] || row['Dimensão'] || '').toString().trim() || null;
-          const cor = (row['Cor'] || '').toString().trim() || null;
-          const peso = (row['Peso'] || '').toString().trim() || null;
+      for (const row of linhas) {
+        // Normalização tolerante de cabeçalhos
+        const sku = (row['SKU'] || row['Código SKU'] || row['sku'] || row['Codigo SKU'] || '').toString().trim().toUpperCase();
+        const nome = (row['Nome do Produto'] || row['Nome'] || row['Descrição'] || row['Descricao'] || row['nome'] || '').toString().trim();
+        const categoria = (row['Categoria'] || row['categoria'] || 'Outros').toString().trim();
+        const marca = (row['Marca'] || row['Marca / Fabricante'] || row['Fabricante'] || row['marca'] || '').toString().trim() || null;
+        const unidade = (row['Unidade'] || row['Unidade de Medida'] || row['UN'] || row['unidade'] || 'UN').toString().trim().toUpperCase();
+        const quantidade = parseInt(row['Quantidade'] || row['Estoque'] || row['Qtd'] || 0, 10) || 0;
+        const estoqueMinimo = parseInt(row['Estoque Mínimo'] || row['Estoque Minimo'] || row['Mínimo'] || row['Minimo'] || 0, 10) || 0;
+        const localizacao = (row['Localização'] || row['Localizacao'] || row['Endereçamento'] || '').toString().trim() || null;
+        const tag = (row['TAG'] || row['TAG / Plaqueta'] || row['Plaqueta'] || '').toString().trim().toUpperCase() || null;
+        const patrimonio = (row['Patrimônio'] || row['Patrimonio'] || row['Nº de Patrimônio'] || '').toString().trim().toUpperCase() || null;
+        const ca = (row['C.A (EPI)'] || row['C.A'] || row['CA'] || '').toString().trim() || null;
+        const numeroSerie = (row['Número de Série'] || row['Numero de Serie'] || row['Série'] || '').toString().trim() || null;
+        const tamanho = (row['Tamanho'] || row['Tamanho / Dimensão'] || row['Dimensão'] || '').toString().trim() || null;
+        const cor = (row['Cor'] || '').toString().trim() || null;
+        const peso = (row['Peso'] || '').toString().trim() || null;
 
-          // Pula linhas totalmente vazias
-          if (!sku && !nome) return;
+        // Pula linhas totalmente vazias
+        if (!sku && !nome) continue;
 
-          // Verifica se o SKU já existe no banco
-          let produtoExistente = null;
-          if (sku) {
-            produtoExistente = db.prepare('SELECT id, sku, nome, quantidade FROM produtos WHERE UPPER(sku) = ?').get(sku);
+        // Verifica se o SKU já existe no banco
+        let produtoExistente = null;
+        if (sku) {
+          produtoExistente = await Produto.findBySku(sku);
+        }
+
+        if (produtoExistente) {
+          // ATUALIZA o produto existente
+          await Produto.update(produtoExistente.id, {
+            sku: sku || produtoExistente.sku,
+            sku_atual: produtoExistente.sku,
+            nome: nome || produtoExistente.nome,
+            categoria: categoria || 'Outros',
+            marca,
+            unidade_medida: unidade || 'UN',
+            quantidade,
+            estoque_minimo: estoqueMinimo,
+            localizacao,
+            tamanho,
+            cor,
+            peso,
+            numero_serie: numeroSerie,
+            ca,
+            patrimonio,
+            tag
+          });
+          atualizados++;
+        } else {
+          // CADASTRA novo produto
+          const novoSku = sku || Produto.gerarSku(categoria);
+          const novoId = await Produto.create({
+            sku: novoSku,
+            nome: nome || 'Item importado sem descrição',
+            categoria: categoria || 'Outros',
+            marca,
+            unidade_medida: unidade || 'UN',
+            quantidade,
+            estoque_minimo: estoqueMinimo,
+            preco_unitario: 0.0,
+            localizacao,
+            tamanho,
+            cor,
+            peso,
+            numero_serie: numeroSerie,
+            ca,
+            patrimonio,
+            tag
+          });
+
+          // Se quantidade inicial > 0, registra a carga inicial
+          if (quantidade > 0) {
+            await Movimentacao.registrar({
+              produto_id: novoId,
+              tipo: 'ENTRADA',
+              quantidade,
+              motivo: 'Carga inicial via importação Excel',
+              responsavel: 'Importação em Lote',
+              documento_ref: 'PLANILHA-IMPORT'
+            });
           }
 
-          if (produtoExistente) {
-            // ATUALIZA o produto existente
-            db.prepare(`
-              UPDATE produtos SET
-                nome = COALESCE(NULLIF(@nome, ''), nome),
-                categoria = COALESCE(NULLIF(@categoria, ''), categoria),
-                marca = COALESCE(@marca, marca),
-                unidade_medida = COALESCE(NULLIF(@unidade_medida, ''), unidade_medida),
-                quantidade = @quantidade,
-                estoque_minimo = @estoque_minimo,
-                localizacao = COALESCE(@localizacao, localizacao),
-                tamanho = COALESCE(@tamanho, tamanho),
-                cor = COALESCE(@cor, cor),
-                peso = COALESCE(@peso, peso),
-                numero_serie = COALESCE(@numero_serie, numero_serie),
-                ca = COALESCE(@ca, ca),
-                patrimonio = COALESCE(@patrimonio, patrimonio),
-                tag = COALESCE(@tag, tag),
-                atualizado_em = datetime('now', 'localtime')
-              WHERE id = @id
-            `).run({
-              id: produtoExistente.id,
-              nome: nome || produtoExistente.nome,
-              categoria: categoria || 'Outros',
-              marca,
-              unidade_medida: unidade || 'UN',
-              quantidade,
-              estoque_minimo: estoqueMinimo,
-              localizacao,
-              tamanho,
-              cor,
-              peso,
-              numero_serie: numeroSerie,
-              ca,
-              patrimonio,
-              tag
-            });
-            atualizados++;
-          } else {
-            // CADASTRA novo produto
-            const novoSku = sku || Produto.gerarSku(categoria);
-            const resInsert = db.prepare(`
-              INSERT INTO produtos (
-                sku, nome, categoria, marca, unidade_medida, quantidade, 
-                estoque_minimo, preco_unitario, localizacao,
-                tamanho, cor, peso, numero_serie, ca, patrimonio, tag
-              ) VALUES (
-                @sku, @nome, @categoria, @marca, @unidade_medida, @quantidade, 
-                @estoque_minimo, 0.0, @localizacao,
-                @tamanho, @cor, @peso, @numero_serie, @ca, @patrimonio, @tag
-              )
-            `).run({
-              sku: novoSku,
-              nome: nome || 'Item importado sem descrição',
-              categoria: categoria || 'Outros',
-              marca,
-              unidade_medida: unidade || 'UN',
-              quantidade,
-              estoque_minimo: estoqueMinimo,
-              localizacao,
-              tamanho,
-              cor,
-              peso,
-              numero_serie: numeroSerie,
-              ca,
-              patrimonio,
-              tag
-            });
-
-            // Se quantidade inicial > 0, registra a carga inicial
-            if (quantidade > 0) {
-              db.prepare(`
-                INSERT INTO movimentacoes (produto_id, tipo, quantidade, motivo, responsavel, documento_ref)
-                VALUES (@produto_id, 'ENTRADA', @quantidade, 'Carga inicial via importação Excel', 'Importação em Lote', 'PLANILHA-IMPORT')
-              `).run({
-                produto_id: resInsert.lastInsertRowid,
-                quantidade
-              });
-            }
-
-            criados++;
-          }
-        });
-      });
-
-      tx();
+          criados++;
+        }
+      }
 
       const mensagemSucesso = `Planilha processada com sucesso! ${criados} produto(s) cadastrado(s) e ${atualizados} atualizado(s) no inventário.`;
       res.redirect('/produtos?sucesso=' + encodeURIComponent(mensagemSucesso));

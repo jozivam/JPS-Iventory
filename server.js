@@ -65,9 +65,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`📦 JPS-Inventory (Sistema de Almoxarifado MVC)`);
-  console.log(`🚀 Servidor rodando com sucesso em: http://localhost:${PORT}`);
-  console.log(`====================================================`);
-});
+// Exporta a aplicação para a Vercel Serverless Function
+module.exports = app;
+
+// Só inicia o servidor localmente se NÃO estiver rodando na Vercel
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`📦 JPS-Inventory (Sistema de Almoxarifado MVC)`);
+    console.log(`🚀 Servidor rodando com sucesso em: http://localhost:${PORT}`);
+    console.log(`====================================================`);
+  });
+}

@@ -6,7 +6,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseUrl = process.env.SUPABASE_URL || 'https://nhomnkckccszanrqpnki.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const databaseUrl = process.env.DATABASE_URL || '';
 

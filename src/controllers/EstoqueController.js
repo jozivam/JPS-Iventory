@@ -44,8 +44,8 @@ class EstoqueController {
         periodo: periodo || ''
       };
 
-      const movimentacoes = Movimentacao.findAll(filtros);
-      const produtos = Produto.findAll();
+      const movimentacoes = await Movimentacao.findAll(filtros);
+      const produtos = await Produto.findAll();
 
       res.render('movimentacoes/index', {
         title: 'Histórico de Movimentações',
@@ -73,11 +73,11 @@ class EstoqueController {
   static async create(req, res) {
     try {
       const { produto_id, tipo } = req.query;
-      const produtos = Produto.findAll();
+      const produtos = await Produto.findAll();
 
       let produtoPreSelecionado = null;
       if (produto_id) {
-        produtoPreSelecionado = Produto.findById(produto_id);
+        produtoPreSelecionado = await Produto.findById(produto_id);
       }
 
       const tipoPadrao = (tipo === 'ENTRADA' || tipo === 'SAIDA') ? tipo : 'SAIDA';
@@ -113,7 +113,7 @@ class EstoqueController {
         throw new Error('A quantidade deve ser maior que zero.');
       }
 
-      const resultado = Movimentacao.registrar({
+      const resultado = await Movimentacao.registrar({
         produto_id: parseInt(produto_id, 10),
         tipo,
         quantidade: qtd,
@@ -127,8 +127,8 @@ class EstoqueController {
       res.redirect('/movimentacoes?sucesso=' + encodeURIComponent(mensagemSucesso));
     } catch (error) {
       console.error('Erro ao processar movimentação:', error);
-      const produtos = Produto.findAll();
-      const produtoPreSelecionado = req.body.produto_id ? Produto.findById(req.body.produto_id) : null;
+      const produtos = await Produto.findAll();
+      const produtoPreSelecionado = req.body.produto_id ? await Produto.findById(req.body.produto_id) : null;
 
       res.render('movimentacoes/create', {
         title: 'Registrar Movimentação',
@@ -150,7 +150,7 @@ class EstoqueController {
       const { id } = req.params;
       const { produto_id, tipo, quantidade, motivo, responsavel, documento_ref } = req.body;
 
-      Movimentacao.update(id, {
+      await Movimentacao.update(id, {
         produto_id,
         tipo,
         quantidade,
@@ -172,7 +172,7 @@ class EstoqueController {
   static async delete(req, res) {
     try {
       const { id } = req.params;
-      const resultado = Movimentacao.delete(id);
+      const resultado = await Movimentacao.delete(id);
 
       res.redirect('/movimentacoes?sucesso=' + encodeURIComponent(`Movimentação MOV-${String(id).padStart(4, '0')} excluída com sucesso! O saldo de "${resultado.produto_nome}" foi estornado no inventário.`));
     } catch (error) {
@@ -213,7 +213,7 @@ class EstoqueController {
         dtFim = formatYMD(hoje);
       }
 
-      const movimentacoes = Movimentacao.findAll({
+      const movimentacoes = await Movimentacao.findAll({
         produto_id: produto_id ? parseInt(produto_id, 10) : '',
         tipo: tipo || '',
         data_inicio: dtInicio,
