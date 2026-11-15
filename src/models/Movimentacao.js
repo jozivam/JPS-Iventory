@@ -18,12 +18,16 @@ class Movimentacao {
   /**
    * Lista histórico de movimentações com filtros opcionais
    */
-  static async findAll({ produto_id, tipo, data_inicio, data_fim, busca, status_emprestimo, limite = 200 } = {}) {
+  static async findAll({ produto_id, colaborador_id, tipo, data_inicio, data_fim, busca, status_emprestimo, limite = 200 } = {}) {
     if (useSupabase && supabase) {
       let q = supabase.from('movimentacoes').select('*, produtos(nome, sku, unidade_medida, marca, tag, patrimonio)');
 
       if (produto_id) {
         q = q.eq('produto_id', parseInt(produto_id, 10));
+      }
+
+      if (colaborador_id) {
+        q = q.eq('colaborador_id', parseInt(colaborador_id, 10));
       }
 
       if (tipo && TIPOS_VALIDOS.includes(tipo)) {
@@ -87,6 +91,11 @@ class Movimentacao {
     if (produto_id) {
       sql += ` AND m.produto_id = @produto_id`;
       params.produto_id = parseInt(produto_id, 10);
+    }
+
+    if (colaborador_id) {
+      sql += ` AND m.colaborador_id = @colaborador_id`;
+      params.colaborador_id = parseInt(colaborador_id, 10);
     }
 
     if (tipo && TIPOS_VALIDOS.includes(tipo)) {
@@ -162,7 +171,7 @@ class Movimentacao {
   /**
    * Registra uma nova movimentação atômica
    */
-  static async registrar({ produto_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, status_emprestimo, movimentacao_origem_id }) {
+  static async registrar({ produto_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, colaborador_id, status_emprestimo, movimentacao_origem_id }) {
     const qtd = parseInt(quantidade, 10);
     if (!qtd || qtd <= 0) {
       throw new Error('A quantidade deve ser um número inteiro maior que zero.');
@@ -176,8 +185,19 @@ class Movimentacao {
     const colaboradorFinal = (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão';
     const responsavelFinal = responsavel ? responsavel.trim() : 'Almoxarife';
     const statusFinal = status_emprestimo || (tipo === 'EMPRESTIMO' ? 'PENDENTE' : (tipo === 'DEVOLUCAO' ? 'CONCLUIDO' : null));
+    let colabIdFinal = colaborador_id ? parseInt(colaborador_id, 10) : null;
 
     if (useSupabase && supabase) {
+      // Se não passou o colaborador_id mas passou o nome do colaborador, tenta associar automaticamente
+      if (!colabIdFinal && colaboradorFinal && colaboradorFinal.toLowerCase() !== 'balcão') {
+        try {
+          const { data: c } = await supabase.from('colaboradores').select('id').ilike('nome', colaboradorFinal).limit(1).maybeSingle();
+          if (c) colabIdFinal = c.id;
+        } catch (e) {
+          console.warn('Aviso ao resolver colaborador_id no Supabase:', e.message);
+        }
+      }
+
       const { data: prod, error: errProd } = await supabase.from('produtos').select('id, nome, quantidade, unidade_medida').eq('id', produto_id).single();
       if (errProd || !prod) {
         throw new Error('Produto selecionado não existe.');
@@ -228,6 +248,7 @@ class Movimentacao {
         const { data: mov, error: errMov } = await supabase.from('movimentacoes').insert({
           ...payloadMov,
           colaborador: colaboradorFinal,
+          colaborador_id: colabIdFinal,
           status_emprestimo: statusFinal,
           movimentacao_origem_id: movimentacao_origem_id ? parseInt(movimentacao_origem_id, 10) : null
         }).select().single();
@@ -261,6 +282,12 @@ class Movimentacao {
     if (!db) throw new Error('Banco de dados não disponível');
 
     const tx = db.transaction(() => {
+      // Se não passou o colaborador_id mas passou o nome do colaborador, tenta associar automaticamente
+      if (!colabIdFinal && colaboradorFinal && colaboradorFinal.toLowerCase() !== 'balcão') {
+        const c = db.prepare('SELECT id FROM colaboradores WHERE LOWER(nome) = LOWER(?)').get(colaboradorFinal);
+        if (c) colabIdFinal = c.id;
+      }
+
       const produto = db.prepare('SELECT id, nome, quantidade, unidade_medida FROM produtos WHERE id = ?').get(produto_id);
       if (!produto) {
         throw new Error('Produto selecionado não existe.');
@@ -298,16 +325,17 @@ class Movimentacao {
 
       const insertStmt = db.prepare(`
         INSERT INTO movimentacoes (
-          produto_id, tipo, quantidade, motivo, responsavel, documento_ref,
+          produto_id, colaborador_id, tipo, quantidade, motivo, responsavel, documento_ref,
           colaborador, status_emprestimo, movimentacao_origem_id
         ) VALUES (
-          @produto_id, @tipo, @quantidade, @motivo, @responsavel, @documento_ref,
+          @produto_id, @colaborador_id, @tipo, @quantidade, @motivo, @responsavel, @documento_ref,
           @colaborador, @status_emprestimo, @movimentacao_origem_id
         )
       `);
 
       const res = insertStmt.run({
         produto_id,
+        colaborador_id: colabIdFinal,
         tipo,
         quantidade: qtd,
         motivo: motivo ? motivo.trim() : `Lançamento de ${tipo.toLowerCase()} no balcão`,

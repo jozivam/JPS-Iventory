@@ -150,6 +150,88 @@ class Colaborador {
   }
 
   /**
+   * Obtém a Ficha Completa e Isolada do Colaborador
+   * Vincula e totaliza todos os produtos movimentados do inventário para a ficha deste colaborador.
+   */
+  static async getFicha(id) {
+    const colaborador = await this.findById(id);
+    if (!colaborador) {
+      throw new Error('Colaborador não encontrado.');
+    }
+
+    let movimentacoes = [];
+
+    if (useSupabase && supabase) {
+      // Busca movimentações onde colaborador_id = id OU onde o nome do colaborador coincida
+      const { data, error } = await supabase
+        .from('movimentacoes')
+        .select('*, produtos(nome, sku, unidade_medida, categoria, marca)')
+        .or(`colaborador_id.eq.${colaborador.id},colaborador.ilike.%${colaborador.nome}%`)
+        .order('id', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar movimentações da ficha no Supabase:', error);
+      } else if (data) {
+        movimentacoes = data.map(m => ({
+          ...m,
+          produto_nome: m.produtos ? m.produtos.nome : 'Item',
+          produto_sku: m.produtos ? m.produtos.sku : '',
+          produto_unidade: m.produtos ? m.produtos.unidade_medida : 'UN',
+          produto_categoria: m.produtos ? m.produtos.categoria : 'Geral',
+          produto_marca: m.produtos ? m.produtos.marca : ''
+        }));
+      }
+    } else if (db) {
+      const sql = `
+        SELECT 
+          m.*,
+          p.nome as produto_nome,
+          p.sku as produto_sku,
+          p.unidade_medida as produto_unidade,
+          p.categoria as produto_categoria,
+          p.marca as produto_marca
+        FROM movimentacoes m
+        JOIN produtos p ON m.produto_id = p.id
+        WHERE m.colaborador_id = ? OR m.colaborador LIKE ?
+        ORDER BY m.id DESC
+      `;
+      movimentacoes = db.prepare(sql).all(colaborador.id, `%${colaborador.nome}%`);
+    }
+
+    // Métricas consolidadas da Ficha
+    const totalSaidasQtd = movimentacoes
+      .filter(m => m.tipo === 'SAIDA')
+      .reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
+
+    const totalEmprestimosQtd = movimentacoes
+      .filter(m => m.tipo === 'EMPRESTIMO')
+      .reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
+
+    const emprestimosAtivos = movimentacoes.filter(m => m.tipo === 'EMPRESTIMO' && m.status_emprestimo === 'PENDENTE');
+    const totalEmprestimosAtivosQtd = emprestimosAtivos.reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
+
+    const totalDevolucoesQtd = movimentacoes
+      .filter(m => m.tipo === 'DEVOLUCAO' || (m.tipo === 'EMPRESTIMO' && m.status_emprestimo === 'DEVOLVIDO'))
+      .reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
+
+    const estatisticasFicha = {
+      totalLancamentos: movimentacoes.length,
+      totalSaidasQtd,
+      totalEmprestimosQtd,
+      totalEmprestimosAtivosQtd,
+      totalDevolucoesQtd,
+      totalEmprestimosPendentesCount: emprestimosAtivos.length
+    };
+
+    return {
+      colaborador,
+      estatisticasFicha,
+      emprestimosAtivos,
+      movimentacoes
+    };
+  }
+
+  /**
    * Cadastra novo colaborador ou usuário do sistema
    */
   static async create({

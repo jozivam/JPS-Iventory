@@ -249,6 +249,9 @@
               <!-- Ações -->
               <td style="text-align: right;" onclick="event.stopPropagation()">
                 <div style="display: inline-flex; gap: 0.35rem;">
+                  <a href="/colaboradores/<%= c.id %>/ficha" class="btn btn-outline btn-sm" title="Ver Ficha Individual de Movimentações" style="color: #4F46E5; border-color: #C7D2FE; font-weight: 700;">
+                    <i class="fa-solid fa-file-invoice"></i> Ficha
+                  </a>
                   <button type="button" class="btn btn-outline btn-sm" title="Ver Detalhes e Nível de Acesso" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
                     <i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i>
                   </button>
@@ -324,6 +327,9 @@
             </div>
 
             <div style="display: flex; gap: 0.4rem;" onclick="event.stopPropagation()">
+              <a href="/colaboradores/<%= c.id %>/ficha" class="btn btn-outline btn-sm" style="color: #4F46E5; border-color: #C7D2FE; font-weight: 700;">
+                <i class="fa-solid fa-file-invoice"></i> Ficha
+              </a>
               <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
                 <i class="fa-solid fa-shield-halved"></i> Acesso
               </button>
@@ -497,10 +503,15 @@
     </div>
 
     <!-- Rodapé do Modal de Detalhes -->
-    <div class="modal-footer" style="border-top: 1px solid var(--border-light); padding: 0.85rem 1.25rem; display: flex; justify-content: space-between;">
-      <button type="button" class="btn btn-outline" id="btn-modal-editar-dados" onclick="fecharModalDetalhesColaborador(); abrirModalEditarColaborador(colaboradorAtualId);">
-        <i class="fa-solid fa-pen-to-square"></i> Editar Dados Cadastrais
-      </button>
+    <div class="modal-footer" style="border-top: 1px solid var(--border-light); padding: 0.85rem 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <a href="#" id="link-modal-ver-ficha" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+          <i class="fa-solid fa-file-invoice"></i> Acessar Ficha Completa
+        </a>
+        <button type="button" class="btn btn-outline" id="btn-modal-editar-dados" onclick="fecharModalDetalhesColaborador(); abrirModalEditarColaborador(colaboradorAtualId);">
+          <i class="fa-solid fa-pen-to-square"></i> Editar Dados
+        </button>
+      </div>
 
       <button type="button" class="btn btn-secondary" onclick="fecharModalDetalhesColaborador()">
         Fechar
@@ -743,6 +754,9 @@
     document.getElementById('modal-view-nome').textContent = c.nome;
     document.getElementById('modal-view-matricula').textContent = c.matricula || 'SEM MATRÍCULA';
     document.getElementById('modal-view-avatar').textContent = (c.nome || 'JS').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    
+    const linkFicha = document.getElementById('link-modal-ver-ficha');
+    if (linkFicha) linkFicha.href = `/colaboradores/${c.id}/ficha`;
     
     const statusPill = document.getElementById('modal-view-status-pill');
     if (c.status === 'ATIVO') {

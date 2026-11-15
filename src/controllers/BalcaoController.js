@@ -8,7 +8,7 @@ class BalcaoController {
    */
   static async index(req, res) {
     try {
-      const { tipo, produto_id, sucesso, erro } = req.query;
+      const { tipo, produto_id, colaborador_id, sucesso, erro } = req.query;
 
       const [produtos, emprestimosPendentes, estatisticas, ultimosAtendimentos, colaboradores] = await Promise.all([
         Produto.findAll(),
@@ -23,6 +23,11 @@ class BalcaoController {
         produtoPreSelecionado = await Produto.findById(produto_id);
       }
 
+      let colaboradorPreSelecionado = null;
+      if (colaborador_id) {
+        colaboradorPreSelecionado = await Colaborador.findById(colaborador_id);
+      }
+
       res.render('balcao/index', {
         title: 'Balcão de Atendimento e Lançamentos',
         currentPage: 'balcao',
@@ -33,6 +38,7 @@ class BalcaoController {
         ultimosAtendimentos,
         tipoPreSelecionado: tipo || 'SAIDA',
         produtoPreSelecionado,
+        colaboradorPreSelecionado,
         sucesso: sucesso || null,
         erro: erro || null
       });
@@ -53,7 +59,7 @@ class BalcaoController {
   static async registrar(req, res) {
     try {
       const { 
-        produto_id, tipo, quantidade, colaborador, responsavel, motivo, documento_ref 
+        produto_id, tipo, quantidade, colaborador, colaborador_id, responsavel, motivo, documento_ref 
       } = req.body;
 
       if (!produto_id) {
@@ -88,6 +94,7 @@ class BalcaoController {
         tipo,
         quantidade: qtd,
         colaborador: colabFinal,
+        colaborador_id: colaborador_id ? parseInt(colaborador_id, 10) : null,
         responsavel: responsavel ? responsavel.trim() : 'Almoxarife',
         motivo: motivo ? motivo.trim() : null,
         documento_ref: documento_ref ? documento_ref.trim() : null

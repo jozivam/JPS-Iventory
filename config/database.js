@@ -36,6 +36,7 @@ function initDatabase() {
     CREATE TABLE IF NOT EXISTS movimentacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       produto_id INTEGER NOT NULL,
+      colaborador_id INTEGER,
       tipo TEXT NOT NULL CHECK(tipo IN ('ENTRADA', 'SAIDA', 'EMPRESTIMO', 'DEVOLUCAO', 'TROCA')),
       quantidade INTEGER NOT NULL CHECK(quantidade > 0),
       motivo TEXT,
@@ -46,7 +47,8 @@ function initDatabase() {
       data_devolucao DATETIME,
       movimentacao_origem_id INTEGER,
       criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
-      FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE
+      FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS colaboradores (
@@ -98,6 +100,7 @@ function initDatabase() {
   const colsMovExistentes = db.prepare('PRAGMA table_info(movimentacoes)').all().map(c => c.name);
   const colunasMovNecessarias = [
     { nome: 'colaborador', tipo: 'TEXT' },
+    { nome: 'colaborador_id', tipo: 'INTEGER' },
     { nome: 'status_emprestimo', tipo: 'TEXT' },
     { nome: 'data_devolucao', tipo: 'DATETIME' },
     { nome: 'movimentacao_origem_id', tipo: 'INTEGER' }

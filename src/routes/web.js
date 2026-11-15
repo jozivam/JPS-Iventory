@@ -54,6 +54,7 @@ router.post('/movimentacoes/:id/excluir', EstoqueController.delete);
 // --- COLABORADORES E USUÁRIOS DO SISTEMA ---
 router.get('/colaboradores', ColaboradorController.index);
 router.post('/colaboradores', ColaboradorController.store);
+router.get('/colaboradores/:id/ficha', ColaboradorController.ficha);
 router.get('/colaboradores/:id/detalhes', ColaboradorController.detalhes);
 router.post('/colaboradores/:id/editar', ColaboradorController.update);
 router.post('/colaboradores/:id/nivel-acesso', ColaboradorController.updateNivelAcesso);

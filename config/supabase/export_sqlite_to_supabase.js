@@ -77,28 +77,13 @@ function gerarSqlRecriacao() {
   sql += `    atualizado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP\n`;
   sql += `);\n\n`;
 
+  sql += `DROP TRIGGER IF EXISTS trigger_update_produtos_atualizado_em ON produtos;\n`;
   sql += `CREATE TRIGGER trigger_update_produtos_atualizado_em\n`;
   sql += `    BEFORE UPDATE ON produtos\n`;
   sql += `    FOR EACH ROW\n`;
   sql += `    EXECUTE FUNCTION update_updated_at_column();\n\n`;
 
-  sql += `-- 4. TABELA: MOVIMENTACOES (HISTÓRICO, BALCÃO E AUDITORIA)\n`;
-  sql += `CREATE TABLE movimentacoes (\n`;
-  sql += `    id BIGSERIAL PRIMARY KEY,\n`;
-  sql += `    produto_id BIGINT NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,\n`;
-  sql += `    tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('ENTRADA', 'SAIDA', 'EMPRESTIMO', 'DEVOLUCAO', 'TROCA')),\n`;
-  sql += `    quantidade NUMERIC(14, 2) NOT NULL CHECK (quantidade > 0),\n`;
-  sql += `    motivo TEXT,\n`;
-  sql += `    responsavel VARCHAR(150),\n`;
-  sql += `    documento_ref VARCHAR(100),\n`;
-  sql += `    colaborador VARCHAR(150),\n`;
-  sql += `    status_emprestimo VARCHAR(50) DEFAULT 'PENDENTE',\n`;
-  sql += `    data_devolucao TIMESTAMPTZ,\n`;
-  sql += `    movimentacao_origem_id BIGINT REFERENCES movimentacoes(id) ON DELETE SET NULL,\n`;
-  sql += `    criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP\n`;
-  sql += `);\n\n`;
-
-  sql += `-- 5. TABELA: COLABORADORES E USUÁRIOS DO SISTEMA\n`;
+  sql += `-- 4. TABELA: COLABORADORES E USUÁRIOS DO SISTEMA\n`;
   sql += `CREATE TABLE colaboradores (\n`;
   sql += `    id BIGSERIAL PRIMARY KEY,\n`;
   sql += `    nome VARCHAR(255) NOT NULL,\n`;
@@ -115,16 +100,35 @@ function gerarSqlRecriacao() {
   sql += `    atualizado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP\n`;
   sql += `);\n\n`;
 
+  sql += `DROP TRIGGER IF EXISTS trigger_update_colaboradores_atualizado_em ON colaboradores;\n`;
   sql += `CREATE TRIGGER trigger_update_colaboradores_atualizado_em\n`;
   sql += `    BEFORE UPDATE ON colaboradores\n`;
   sql += `    FOR EACH ROW\n`;
   sql += `    EXECUTE FUNCTION update_updated_at_column();\n\n`;
+
+  sql += `-- 5. TABELA: MOVIMENTACOES (HISTÓRICO, BALCÃO E AUDITORIA)\n`;
+  sql += `CREATE TABLE movimentacoes (\n`;
+  sql += `    id BIGSERIAL PRIMARY KEY,\n`;
+  sql += `    produto_id BIGINT NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,\n`;
+  sql += `    colaborador_id BIGINT REFERENCES colaboradores(id) ON DELETE SET NULL,\n`;
+  sql += `    tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('ENTRADA', 'SAIDA', 'EMPRESTIMO', 'DEVOLUCAO', 'TROCA')),\n`;
+  sql += `    quantidade NUMERIC(14, 2) NOT NULL CHECK (quantidade > 0),\n`;
+  sql += `    motivo TEXT,\n`;
+  sql += `    responsavel VARCHAR(150),\n`;
+  sql += `    documento_ref VARCHAR(100),\n`;
+  sql += `    colaborador VARCHAR(150),\n`;
+  sql += `    status_emprestimo VARCHAR(50) DEFAULT 'PENDENTE',\n`;
+  sql += `    data_devolucao TIMESTAMPTZ,\n`;
+  sql += `    movimentacao_origem_id BIGINT REFERENCES movimentacoes(id) ON DELETE SET NULL,\n`;
+  sql += `    criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP\n`;
+  sql += `);\n\n`;
 
   sql += `-- 6. ÍNDICES DE PERFORMANCE\n`;
   sql += `CREATE INDEX idx_produtos_sku ON produtos(UPPER(sku));\n`;
   sql += `CREATE INDEX idx_produtos_categoria ON produtos(categoria);\n`;
   sql += `CREATE INDEX idx_produtos_nome ON produtos(nome);\n`;
   sql += `CREATE INDEX idx_movimentacoes_produto_id ON movimentacoes(produto_id);\n`;
+  sql += `CREATE INDEX idx_movimentacoes_colaborador_id ON movimentacoes(colaborador_id);\n`;
   sql += `CREATE INDEX idx_movimentacoes_tipo ON movimentacoes(tipo);\n`;
   sql += `CREATE INDEX idx_movimentacoes_status_emprestimo ON movimentacoes(status_emprestimo);\n`;
   sql += `CREATE INDEX idx_movimentacoes_colaborador ON movimentacoes(colaborador);\n`;
@@ -153,22 +157,7 @@ function gerarSqlRecriacao() {
   sql += `\n-- Atualização da sequência de IDs de produtos\n`;
   sql += `SELECT setval(pg_get_serial_sequence('produtos', 'id'), COALESCE((SELECT MAX(id) FROM produtos), 1));\n\n`;
 
-  // Inserts de Movimentações
-  const colsMov = [
-    'id', 'produto_id', 'tipo', 'quantidade', 'motivo', 'responsavel', 'documento_ref',
-    'colaborador', 'status_emprestimo', 'data_devolucao', 'movimentacao_origem_id', 'criado_em'
-  ];
-
-  sql += `-- Movimentações registradas (${movimentacoes.length} registros)\n`;
-  movimentacoes.forEach(m => {
-    const vals = colsMov.map(col => escapeSqlValue(m[col])).join(', ');
-    sql += `INSERT INTO movimentacoes (${colsMov.join(', ')}) VALUES (${vals});\n`;
-  });
-
-  sql += `\n-- Atualização da sequência de IDs de movimentações\n`;
-  sql += `SELECT setval(pg_get_serial_sequence('movimentacoes', 'id'), COALESCE((SELECT MAX(id) FROM movimentacoes), 1));\n\n`;
-
-  // Inserts de Colaboradores
+  // Inserts de Colaboradores (Inseridos antes de Movimentações para respeitar FK)
   const colsColab = [
     'id', 'nome', 'matricula', 'cargo', 'departamento', 'email', 'telefone',
     'tipo_perfil', 'nivel_acesso', 'status', 'observacoes', 'criado_em', 'atualizado_em'
@@ -182,6 +171,21 @@ function gerarSqlRecriacao() {
 
   sql += `\n-- Atualização da sequência de IDs de colaboradores\n`;
   sql += `SELECT setval(pg_get_serial_sequence('colaboradores', 'id'), COALESCE((SELECT MAX(id) FROM colaboradores), 1));\n\n`;
+
+  // Inserts de Movimentações
+  const colsMov = [
+    'id', 'produto_id', 'colaborador_id', 'tipo', 'quantidade', 'motivo', 'responsavel', 'documento_ref',
+    'colaborador', 'status_emprestimo', 'data_devolucao', 'movimentacao_origem_id', 'criado_em'
+  ];
+
+  sql += `-- Movimentações registradas (${movimentacoes.length} registros)\n`;
+  movimentacoes.forEach(m => {
+    const vals = colsMov.map(col => escapeSqlValue(m[col])).join(', ');
+    sql += `INSERT INTO movimentacoes (${colsMov.join(', ')}) VALUES (${vals});\n`;
+  });
+
+  sql += `\n-- Atualização da sequência de IDs de movimentações\n`;
+  sql += `SELECT setval(pg_get_serial_sequence('movimentacoes', 'id'), COALESCE((SELECT MAX(id) FROM movimentacoes), 1));\n\n`;
 
   sql += `COMMIT;\n\n`;
 
