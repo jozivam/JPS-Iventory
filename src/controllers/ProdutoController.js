@@ -76,7 +76,7 @@ class ProdutoController {
       const { 
         sku, nome, categoria, categoria_personalizada, marca, unidade_medida, 
         quantidade, estoque_minimo, localizacao,
-        tamanho, cor, peso, numero_serie, ca, patrimonio, tag
+        tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao
       } = req.body;
 
       // Define categoria final
@@ -134,7 +134,8 @@ class ProdutoController {
         numero_serie,
         ca,
         patrimonio,
-        tag
+        tag,
+        observacao
       });
 
       // Se informou quantidade maior que 0, registra a movimentação de entrada inicial
@@ -206,7 +207,7 @@ class ProdutoController {
       const { 
         sku, nome, categoria, categoria_personalizada, marca, unidade_medida, 
         quantidade, estoque_minimo, localizacao,
-        tamanho, cor, peso, numero_serie, ca, patrimonio, tag
+        tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao
       } = req.body;
 
       // Define categoria final
@@ -246,7 +247,8 @@ class ProdutoController {
         numero_serie,
         ca,
         patrimonio,
-        tag
+        tag,
+        observacao
       });
 
       const nomeItem = nome && nome.trim() ? `"${nome.trim()}"` : 'Produto';
@@ -336,7 +338,7 @@ class ProdutoController {
       const colunasCabecalho = [
         'SKU', 'Nome do Produto', 'Categoria', 'Quantidade', 'Estoque Mínimo', 
         'Unidade', 'Marca', 'Localização', 'TAG', 'Patrimônio', 'C.A (EPI)', 
-        'Número de Série', 'Tamanho', 'Cor', 'Peso'
+        'Número de Série', 'Tamanho', 'Cor', 'Peso', 'Observações'
       ];
 
       const linhasExemplo = [
@@ -355,7 +357,8 @@ class ProdutoController {
           'Número de Série': 'SN-84721',
           'Tamanho': '8 polegadas',
           'Cor': 'Amarelo/Vermelho',
-          'Peso': '350g'
+          'Peso': '350g',
+          'Observações': 'Isolação 1000V NBR 9627'
         },
         {
           'SKU': 'EPI-CAP-001',
@@ -372,7 +375,8 @@ class ProdutoController {
           'Número de Série': '',
           'Tamanho': 'Único',
           'Cor': 'Azul',
-          'Peso': '310g'
+          'Peso': '310g',
+          'Observações': 'Validade CA até 2028'
         },
         {
           'SKU': 'ELE-CAB-001',
@@ -389,7 +393,8 @@ class ProdutoController {
           'Número de Série': 'BOB-2026',
           'Tamanho': 'Bobina 305m',
           'Cor': 'Azul',
-          'Peso': '12.5kg'
+          'Peso': '12.5kg',
+          'Observações': 'Uso exclusivo infraestrutura de dados'
         }
       ];
 
@@ -410,7 +415,8 @@ class ProdutoController {
         { wch: 18 }, // Número de Série
         { wch: 16 }, // Tamanho
         { wch: 16 }, // Cor
-        { wch: 14 }  // Peso
+        { wch: 14 }, // Peso
+        { wch: 28 }  // Observações
       ];
       ws['!cols'] = wscols;
 
@@ -440,7 +446,7 @@ class ProdutoController {
         'SKU', 'Nome do Produto', 'Categoria', 'Marca', 'Quantidade', 
         'Unidade', 'Estoque Mínimo', 'Status Estoque', 'Localização', 
         'TAG', 'Patrimônio', 'C.A (EPI)', 'Número de Série', 'Tamanho', 
-        'Cor', 'Peso', 'Última Atualização'
+        'Cor', 'Peso', 'Observações', 'Última Atualização'
       ];
 
       if (produtos && produtos.length > 0) {
@@ -461,6 +467,7 @@ class ProdutoController {
           'Tamanho': p.tamanho || '',
           'Cor': p.cor || '',
           'Peso': p.peso || '',
+          'Observações': p.observacao || '',
           'Última Atualização': p.atualizado_em || ''
         }));
       } else {
@@ -483,6 +490,7 @@ class ProdutoController {
             'Tamanho': '8 polegadas',
             'Cor': 'Amarelo/Vermelho',
             'Peso': '350g',
+            'Observações': 'Isolação 1000V NBR 9627',
             'Última Atualização': ''
           },
           {
@@ -502,6 +510,7 @@ class ProdutoController {
             'Tamanho': 'Único',
             'Cor': 'Azul',
             'Peso': '310g',
+            'Observações': 'Validade CA até 2028',
             'Última Atualização': ''
           }
         ];
@@ -527,6 +536,7 @@ class ProdutoController {
         { wch: 14 }, // Tamanho
         { wch: 14 }, // Cor
         { wch: 12 }, // Peso
+        { wch: 28 }, // Observações
         { wch: 20 }  // Data
       ];
       ws['!cols'] = wscols;
@@ -588,6 +598,7 @@ class ProdutoController {
         const tamanho = (row['Tamanho'] || row['Tamanho / Dimensão'] || row['Dimensão'] || '').toString().trim() || null;
         const cor = (row['Cor'] || '').toString().trim() || null;
         const peso = (row['Peso'] || '').toString().trim() || null;
+        const observacao = (row['Observações'] || row['Observacoes'] || row['Observação'] || row['Observacao'] || row['Obs'] || '').toString().trim() || null;
 
         // Pula linhas totalmente vazias ou linhas de exemplo
         if (!sku && !nome) continue;
@@ -620,7 +631,8 @@ class ProdutoController {
             numero_serie: numeroSerie,
             ca,
             patrimonio,
-            tag
+            tag,
+            observacao
           });
           atualizados++;
         } else {
@@ -642,7 +654,8 @@ class ProdutoController {
             numero_serie: numeroSerie,
             ca,
             patrimonio,
-            tag
+            tag,
+            observacao
           });
 
           // Se quantidade inicial > 0, registra a carga inicial

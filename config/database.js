@@ -29,6 +29,7 @@ function initDatabase() {
       ca TEXT,
       patrimonio TEXT,
       tag TEXT,
+      observacao TEXT,
       criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
       atualizado_em DATETIME DEFAULT (datetime('now', 'localtime'))
     );
@@ -120,7 +121,8 @@ function initDatabase() {
     { nome: 'numero_serie', tipo: 'TEXT' },
     { nome: 'ca', tipo: 'TEXT' },
     { nome: 'patrimonio', tipo: 'TEXT' },
-    { nome: 'tag', tipo: 'TEXT' }
+    { nome: 'tag', tipo: 'TEXT' },
+    { nome: 'observacao', tipo: 'TEXT' }
   ];
 
   const colsExistentes = db.prepare('PRAGMA table_info(produtos)').all().map(c => c.name);

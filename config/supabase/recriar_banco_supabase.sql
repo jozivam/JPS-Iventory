@@ -1,7 +1,7 @@
 -- =============================================================================
 -- JPS ALMOXARIFADO - RECRIAÇÃO LIMPA DO BANCO DE DADOS NO SUPABASE
 -- Versão: Completa (Inventário + Balcão/Movimentações + Colaboradores/Usuários)
--- Data de Geração: 15/11/2026, 18:35:16
+-- Data de Geração: 15/11/2026, 19:03:55
 -- =============================================================================
 
 -- 1. LIMPEZA SEGURA DE TABELAS LEGADAS E ATUAIS
@@ -41,6 +41,7 @@ CREATE TABLE produtos (
     ca VARCHAR(50),
     patrimonio VARCHAR(100),
     tag VARCHAR(100),
+    observacao TEXT,
     criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

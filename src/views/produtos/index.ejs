@@ -545,6 +545,14 @@
 
         </div>
 
+        <!-- Bloco de Observações no Modal de Visualização -->
+        <div id="view-observacao-box" style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 0.85rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; display: none;">
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+            <i class="fa-solid fa-clipboard-list" style="color: var(--teal);"></i> Observações do Item
+          </div>
+          <div id="view-observacao" style="font-size: 0.88rem; color: var(--text-body); line-height: 1.5; white-space: pre-wrap;"></div>
+        </div>
+
         <div style="font-size: 0.75rem; color: var(--text-dim); border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between;">
           <span>Cadastrado em: <strong id="view-criado-em">-</strong></span>
           <span>Última atualização: <strong id="view-atualizado-em">-</strong></span>
@@ -644,6 +652,11 @@
               <input type="text" id="modal-edit-peso" name="peso" class="form-control">
             </div>
 
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" for="modal-edit-observacao">Observações do Produto</label>
+              <textarea id="modal-edit-observacao" name="observacao" class="form-control" rows="2" style="resize: vertical;"></textarea>
+            </div>
+
           </div>
         </form>
       </div>
@@ -739,6 +752,16 @@
     document.getElementById('view-criado-em').textContent = p.criado_em || '-';
     document.getElementById('view-atualizado-em').textContent = p.atualizado_em || '-';
 
+    // Observações
+    const boxObs = document.getElementById('view-observacao-box');
+    const textObs = document.getElementById('view-observacao');
+    if (p.observacao && p.observacao.trim()) {
+      textObs.textContent = p.observacao;
+      boxObs.style.display = 'block';
+    } else {
+      boxObs.style.display = 'none';
+    }
+
     // Links de movimentação rápida via Balcão com proteção para itens zerados
     const linkBaixa = document.getElementById('modal-link-baixa');
     const isZerado = Number(p.quantidade) <= 0;
@@ -805,6 +828,7 @@
     document.getElementById('modal-edit-tamanho').value = p.tamanho || '';
     document.getElementById('modal-edit-cor').value = p.cor || '';
     document.getElementById('modal-edit-peso').value = p.peso || '';
+    document.getElementById('modal-edit-observacao').value = p.observacao || '';
 
     // Alterna visualizações
     document.getElementById('secao-modo-visualizacao').style.display = 'none';

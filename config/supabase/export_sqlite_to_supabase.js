@@ -73,6 +73,7 @@ function gerarSqlRecriacao() {
   sql += `    ca VARCHAR(50),\n`;
   sql += `    patrimonio VARCHAR(100),\n`;
   sql += `    tag VARCHAR(100),\n`;
+  sql += `    observacao TEXT,\n`;
   sql += `    criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,\n`;
   sql += `    atualizado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP\n`;
   sql += `);\n\n`;
@@ -145,7 +146,7 @@ function gerarSqlRecriacao() {
     'id', 'sku', 'nome', 'categoria', 'marca', 'unidade_medida',
     'quantidade', 'estoque_minimo', 'preco_unitario', 'localizacao',
     'tamanho', 'cor', 'peso', 'numero_serie', 'ca', 'patrimonio', 'tag',
-    'criado_em', 'atualizado_em'
+    'observacao', 'criado_em', 'atualizado_em'
   ];
 
   sql += `-- Produtos cadastrados (${produtos.length} itens)\n`;
