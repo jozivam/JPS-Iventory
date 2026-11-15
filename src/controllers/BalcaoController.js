@@ -1,5 +1,6 @@
 const Produto = require('../models/Produto');
 const Movimentacao = require('../models/Movimentacao');
+const Colaborador = require('../models/Colaborador');
 
 class BalcaoController {
   /**
@@ -9,11 +10,12 @@ class BalcaoController {
     try {
       const { tipo, produto_id, sucesso, erro } = req.query;
 
-      const [produtos, emprestimosPendentes, estatisticas, ultimosAtendimentos] = await Promise.all([
+      const [produtos, emprestimosPendentes, estatisticas, ultimosAtendimentos, colaboradores] = await Promise.all([
         Produto.findAll(),
         Movimentacao.findEmprestimosPendentes(),
         Movimentacao.getEstatisticasBalcao(),
-        Movimentacao.findAll({ limite: 10 })
+        Movimentacao.findAll({ limite: 10 }),
+        Colaborador.findAll({ status: 'ATIVO' })
       ]);
 
       let produtoPreSelecionado = null;
@@ -25,6 +27,7 @@ class BalcaoController {
         title: 'Balcão de Atendimento e Lançamentos',
         currentPage: 'balcao',
         produtos,
+        colaboradores,
         emprestimosPendentes,
         estatisticas,
         ultimosAtendimentos,

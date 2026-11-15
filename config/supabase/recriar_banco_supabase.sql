@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS estoques CASCADE;
 DROP TABLE IF EXISTS almoxarifados CASCADE;
 DROP TABLE IF EXISTS fornecedores CASCADE;
 DROP TABLE IF EXISTS movimentacoes CASCADE;
+DROP TABLE IF EXISTS colaboradores CASCADE;
 DROP TABLE IF EXISTS produtos CASCADE;
 
 -- 2. FUNÇÃO E TRIGGER PARA ATUALIZAÇÃO AUTOMÁTICA DE TIMESTAMP
@@ -65,7 +66,29 @@ CREATE TABLE movimentacoes (
     criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. ÍNDICES DE PERFORMANCE
+-- 5. TABELA: COLABORADORES E USUÁRIOS DO SISTEMA
+CREATE TABLE colaboradores (
+    id BIGSERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    matricula VARCHAR(50) UNIQUE,
+    cargo VARCHAR(100),
+    departamento VARCHAR(100),
+    email VARCHAR(150),
+    telefone VARCHAR(50),
+    tipo_perfil VARCHAR(50) NOT NULL DEFAULT 'TECNICO' CHECK (tipo_perfil IN ('TECNICO', 'SISTEMA')),
+    nivel_acesso VARCHAR(50) NOT NULL DEFAULT 'SOLICITANTE' CHECK (nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'VISUALIZADOR')),
+    status VARCHAR(20) NOT NULL DEFAULT 'ATIVO' CHECK (status IN ('ATIVO', 'INATIVO')),
+    observacoes TEXT,
+    criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER trigger_update_colaboradores_atualizado_em
+    BEFORE UPDATE ON colaboradores
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 6. ÍNDICES DE PERFORMANCE
 CREATE INDEX idx_produtos_sku ON produtos(UPPER(sku));
 CREATE INDEX idx_produtos_categoria ON produtos(categoria);
 CREATE INDEX idx_produtos_nome ON produtos(nome);
@@ -74,8 +97,11 @@ CREATE INDEX idx_movimentacoes_tipo ON movimentacoes(tipo);
 CREATE INDEX idx_movimentacoes_status_emprestimo ON movimentacoes(status_emprestimo);
 CREATE INDEX idx_movimentacoes_colaborador ON movimentacoes(colaborador);
 CREATE INDEX idx_movimentacoes_criado_em ON movimentacoes(criado_em);
+CREATE INDEX idx_colaboradores_nome ON colaboradores(nome);
+CREATE INDEX idx_colaboradores_matricula ON colaboradores(matricula);
+CREATE INDEX idx_colaboradores_tipo_perfil ON colaboradores(tipo_perfil);
 
--- 6. CARGA INICIAL DE DADOS (SINCRONIZAÇÃO DO BANCO LOCAL)
+-- 7. CARGA INICIAL DE DADOS (SINCRONIZAÇÃO DO BANCO LOCAL)
 BEGIN;
 
 -- Produtos cadastrados (9 itens)
@@ -105,14 +131,26 @@ INSERT INTO movimentacoes (id, produto_id, tipo, quantidade, motivo, responsavel
 -- Atualização da sequência de IDs de movimentações
 SELECT setval(pg_get_serial_sequence('movimentacoes', 'id'), COALESCE((SELECT MAX(id) FROM movimentacoes), 1));
 
+-- Colaboradores cadastrados
+INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, telefone, tipo_perfil, nivel_acesso, status, observacoes) VALUES
+(1, 'Jozivam Silva', 'ALM-001', 'Gestor de Almoxarifado', 'Almoxarifado & Logística', 'jozivam.silva@empresa.com', '(11) 98765-4321', 'SISTEMA', 'ADMIN', 'ATIVO', 'Administrador geral do sistema de almoxarifado'),
+(2, 'Carlos Pereira', 'TEC-101', 'Eletricista de Manutenção', 'Manutenção Elétrica', 'carlos.pereira@empresa.com', '(11) 97654-3210', 'TECNICO', 'SOLICITANTE', 'ATIVO', 'Técnico de campo para requisição de materiais elétricos e ferramentas'),
+(3, 'Marcos Souza', 'TEC-102', 'Técnico de Redes e TI', 'TI / Telecom', 'marcos.souza@empresa.com', '(11) 96543-2109', 'TECNICO', 'SOLICITANTE', 'ATIVO', 'Técnico responsável por cabeamento e infraestrutura de TI'),
+(4, 'Lucas Mendes', 'TEC-103', 'Encarregado de Obras', 'Operações e Obras', 'lucas.mendes@empresa.com', '(11) 95432-1098', 'TECNICO', 'SOLICITANTE', 'ATIVO', 'Responsável por solicitações de EPIs e ferramentas pesadas'),
+(5, 'Ana Paula Ribeiro', 'ALM-002', 'Assistente de Almoxarifado', 'Almoxarifado & Logística', 'ana.ribeiro@empresa.com', '(11) 94321-0987', 'SISTEMA', 'ALMOXARIFE', 'ATIVO', 'Atendente de balcão e conferência de notas fiscais');
+
+SELECT setval(pg_get_serial_sequence('colaboradores', 'id'), COALESCE((SELECT MAX(id) FROM colaboradores), 1));
+
 COMMIT;
 
--- 7. HABILITAR ROW LEVEL SECURITY (RLS) COM POLÍTICAS PERMISSIVAS PARA API
+-- 8. HABILITAR ROW LEVEL SECURITY (RLS) COM POLÍTICAS PERMISSIVAS PARA API
 ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE movimentacoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE colaboradores ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Acesso completo a produtos" ON produtos FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acesso completo a movimentacoes" ON movimentacoes FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Acesso completo a colaboradores" ON colaboradores FOR ALL USING (true) WITH CHECK (true);
 
 -- =============================================================================
 -- FIM DO SCRIPT DE MIGRAÇÃO

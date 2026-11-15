@@ -314,8 +314,17 @@
             id="balcao-colaborador-input" 
             name="colaborador" 
             class="form-control" 
+            list="lista-colaboradores-cadastrados"
             placeholder="Ex: Carlos Pereira (ou deixe em branco para Balcão)"
+            autocomplete="off"
           >
+          <datalist id="lista-colaboradores-cadastrados">
+            <% if (typeof colaboradores !== 'undefined' && colaboradores && colaboradores.length > 0) { %>
+              <% colaboradores.forEach(col => { %>
+                <option value="<%= col.nome %>"><%= col.cargo ? `${col.cargo} • ${col.departamento || ''}` : col.matricula %></option>
+              <% }) %>
+            <% } %>
+          </datalist>
         </div>
 
         <div class="form-group">
@@ -327,9 +336,18 @@
             id="balcao-responsavel-input" 
             name="responsavel" 
             class="form-control" 
+            list="lista-atendentes-sistema"
             value="Jozivam Silva"
             placeholder="Nome do almoxarife"
+            autocomplete="off"
           >
+          <datalist id="lista-atendentes-sistema">
+            <% if (typeof colaboradores !== 'undefined' && colaboradores && colaboradores.length > 0) { %>
+              <% colaboradores.filter(col => col.tipo_perfil === 'SISTEMA').forEach(col => { %>
+                <option value="<%= col.nome %>"><%= col.cargo %> (<%= col.nivel_acesso %>)</option>
+              <% }) %>
+            <% } %>
+          </datalist>
         </div>
       </div>
 

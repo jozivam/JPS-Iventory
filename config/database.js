@@ -48,6 +48,22 @@ function initDatabase() {
       criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
       FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS colaboradores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      matricula TEXT UNIQUE,
+      cargo TEXT,
+      departamento TEXT,
+      email TEXT,
+      telefone TEXT,
+      tipo_perfil TEXT NOT NULL DEFAULT 'TECNICO' CHECK(tipo_perfil IN ('TECNICO', 'SISTEMA')),
+      nivel_acesso TEXT NOT NULL DEFAULT 'SOLICITANTE' CHECK(nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'VISUALIZADOR')),
+      status TEXT NOT NULL DEFAULT 'ATIVO' CHECK(status IN ('ATIVO', 'INATIVO')),
+      observacoes TEXT,
+      criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
+      atualizado_em DATETIME DEFAULT (datetime('now', 'localtime'))
+    );
   `);
 
   // Migração segura para atualizar constraint e colunas de movimentações
@@ -116,6 +132,95 @@ function initDatabase() {
   if (countProd.total === 0) {
     seedDatabase();
   }
+
+  // Sementes iniciais de colaboradores caso a tabela esteja vazia
+  const countColab = db.prepare('SELECT COUNT(*) as total FROM colaboradores').get();
+  if (countColab.total === 0) {
+    seedColaboradores();
+  }
+}
+
+function seedColaboradores() {
+  if (!db) return;
+
+  const seedColabs = [
+    {
+      nome: 'Jozivam Silva',
+      matricula: 'ALM-001',
+      cargo: 'Gestor de Almoxarifado',
+      departamento: 'Almoxarifado & Logística',
+      email: 'jozivam.silva@empresa.com',
+      telefone: '(11) 98765-4321',
+      tipo_perfil: 'SISTEMA',
+      nivel_acesso: 'ADMIN',
+      status: 'ATIVO',
+      observacoes: 'Administrador geral do sistema de almoxarifado'
+    },
+    {
+      nome: 'Carlos Pereira',
+      matricula: 'TEC-101',
+      cargo: 'Eletricista de Manutenção',
+      departamento: 'Manutenção Elétrica',
+      email: 'carlos.pereira@empresa.com',
+      telefone: '(11) 97654-3210',
+      tipo_perfil: 'TECNICO',
+      nivel_acesso: 'SOLICITANTE',
+      status: 'ATIVO',
+      observacoes: 'Técnico de campo para requisição de materiais elétricos e ferramentas'
+    },
+    {
+      nome: 'Marcos Souza',
+      matricula: 'TEC-102',
+      cargo: 'Técnico de Redes e TI',
+      departamento: 'TI / Telecom',
+      email: 'marcos.souza@empresa.com',
+      telefone: '(11) 96543-2109',
+      tipo_perfil: 'TECNICO',
+      nivel_acesso: 'SOLICITANTE',
+      status: 'ATIVO',
+      observacoes: 'Técnico responsável por cabeamento e infraestrutura de TI'
+    },
+    {
+      nome: 'Lucas Mendes',
+      matricula: 'TEC-103',
+      cargo: 'Encarregado de Obras',
+      departamento: 'Operações e Obras',
+      email: 'lucas.mendes@empresa.com',
+      telefone: '(11) 95432-1098',
+      tipo_perfil: 'TECNICO',
+      nivel_acesso: 'SOLICITANTE',
+      status: 'ATIVO',
+      observacoes: 'Responsável por solicitações de EPIs e ferramentas pesadas'
+    },
+    {
+      nome: 'Ana Paula Ribeiro',
+      matricula: 'ALM-002',
+      cargo: 'Assistente de Almoxarifado',
+      departamento: 'Almoxarifado & Logística',
+      email: 'ana.ribeiro@empresa.com',
+      telefone: '(11) 94321-0987',
+      tipo_perfil: 'SISTEMA',
+      nivel_acesso: 'ALMOXARIFE',
+      status: 'ATIVO',
+      observacoes: 'Atendente de balcão e conferência de notas fiscais'
+    }
+  ];
+
+  const insertColab = db.prepare(`
+    INSERT INTO colaboradores (
+      nome, matricula, cargo, departamento, email, telefone,
+      tipo_perfil, nivel_acesso, status, observacoes
+    ) VALUES (
+      @nome, @matricula, @cargo, @departamento, @email, @telefone,
+      @tipo_perfil, @nivel_acesso, @status, @observacoes
+    )
+  `);
+
+  const tx = db.transaction(() => {
+    seedColabs.forEach(c => insertColab.run(c));
+  });
+
+  tx();
 }
 
 function seedDatabase() {
