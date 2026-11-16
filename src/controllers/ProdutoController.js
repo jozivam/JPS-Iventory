@@ -76,7 +76,7 @@ class ProdutoController {
       const { 
         sku, nome, categoria, categoria_personalizada, marca, unidade_medida, 
         quantidade, estoque_minimo, localizacao,
-        tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao
+        tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao, condicao
       } = req.body;
 
       // Define categoria final
@@ -135,7 +135,8 @@ class ProdutoController {
         ca,
         patrimonio,
         tag,
-        observacao
+        observacao,
+        condicao: condicao || 'NOVO'
       });
 
       // Se informou quantidade maior que 0, registra a movimentação de entrada inicial
@@ -207,7 +208,7 @@ class ProdutoController {
       const { 
         sku, nome, categoria, categoria_personalizada, marca, unidade_medida, 
         quantidade, estoque_minimo, localizacao,
-        tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao
+        tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao, condicao
       } = req.body;
 
       // Define categoria final
@@ -248,7 +249,8 @@ class ProdutoController {
         ca,
         patrimonio,
         tag,
-        observacao
+        observacao,
+        condicao: condicao || 'NOVO'
       });
 
       const nomeItem = nome && nome.trim() ? `"${nome.trim()}"` : 'Produto';
@@ -444,7 +446,7 @@ class ProdutoController {
       let dadosParaExportar = [];
       const colunasCabecalho = [
         'SKU', 'Nome do Produto', 'Categoria', 'Marca', 'Quantidade', 
-        'Unidade', 'Estoque Mínimo', 'Status Estoque', 'Localização', 
+        'Unidade', 'Estoque Mínimo', 'Status Estoque', 'Nível de Estoque', 'Localização', 
         'TAG', 'Patrimônio', 'C.A (EPI)', 'Número de Série', 'Tamanho', 
         'Cor', 'Peso', 'Observações', 'Última Atualização'
       ];
@@ -458,7 +460,8 @@ class ProdutoController {
           'Quantidade': p.quantidade !== undefined ? p.quantidade : 0,
           'Unidade': p.unidade_medida || 'UN',
           'Estoque Mínimo': p.estoque_minimo !== undefined ? p.estoque_minimo : 0,
-          'Status Estoque': p.status_estoque || 'NORMAL',
+          'Status Estoque': p.condicao || 'NOVO',
+          'Nível de Estoque': p.status_estoque || 'NORMAL',
           'Localização': p.localizacao || '',
           'TAG': p.tag || '',
           'Patrimônio': p.patrimonio || '',
@@ -481,7 +484,8 @@ class ProdutoController {
             'Quantidade': 10,
             'Unidade': 'UN',
             'Estoque Mínimo': 3,
-            'Status Estoque': 'NORMAL',
+            'Status Estoque': 'NOVO',
+            'Nível de Estoque': 'NORMAL',
             'Localização': 'Bancada B-01',
             'TAG': 'FER-01',
             'Patrimônio': 'PAT-0012',
@@ -501,7 +505,8 @@ class ProdutoController {
             'Quantidade': 15,
             'Unidade': 'UN',
             'Estoque Mínimo': 5,
-            'Status Estoque': 'NORMAL',
+            'Status Estoque': 'REUSO',
+            'Nível de Estoque': 'NORMAL',
             'Localização': 'Prateleira A-01',
             'TAG': '',
             'Patrimônio': '',
@@ -527,7 +532,8 @@ class ProdutoController {
         { wch: 12 }, // Quantidade
         { wch: 10 }, // Unidade
         { wch: 14 }, // Mínimo
-        { wch: 14 }, // Status
+        { wch: 16 }, // Status Estoque (Condição: NOVO, REUSO, etc)
+        { wch: 16 }, // Nível de Estoque (NORMAL, BAIXO, ZERADO)
         { wch: 22 }, // Localização
         { wch: 14 }, // TAG
         { wch: 16 }, // Patrimônio
@@ -599,6 +605,27 @@ class ProdutoController {
         const cor = (row['Cor'] || '').toString().trim() || null;
         const peso = (row['Peso'] || '').toString().trim() || null;
         const observacao = (row['Observações'] || row['Observacoes'] || row['Observação'] || row['Observacao'] || row['Obs'] || '').toString().trim() || null;
+        
+        // Mapeia o Status do Estoque / Condição do Item (ex: NOVO, REUSO, OUTROS, BOM, SUCATA)
+        const statusEstoqueTexto = (row['Status Estoque'] || row['Condição'] || row['Condicao'] || row['Condição do Item'] || row['Estado'] || row['Status'] || '').toString().trim().toUpperCase();
+        let condicaoFinal = 'NOVO';
+        if (statusEstoqueTexto) {
+          if (statusEstoqueTexto.includes('REUSO') || statusEstoqueTexto.includes('REÚSO') || statusEstoqueTexto.includes('USAD')) {
+            condicaoFinal = 'REUSO';
+          } else if (statusEstoqueTexto.includes('BOM')) {
+            condicaoFinal = 'BOM';
+          } else if (statusEstoqueTexto.includes('MANUT')) {
+            condicaoFinal = 'MANUTENÇÃO';
+          } else if (statusEstoqueTexto.includes('SUCAT')) {
+            condicaoFinal = 'SUCATA';
+          } else if (statusEstoqueTexto.includes('OUTRO')) {
+            condicaoFinal = 'OUTROS';
+          } else if (['NORMAL', 'BAIXO', 'CRITICO', 'ZERADO'].includes(statusEstoqueTexto)) {
+            condicaoFinal = 'NOVO';
+          } else {
+            condicaoFinal = statusEstoqueTexto;
+          }
+        }
 
         // Pula linhas totalmente vazias ou linhas de exemplo
         if (!sku && !nome) continue;
@@ -632,7 +659,8 @@ class ProdutoController {
             ca,
             patrimonio,
             tag,
-            observacao
+            observacao,
+            condicao: condicaoFinal
           });
           atualizados++;
         } else {
@@ -655,7 +683,8 @@ class ProdutoController {
             ca,
             patrimonio,
             tag,
-            observacao
+            observacao,
+            condicao: condicaoFinal
           });
 
           // Se quantidade inicial > 0, registra a carga inicial

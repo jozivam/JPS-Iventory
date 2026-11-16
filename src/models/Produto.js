@@ -15,7 +15,7 @@ class Produto {
 
       if (busca && busca.trim()) {
         const b = busca.trim();
-        q = q.or(`nome.ilike.%${b}%,sku.ilike.%${b}%,marca.ilike.%${b}%,tag.ilike.%${b}%,patrimonio.ilike.%${b}%,ca.ilike.%${b}%,localizacao.ilike.%${b}%,numero_serie.ilike.%${b}%,observacao.ilike.%${b}%`);
+        q = q.or(`nome.ilike.%${b}%,sku.ilike.%${b}%,marca.ilike.%${b}%,tag.ilike.%${b}%,patrimonio.ilike.%${b}%,ca.ilike.%${b}%,localizacao.ilike.%${b}%,numero_serie.ilike.%${b}%,observacao.ilike.%${b}%,condicao.ilike.%${b}%`);
       }
 
       if (categoria && categoria.trim()) {
@@ -67,6 +67,7 @@ class Produto {
         OR p.numero_serie LIKE @busca
         OR p.ca LIKE @busca
         OR p.observacao LIKE @busca
+        OR p.condicao LIKE @busca
       )`;
       params.busca = `%${busca.trim()}%`;
     }
@@ -208,7 +209,8 @@ class Produto {
       ca: dados.ca && dados.ca.trim() ? dados.ca.trim() : null,
       patrimonio: dados.patrimonio && dados.patrimonio.trim() ? dados.patrimonio.trim() : null,
       tag: dados.tag && dados.tag.trim() ? dados.tag.trim().toUpperCase() : null,
-      observacao: dados.observacao && dados.observacao.trim() ? dados.observacao.trim() : null
+      observacao: dados.observacao && dados.observacao.trim() ? dados.observacao.trim() : null,
+      condicao: dados.condicao && dados.condicao.trim() ? dados.condicao.trim().toUpperCase() : 'NOVO'
     };
 
     if (useSupabase && supabase) {
@@ -223,11 +225,11 @@ class Produto {
       INSERT INTO produtos (
         sku, nome, categoria, marca, unidade_medida, quantidade, 
         estoque_minimo, preco_unitario, localizacao,
-        tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao
+        tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao, condicao
       ) VALUES (
         @sku, @nome, @categoria, @marca, @unidade_medida, @quantidade, 
         @estoque_minimo, @preco_unitario, @localizacao,
-        @tamanho, @cor, @peso, @numero_serie, @ca, @patrimonio, @tag, @observacao
+        @tamanho, @cor, @peso, @numero_serie, @ca, @patrimonio, @tag, @observacao, @condicao
       )
     `);
 
@@ -257,7 +259,8 @@ class Produto {
       ca: dados.ca && dados.ca.trim() ? dados.ca.trim() : null,
       patrimonio: dados.patrimonio && dados.patrimonio.trim() ? dados.patrimonio.trim() : null,
       tag: dados.tag && dados.tag.trim() ? dados.tag.trim().toUpperCase() : null,
-      observacao: dados.observacao !== undefined ? (dados.observacao && dados.observacao.trim() ? dados.observacao.trim() : null) : (dados.observacao_atual || null)
+      observacao: dados.observacao !== undefined ? (dados.observacao && dados.observacao.trim() ? dados.observacao.trim() : null) : (dados.observacao_atual || null),
+      condicao: dados.condicao && dados.condicao.trim() ? dados.condicao.trim().toUpperCase() : (dados.condicao_atual || 'NOVO')
     };
 
     if (useSupabase && supabase) {
@@ -287,6 +290,7 @@ class Produto {
         patrimonio = @patrimonio,
         tag = @tag,
         observacao = @observacao,
+        condicao = @condicao,
         atualizado_em = datetime('now', 'localtime')
       WHERE id = @id
     `);

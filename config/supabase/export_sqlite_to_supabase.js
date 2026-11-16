@@ -74,6 +74,7 @@ function gerarSqlRecriacao() {
   sql += `    patrimonio VARCHAR(100),\n`;
   sql += `    tag VARCHAR(100),\n`;
   sql += `    observacao TEXT,\n`;
+  sql += `    condicao VARCHAR(50) DEFAULT 'NOVO',\n`;
   sql += `    criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,\n`;
   sql += `    atualizado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP\n`;
   sql += `);\n\n`;
@@ -96,6 +97,8 @@ function gerarSqlRecriacao() {
   sql += `    tipo_perfil VARCHAR(50) NOT NULL DEFAULT 'TECNICO' CHECK (tipo_perfil IN ('TECNICO', 'SISTEMA')),\n`;
   sql += `    nivel_acesso VARCHAR(50) NOT NULL DEFAULT 'SOLICITANTE' CHECK (nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'VISUALIZADOR')),\n`;
   sql += `    status VARCHAR(20) NOT NULL DEFAULT 'ATIVO' CHECK (status IN ('ATIVO', 'INATIVO')),\n`;
+  sql += `    login VARCHAR(100) UNIQUE,\n`;
+  sql += `    senha_hash VARCHAR(255),\n`;
   sql += `    observacoes TEXT,\n`;
   sql += `    criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,\n`;
   sql += `    atualizado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP\n`;
@@ -136,6 +139,7 @@ function gerarSqlRecriacao() {
   sql += `CREATE INDEX idx_movimentacoes_criado_em ON movimentacoes(criado_em);\n`;
   sql += `CREATE INDEX idx_colaboradores_nome ON colaboradores(nome);\n`;
   sql += `CREATE INDEX idx_colaboradores_matricula ON colaboradores(matricula);\n`;
+  sql += `CREATE INDEX idx_colaboradores_login ON colaboradores(login);\n`;
   sql += `CREATE INDEX idx_colaboradores_tipo_perfil ON colaboradores(tipo_perfil);\n\n`;
 
   sql += `-- 7. CARGA DE DADOS SINCRONIZADA DO BANCO LOCAL\n`;
@@ -146,7 +150,7 @@ function gerarSqlRecriacao() {
     'id', 'sku', 'nome', 'categoria', 'marca', 'unidade_medida',
     'quantidade', 'estoque_minimo', 'preco_unitario', 'localizacao',
     'tamanho', 'cor', 'peso', 'numero_serie', 'ca', 'patrimonio', 'tag',
-    'observacao', 'criado_em', 'atualizado_em'
+    'observacao', 'condicao', 'criado_em', 'atualizado_em'
   ];
 
   sql += `-- Produtos cadastrados (${produtos.length} itens)\n`;
@@ -161,7 +165,7 @@ function gerarSqlRecriacao() {
   // Inserts de Colaboradores (Inseridos antes de Movimentações para respeitar FK)
   const colsColab = [
     'id', 'nome', 'matricula', 'cargo', 'departamento', 'email', 'telefone',
-    'tipo_perfil', 'nivel_acesso', 'status', 'observacoes', 'criado_em', 'atualizado_em'
+    'tipo_perfil', 'nivel_acesso', 'status', 'login', 'senha_hash', 'observacoes', 'criado_em', 'atualizado_em'
   ];
 
   sql += `-- Colaboradores cadastrados (${colaboradores.length} pessoas)\n`;

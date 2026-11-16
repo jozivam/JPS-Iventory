@@ -203,6 +203,22 @@
               value="<%= produto.localizacao || '' %>"
             >
           </div>
+
+          <!-- Status Estoque / Condição do Item (Igual à coluna da Planilha) -->
+          <div class="form-group">
+            <label class="form-label" for="produto-condicao-select">
+              Status Estoque / Condição
+            </label>
+            <select id="produto-condicao-select" name="condicao" class="form-select">
+              <option value="NOVO" <%= (!produto.condicao || produto.condicao === 'NOVO') ? 'selected' : '' %>>NOVO (Item Novo / Lacrado)</option>
+              <option value="REUSO" <%= produto.condicao === 'REUSO' ? 'selected' : '' %>>REUSO (Item de Reúso / Seminovo)</option>
+              <option value="BOM" <%= produto.condicao === 'BOM' ? 'selected' : '' %>>BOM (Bom Estado de Conservação)</option>
+              <option value="MANUTENÇÃO" <%= produto.condicao === 'MANUTENÇÃO' ? 'selected' : '' %>>MANUTENÇÃO (Em Revisão / Manutenção)</option>
+              <option value="SUCATA" <%= produto.condicao === 'SUCATA' ? 'selected' : '' %>>SUCATA (Inservível / Descarte)</option>
+              <option value="OUTROS" <%= produto.condicao === 'OUTROS' ? 'selected' : '' %>>OUTROS (Diversos)</option>
+            </select>
+            <span class="form-help">Mesmo campo "Status Estoque" presente na planilha Excel.</span>
+          </div>
         </div>
       </div>
 

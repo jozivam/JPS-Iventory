@@ -45,7 +45,7 @@ class ColaboradorController {
     try {
       const { 
         nome, matricula, cargo, departamento, email, telefone, 
-        tipo_perfil, nivel_acesso, status, observacoes 
+        tipo_perfil, nivel_acesso, status, login, senha, observacoes 
       } = req.body;
 
       const colab = await Colaborador.create({
@@ -58,11 +58,13 @@ class ColaboradorController {
         tipo_perfil,
         nivel_acesso,
         status,
+        login,
+        senha,
         observacoes
       });
 
       const perfilDesc = colab.tipo_perfil === 'SISTEMA' 
-        ? `Usuário do Sistema (${colab.nivel_acesso})` 
+        ? `Usuário do Sistema (${colab.nivel_acesso}) [Login: ${colab.login}]` 
         : 'Técnico Solicitante';
 
       res.redirect('/colaboradores?sucesso=' + encodeURIComponent(`"${colab.nome}" cadastrado com sucesso como ${perfilDesc}!`));
@@ -86,9 +88,15 @@ class ColaboradorController {
 
       const emprestimosAtivos = await Colaborador.findEmprestimosAtivos(colaborador.nome);
 
+      // Não expõe a hash da senha, mas sinaliza se já possui senha
+      const { senha_hash, ...dadosSeguros } = colaborador;
+
       res.json({
         sucesso: true,
-        colaborador,
+        colaborador: {
+          ...dadosSeguros,
+          tem_senha: !!senha_hash
+        },
         emprestimosAtivos
       });
     } catch (error) {
@@ -105,7 +113,7 @@ class ColaboradorController {
       const { id } = req.params;
       const { 
         nome, matricula, cargo, departamento, email, telefone, 
-        tipo_perfil, nivel_acesso, status, observacoes 
+        tipo_perfil, nivel_acesso, status, login, senha, observacoes 
       } = req.body;
 
       await Colaborador.update(id, {
@@ -118,6 +126,8 @@ class ColaboradorController {
         tipo_perfil,
         nivel_acesso,
         status,
+        login,
+        senha,
         observacoes
       });
 
@@ -134,9 +144,9 @@ class ColaboradorController {
   static async updateNivelAcesso(req, res) {
     try {
       const { id } = req.params;
-      const { tipo_perfil, nivel_acesso } = req.body;
+      const { tipo_perfil, nivel_acesso, login, senha } = req.body;
 
-      const atualizado = await Colaborador.updateNivelAcesso(id, { tipo_perfil, nivel_acesso });
+      const atualizado = await Colaborador.updateNivelAcesso(id, { tipo_perfil, nivel_acesso, login, senha });
 
       if (req.xhr || req.headers.accept?.includes('application/json')) {
         return res.json({ sucesso: true, colaborador: atualizado });

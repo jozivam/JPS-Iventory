@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
 
 const isVercel = !!process.env.VERCEL;
 const isSupabaseDriver = process.env.DB_DRIVER === 'supabase';
@@ -30,6 +31,7 @@ function initDatabase() {
       patrimonio TEXT,
       tag TEXT,
       observacao TEXT,
+      condicao TEXT DEFAULT 'NOVO',
       criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
       atualizado_em DATETIME DEFAULT (datetime('now', 'localtime'))
     );
@@ -63,6 +65,8 @@ function initDatabase() {
       tipo_perfil TEXT NOT NULL DEFAULT 'TECNICO' CHECK(tipo_perfil IN ('TECNICO', 'SISTEMA')),
       nivel_acesso TEXT NOT NULL DEFAULT 'SOLICITANTE' CHECK(nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'VISUALIZADOR')),
       status TEXT NOT NULL DEFAULT 'ATIVO' CHECK(status IN ('ATIVO', 'INATIVO')),
+      login TEXT UNIQUE,
+      senha_hash TEXT,
       observacoes TEXT,
       criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
       atualizado_em DATETIME DEFAULT (datetime('now', 'localtime'))
@@ -122,7 +126,8 @@ function initDatabase() {
     { nome: 'ca', tipo: 'TEXT' },
     { nome: 'patrimonio', tipo: 'TEXT' },
     { nome: 'tag', tipo: 'TEXT' },
-    { nome: 'observacao', tipo: 'TEXT' }
+    { nome: 'observacao', tipo: 'TEXT' },
+    { nome: 'condicao', tipo: "TEXT DEFAULT 'NOVO'" }
   ];
 
   const colsExistentes = db.prepare('PRAGMA table_info(produtos)').all().map(c => c.name);
@@ -132,18 +137,36 @@ function initDatabase() {
     }
   });
 
-  // Modo Produção: Não auto-semeia produtos fictícios quando o banco estiver vazio.
-  // Usuário cadastra ou importa seus produtos reais.
-  
+  // Migração segura de colunas na tabela de colaboradores (login, senha_hash)
+  const colsColabExistentes = db.prepare('PRAGMA table_info(colaboradores)').all().map(c => c.name);
+  const colunasColabNecessarias = [
+    { nome: 'login', tipo: 'TEXT' },
+    { nome: 'senha_hash', tipo: 'TEXT' }
+  ];
+  colunasColabNecessarias.forEach(col => {
+    if (!colsColabExistentes.includes(col.nome)) {
+      db.exec(`ALTER TABLE colaboradores ADD COLUMN ${col.nome} ${col.tipo}`);
+    }
+  });
+
   // Garante que o administrador Jozivam Silva exista se a tabela de colaboradores estiver vazia
   const countColab = db.prepare('SELECT COUNT(*) as total FROM colaboradores').get();
   if (countColab.total === 0) {
     seedColaboradores();
+  } else {
+    // Garante que o administrador tenha login e senha_hash definidos
+    const admin = db.prepare("SELECT * FROM colaboradores WHERE matricula = 'ALM-001' OR email LIKE 'jozivam%'").get();
+    if (admin && (!admin.login || !admin.senha_hash)) {
+      const senhaPadraoHash = bcrypt.hashSync('123456', 10);
+      db.prepare("UPDATE colaboradores SET login = COALESCE(login, 'jozivam'), senha_hash = COALESCE(senha_hash, ?) WHERE id = ?").run(senhaPadraoHash, admin.id);
+    }
   }
 }
 
 function seedColaboradores() {
   if (!db) return;
+
+  const senhaPadraoHash = bcrypt.hashSync('123456', 10);
 
   const seedColabs = [
     {
@@ -156,6 +179,8 @@ function seedColaboradores() {
       tipo_perfil: 'SISTEMA',
       nivel_acesso: 'ADMIN',
       status: 'ATIVO',
+      login: 'jozivam',
+      senha_hash: senhaPadraoHash,
       observacoes: 'Administrador geral do sistema de almoxarifado'
     }
   ];
@@ -163,10 +188,10 @@ function seedColaboradores() {
   const insertColab = db.prepare(`
     INSERT INTO colaboradores (
       nome, matricula, cargo, departamento, email, telefone,
-      tipo_perfil, nivel_acesso, status, observacoes
+      tipo_perfil, nivel_acesso, status, login, senha_hash, observacoes
     ) VALUES (
       @nome, @matricula, @cargo, @departamento, @email, @telefone,
-      @tipo_perfil, @nivel_acesso, @status, @observacoes
+      @tipo_perfil, @nivel_acesso, @status, @login, @senha_hash, @observacoes
     )
   `);
 

@@ -1,7 +1,7 @@
 -- =============================================================================
 -- JPS ALMOXARIFADO - RECRIAÇÃO LIMPA DO BANCO DE DADOS NO SUPABASE
 -- Versão: Completa (Inventário + Balcão/Movimentações + Colaboradores/Usuários)
--- Data de Geração: 15/11/2026, 19:03:55
+-- Data de Geração: 15/11/2026, 20:08:35
 -- =============================================================================
 
 -- 1. LIMPEZA SEGURA DE TABELAS LEGADAS E ATUAIS
@@ -42,6 +42,7 @@ CREATE TABLE produtos (
     patrimonio VARCHAR(100),
     tag VARCHAR(100),
     observacao TEXT,
+    condicao VARCHAR(50) DEFAULT 'NOVO',
     criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -64,6 +65,8 @@ CREATE TABLE colaboradores (
     tipo_perfil VARCHAR(50) NOT NULL DEFAULT 'TECNICO' CHECK (tipo_perfil IN ('TECNICO', 'SISTEMA')),
     nivel_acesso VARCHAR(50) NOT NULL DEFAULT 'SOLICITANTE' CHECK (nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'VISUALIZADOR')),
     status VARCHAR(20) NOT NULL DEFAULT 'ATIVO' CHECK (status IN ('ATIVO', 'INATIVO')),
+    login VARCHAR(100) UNIQUE,
+    senha_hash VARCHAR(255),
     observacoes TEXT,
     criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -104,6 +107,7 @@ CREATE INDEX idx_movimentacoes_colaborador ON movimentacoes(colaborador);
 CREATE INDEX idx_movimentacoes_criado_em ON movimentacoes(criado_em);
 CREATE INDEX idx_colaboradores_nome ON colaboradores(nome);
 CREATE INDEX idx_colaboradores_matricula ON colaboradores(matricula);
+CREATE INDEX idx_colaboradores_login ON colaboradores(login);
 CREATE INDEX idx_colaboradores_tipo_perfil ON colaboradores(tipo_perfil);
 
 -- 7. CARGA DE DADOS SINCRONIZADA DO BANCO LOCAL
@@ -115,7 +119,7 @@ BEGIN;
 SELECT setval(pg_get_serial_sequence('produtos', 'id'), COALESCE((SELECT MAX(id) FROM produtos), 1));
 
 -- Colaboradores cadastrados (1 pessoas)
-INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, telefone, tipo_perfil, nivel_acesso, status, observacoes, criado_em, atualizado_em) VALUES (1, 'Jozivam Silva', 'ALM-001', 'Gestor de Almoxarifado', 'Almoxarifado & Logística', 'jozivam.silva@empresa.com', '(11) 98765-4321', 'SISTEMA', 'ADMIN', 'ATIVO', 'Administrador geral do sistema de almoxarifado', '2026-11-15 15:53:25', '2026-11-15 15:53:25');
+INSERT INTO colaboradores (id, nome, matricula, cargo, departamento, email, telefone, tipo_perfil, nivel_acesso, status, login, senha_hash, observacoes, criado_em, atualizado_em) VALUES (1, 'Jozivam Silva', 'ALM-001', 'Gestor de Almoxarifado', 'Almoxarifado & Logística', 'jozivam.silva@empresa.com', '(11) 98765-4321', 'SISTEMA', 'ADMIN', 'ATIVO', 'jozivam', '$2b$10$KAQ702zgyZzHPgazLPh72uVn.0/2eZdewinBlqfG93FRpftCWf8Xa', 'Administrador geral do sistema de almoxarifado', '2026-11-15 15:53:25', '2026-11-15 15:53:25');
 
 -- Atualização da sequência de IDs de colaboradores
 SELECT setval(pg_get_serial_sequence('colaboradores', 'id'), COALESCE((SELECT MAX(id) FROM colaboradores), 1));

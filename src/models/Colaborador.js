@@ -1,5 +1,6 @@
 const db = require('../../config/database');
 const { supabase } = require('../../config/supabase');
+const bcrypt = require('bcryptjs');
 
 const isVercel = !!process.env.VERCEL;
 const isSupabaseDriver = process.env.DB_DRIVER === 'supabase';
@@ -291,6 +292,8 @@ class Colaborador {
     tipo_perfil = 'TECNICO',
     nivel_acesso = 'SOLICITANTE',
     status = 'ATIVO',
+    login,
+    senha,
     observacoes
   }) {
     if (!nome || !nome.trim()) {
@@ -312,6 +315,23 @@ class Colaborador {
       matriculaFinal = `${prefixo}-${randomNum}`;
     }
 
+    // Configuração de Login e Senha para Usuários do Sistema
+    let loginFinal = null;
+    let senhaHashFinal = null;
+
+    if (perfilFinal === 'SISTEMA') {
+      if (login && login.trim()) {
+        loginFinal = login.trim().toLowerCase();
+      } else if (email && email.includes('@')) {
+        loginFinal = email.split('@')[0].trim().toLowerCase();
+      } else {
+        loginFinal = matriculaFinal.toLowerCase();
+      }
+
+      const senhaPlana = (senha && senha.trim()) ? senha.trim() : '123456';
+      senhaHashFinal = bcrypt.hashSync(senhaPlana, 10);
+    }
+
     const payload = {
       nome: nome.trim(),
       matricula: matriculaFinal,
@@ -322,6 +342,8 @@ class Colaborador {
       tipo_perfil: perfilFinal,
       nivel_acesso: nivelFinal,
       status: status === 'INATIVO' ? 'INATIVO' : 'ATIVO',
+      login: loginFinal,
+      senha_hash: senhaHashFinal,
       observacoes: observacoes ? observacoes.trim() : null
     };
 
@@ -329,6 +351,9 @@ class Colaborador {
       const { data, error } = await supabase.from('colaboradores').insert(payload).select().single();
       if (error) {
         if (error.code === '23505') {
+          if (error.message.includes('login') || error.details?.includes('login')) {
+            throw new Error(`O login "${loginFinal}" já está cadastrado para outro usuário.`);
+          }
           throw new Error(`A matrícula "${matriculaFinal}" já está cadastrada para outro colaborador.`);
         }
         throw new Error('Erro ao salvar no Supabase: ' + error.message);
@@ -342,15 +367,18 @@ class Colaborador {
       const stmt = db.prepare(`
         INSERT INTO colaboradores (
           nome, matricula, cargo, departamento, email, telefone,
-          tipo_perfil, nivel_acesso, status, observacoes
+          tipo_perfil, nivel_acesso, status, login, senha_hash, observacoes
         ) VALUES (
           @nome, @matricula, @cargo, @departamento, @email, @telefone,
-          @tipo_perfil, @nivel_acesso, @status, @observacoes
+          @tipo_perfil, @nivel_acesso, @status, @login, @senha_hash, @observacoes
         )
       `);
       const res = stmt.run(payload);
       return { id: res.lastInsertRowid, ...payload };
     } catch (err) {
+      if (err.message.includes('UNIQUE constraint failed: colaboradores.login')) {
+        throw new Error(`O login "${loginFinal}" já está cadastrado para outro usuário.`);
+      }
       if (err.message.includes('UNIQUE constraint failed: colaboradores.matricula')) {
         throw new Error(`A matrícula "${matriculaFinal}" já está cadastrada.`);
       }
@@ -371,16 +399,40 @@ class Colaborador {
     tipo_perfil,
     nivel_acesso,
     status,
+    login,
+    senha,
     observacoes
   }) {
     if (!nome || !nome.trim()) {
       throw new Error('O nome do colaborador é obrigatório.');
     }
 
+    const colabAtual = await this.findById(id);
+    if (!colabAtual) {
+      throw new Error('Colaborador não encontrado.');
+    }
+
     const perfilFinal = tipo_perfil === 'SISTEMA' ? 'SISTEMA' : 'TECNICO';
     let nivelFinal = 'SOLICITANTE';
     if (perfilFinal === 'SISTEMA') {
       nivelFinal = ['ADMIN', 'ALMOXARIFE', 'VISUALIZADOR'].includes(nivel_acesso) ? nivel_acesso : 'ALMOXARIFE';
+    }
+
+    let loginFinal = null;
+    let senhaHashFinal = null;
+
+    if (perfilFinal === 'SISTEMA') {
+      if (login && login.trim()) {
+        loginFinal = login.trim().toLowerCase();
+      } else {
+        loginFinal = colabAtual.login || (email && email.includes('@') ? email.split('@')[0].trim().toLowerCase() : (matricula || colabAtual.matricula || '').toLowerCase());
+      }
+
+      if (senha && senha.trim()) {
+        senhaHashFinal = bcrypt.hashSync(senha.trim(), 10);
+      } else {
+        senhaHashFinal = colabAtual.senha_hash || bcrypt.hashSync('123456', 10);
+      }
     }
 
     const payload = {
@@ -393,32 +445,50 @@ class Colaborador {
       tipo_perfil: perfilFinal,
       nivel_acesso: nivelFinal,
       status: status === 'INATIVO' ? 'INATIVO' : 'ATIVO',
+      login: loginFinal,
+      senha_hash: senhaHashFinal,
       observacoes: observacoes ? observacoes.trim() : null
     };
 
     if (useSupabase && supabase) {
       const { data, error } = await supabase.from('colaboradores').update(payload).eq('id', id).select().single();
-      if (error) throw new Error('Erro ao atualizar no Supabase: ' + error.message);
+      if (error) {
+        if (error.code === '23505') {
+          if (error.message.includes('login') || error.details?.includes('login')) {
+            throw new Error(`O login "${loginFinal}" já está cadastrado para outro usuário.`);
+          }
+        }
+        throw new Error('Erro ao atualizar no Supabase: ' + error.message);
+      }
       return data;
     }
 
     if (!db) throw new Error('Banco de dados não disponível');
 
-    db.prepare(`
-      UPDATE colaboradores SET
-        nome = @nome,
-        matricula = @matricula,
-        cargo = @cargo,
-        departamento = @departamento,
-        email = @email,
-        telefone = @telefone,
-        tipo_perfil = @tipo_perfil,
-        nivel_acesso = @nivel_acesso,
-        status = @status,
-        observacoes = @observacoes,
-        atualizado_em = datetime('now', 'localtime')
-      WHERE id = @id
-    `).run({ id, ...payload });
+    try {
+      db.prepare(`
+        UPDATE colaboradores SET
+          nome = @nome,
+          matricula = @matricula,
+          cargo = @cargo,
+          departamento = @departamento,
+          email = @email,
+          telefone = @telefone,
+          tipo_perfil = @tipo_perfil,
+          nivel_acesso = @nivel_acesso,
+          status = @status,
+          login = @login,
+          senha_hash = @senha_hash,
+          observacoes = @observacoes,
+          atualizado_em = datetime('now', 'localtime')
+        WHERE id = @id
+      `).run({ id, ...payload });
+    } catch (err) {
+      if (err.message.includes('UNIQUE constraint failed: colaboradores.login')) {
+        throw new Error(`O login "${loginFinal}" já está cadastrado para outro usuário.`);
+      }
+      throw err;
+    }
 
     return this.findById(id);
   }
@@ -426,16 +496,43 @@ class Colaborador {
   /**
    * Atualiza especificamente o Nível de Acesso e Perfil do Usuário
    */
-  static async updateNivelAcesso(id, { tipo_perfil, nivel_acesso }) {
+  static async updateNivelAcesso(id, { tipo_perfil, nivel_acesso, login, senha }) {
+    const colabAtual = await this.findById(id);
+    if (!colabAtual) {
+      throw new Error('Colaborador não encontrado.');
+    }
+
     const perfilFinal = tipo_perfil === 'SISTEMA' ? 'SISTEMA' : 'TECNICO';
     let nivelFinal = 'SOLICITANTE';
     if (perfilFinal === 'SISTEMA') {
       nivelFinal = ['ADMIN', 'ALMOXARIFE', 'VISUALIZADOR'].includes(nivel_acesso) ? nivel_acesso : 'ALMOXARIFE';
     }
 
+    let loginFinal = colabAtual.login;
+    let senhaHashFinal = colabAtual.senha_hash;
+
+    if (perfilFinal === 'SISTEMA') {
+      if (login && login.trim()) {
+        loginFinal = login.trim().toLowerCase();
+      } else if (!loginFinal) {
+        loginFinal = colabAtual.email ? colabAtual.email.split('@')[0].trim().toLowerCase() : colabAtual.matricula.toLowerCase();
+      }
+
+      if (senha && senha.trim()) {
+        senhaHashFinal = bcrypt.hashSync(senha.trim(), 10);
+      } else if (!senhaHashFinal) {
+        senhaHashFinal = bcrypt.hashSync('123456', 10);
+      }
+    } else {
+      loginFinal = null;
+      senhaHashFinal = null;
+    }
+
     const payload = {
       tipo_perfil: perfilFinal,
-      nivel_acesso: nivelFinal
+      nivel_acesso: nivelFinal,
+      login: loginFinal,
+      senha_hash: senhaHashFinal
     };
 
     if (useSupabase && supabase) {
@@ -450,6 +547,8 @@ class Colaborador {
       UPDATE colaboradores SET
         tipo_perfil = @tipo_perfil,
         nivel_acesso = @nivel_acesso,
+        login = @login,
+        senha_hash = @senha_hash,
         atualizado_em = datetime('now', 'localtime')
       WHERE id = @id
     `).run({ id, ...payload });
