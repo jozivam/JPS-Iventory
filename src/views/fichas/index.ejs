@@ -121,17 +121,31 @@
   <div class="table-card hide-on-print" style="padding: 1.15rem 1.25rem; margin-bottom: 1.25rem;">
     <div style="display: flex; gap: 0.85rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
       
-      <!-- Campo de Busca em Tempo Real -->
-      <div style="flex: 1; min-width: 280px; position: relative;">
-        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim);"></i>
+      <!-- Campo de Busca em Tempo Real com Dropdown Inteligente -->
+      <div style="flex: 1; min-width: 280px; position: relative;" id="busca-ficha-wrapper">
+        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); z-index: 2; pointer-events: none;"></i>
         <input 
           type="text" 
           id="busca-ficha-colaborador" 
           class="form-control" 
           placeholder="Buscar colaborador por nome, cargo, matrícula ou departamento..." 
           autocomplete="off"
-          style="padding-left: 2.5rem; height: 42px;"
+          style="padding-left: 2.5rem; padding-right: 2.4rem; height: 42px; font-weight: 500;"
         >
+        <button 
+          type="button" 
+          id="btn-limpar-busca-ficha" 
+          title="Limpar busca"
+          onclick="limparBuscaFicha()"
+          style="position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: none; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 50%; z-index: 2;"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <!-- Dropdown Flutuante de Fichas de Colaboradores -->
+        <div id="busca-ficha-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 12px 28px rgba(0,0,0,0.12); max-height: 320px; overflow-y: auto; z-index: 1050; padding: 0.35rem 0;">
+          <!-- Sugestões injetadas via JS -->
+        </div>
       </div>
 
       <!-- Filtros Rápidos (Pills / Abas) -->
@@ -904,9 +918,153 @@ function filtrarListaColaboradores() {
 }
 
 const inputBuscaColab = document.getElementById('busca-ficha-colaborador');
-if (inputBuscaColab) {
-  inputBuscaColab.addEventListener('input', filtrarListaColaboradores);
+const dropdownFicha = document.getElementById('busca-ficha-dropdown');
+const btnLimparFicha = document.getElementById('btn-limpar-busca-ficha');
+const LISTA_COLABORADORES_FICHAS = <%- JSON.stringify(colaboradores || []) %>;
+let fichaFocadoIndex = -1;
+let fichasFiltradas = [];
+
+function renderizarDropdownFicha(termo = '') {
+  const q = termo.trim().toLowerCase();
+  if (!dropdownFicha) return;
+
+  if (!q) {
+    dropdownFicha.style.display = 'none';
+    return;
+  }
+
+  fichasFiltradas = LISTA_COLABORADORES_FICHAS.filter(c => {
+    const nome = (c.nome || '').toLowerCase();
+    const mat = (c.matricula || '').toLowerCase();
+    const cargo = (c.cargo || '').toLowerCase();
+    const dep = (c.departamento || '').toLowerCase();
+    return nome.includes(q) || mat.includes(q) || cargo.includes(q) || dep.includes(q);
+  });
+
+  fichaFocadoIndex = -1;
+
+  if (fichasFiltradas.length === 0) {
+    dropdownFicha.innerHTML = `
+      <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+        <i class="fa-solid fa-user-slash" style="margin-bottom: 0.35rem; display: block; font-size: 1.2rem; color: var(--border-color);"></i>
+        Nenhum colaborador encontrado para "<strong>${termo}</strong>"
+      </div>
+    `;
+    dropdownFicha.style.display = 'block';
+    return;
+  }
+
+  const html = fichasFiltradas.map((c, idx) => {
+    const iniciais = (c.nome || 'C').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    const temPendencia = c.temPendencia || (c.ferramentasEmAberto && c.ferramentasEmAberto > 0);
+    const qtdPend = c.ferramentasEmAberto || 0;
+    const isSistema = c.tipo_perfil === 'SISTEMA';
+
+    return `
+      <div class="ficha-busca-item" data-index="${idx}" data-id="${c.id}" onclick="window.location.href='/fichas?colaborador_id=${c.id}'" style="padding: 0.65rem 0.95rem; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.12s ease; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+          <div style="width: 34px; height: 34px; border-radius: 50%; background: ${isSistema ? '#EDE9FE' : '#FEF3C7'}; color: ${isSistema ? '#6D28D9' : '#B45309'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.78rem; flex-shrink: 0;">
+            ${iniciais}
+          </div>
+          <div style="min-width: 0;">
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${c.nome}
+            </div>
+            <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;">
+              <span style="font-family: var(--font-mono); font-weight: 700; color: var(--text-body); background: var(--bg-surface); padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border-color);">${c.matricula || 'S/ MAT'}</span>
+              <span>• ${c.cargo || 'Função não inf.'}</span>
+              ${c.departamento ? `<span>(${c.departamento})</span>` : ''}
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
+          <span class="badge" style="background: ${temPendencia ? '#FEF3C7' : '#D1FAE5'}; color: ${temPendencia ? '#92400E' : '#065F46'}; font-weight: 700; font-size: 0.72rem;">
+            ${temPendencia ? `⚠️ ${qtdPend} com ele` : '✅ Regular'}
+          </span>
+          <span style="color: var(--primary); font-weight: 700; font-size: 0.76rem; display: flex; align-items: center; gap: 4px;">
+            Ver Ficha <i class="fa-solid fa-arrow-right"></i>
+          </span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  dropdownFicha.innerHTML = html;
+  dropdownFicha.style.display = 'block';
 }
+
+function limparBuscaFicha() {
+  if (inputBuscaColab) {
+    inputBuscaColab.value = '';
+    if (btnLimparFicha) btnLimparFicha.style.display = 'none';
+    if (dropdownFicha) dropdownFicha.style.display = 'none';
+    filtrarListaColaboradores();
+    inputBuscaColab.focus();
+  }
+}
+
+if (inputBuscaColab) {
+  inputBuscaColab.addEventListener('input', (e) => {
+    const val = e.target.value;
+    if (btnLimparFicha) btnLimparFicha.style.display = val ? 'flex' : 'none';
+    filtrarListaColaboradores();
+    renderizarDropdownFicha(val);
+  });
+
+  inputBuscaColab.addEventListener('focus', () => {
+    if (inputBuscaColab.value.trim()) {
+      renderizarDropdownFicha(inputBuscaColab.value);
+    }
+  });
+
+  inputBuscaColab.addEventListener('keydown', (e) => {
+    if (!dropdownFicha || dropdownFicha.style.display === 'none') return;
+    const items = dropdownFicha.querySelectorAll('.ficha-busca-item');
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (items.length === 0) return;
+      fichaFocadoIndex = (fichaFocadoIndex + 1) % items.length;
+      atualizarFocoFicha(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (items.length === 0) return;
+      fichaFocadoIndex = (fichaFocadoIndex - 1 + items.length) % items.length;
+      atualizarFocoFicha(items);
+    } else if (e.key === 'Enter') {
+      if (fichaFocadoIndex >= 0 && items[fichaFocadoIndex]) {
+        e.preventDefault();
+        const id = items[fichaFocadoIndex].getAttribute('data-id');
+        if (id) window.location.href = `/fichas?colaborador_id=${id}`;
+      } else if (fichasFiltradas.length > 0) {
+        e.preventDefault();
+        window.location.href = `/fichas?colaborador_id=${fichasFiltradas[0].id}`;
+      }
+    } else if (e.key === 'Escape') {
+      dropdownFicha.style.display = 'none';
+    }
+  });
+}
+
+function atualizarFocoFicha(items) {
+  items.forEach((it, idx) => {
+    if (idx === fichaFocadoIndex) {
+      it.style.background = '#f1f5f9';
+      it.scrollIntoView({ block: 'nearest' });
+    } else {
+      it.style.background = '#ffffff';
+    }
+  });
+}
+
+// Fecha dropdown de fichas ao clicar fora
+document.addEventListener('click', (e) => {
+  const wrapper = document.getElementById('busca-ficha-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    if (dropdownFicha) dropdownFicha.style.display = 'none';
+  }
+});
 </script>
 
 <%- include('../layouts/footer') %>

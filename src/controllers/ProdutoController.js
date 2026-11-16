@@ -54,10 +54,10 @@ class ProdutoController {
         title: 'Novo Produto',
         currentPage: 'produtos',
         categorias,
-        produto: { 
-          sku: skuSugerido, 
-          quantidade: 0, 
-          estoque_minimo: 0, 
+        produto: {
+          sku: skuSugerido,
+          quantidade: 0,
+          estoque_minimo: 0,
           categoria: 'Outros'
         },
         erro: null
@@ -73,8 +73,8 @@ class ProdutoController {
    */
   static async store(req, res) {
     try {
-      const { 
-        sku, nome, categoria, categoria_personalizada, marca, unidade_medida, 
+      const {
+        sku, nome, categoria, categoria_personalizada, marca, unidade_medida,
         quantidade, estoque_minimo, localizacao,
         tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao, condicao
       } = req.body;
@@ -205,8 +205,8 @@ class ProdutoController {
         return res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
       }
 
-      const { 
-        sku, nome, categoria, categoria_personalizada, marca, unidade_medida, 
+      const {
+        sku, nome, categoria, categoria_personalizada, marca, unidade_medida,
         quantidade, estoque_minimo, localizacao,
         tamanho, cor, peso, numero_serie, ca, patrimonio, tag, observacao, condicao
       } = req.body;
@@ -338,8 +338,8 @@ class ProdutoController {
   static async baixarModelo(req, res) {
     try {
       const colunasCabecalho = [
-        'SKU', 'Nome do Produto', 'Categoria', 'Quantidade', 'Estoque Mínimo', 
-        'Unidade', 'Marca', 'Localização', 'TAG', 'Patrimônio', 'C.A (EPI)', 
+        'SKU', 'Nome do Produto', 'Categoria', 'Quantidade', 'Estoque Mínimo',
+        'Unidade', 'Marca', 'Localização', 'TAG', 'Patrimônio', 'C.A (EPI)',
         'Número de Série', 'Tamanho', 'Cor', 'Peso', 'Observações'
       ];
 
@@ -445,9 +445,9 @@ class ProdutoController {
 
       let dadosParaExportar = [];
       const colunasCabecalho = [
-        'SKU', 'Nome do Produto', 'Categoria', 'Marca', 'Quantidade', 
-        'Unidade', 'Estoque Mínimo', 'Status Estoque', 'Nível de Estoque', 'Localização', 
-        'TAG', 'Patrimônio', 'C.A (EPI)', 'Número de Série', 'Tamanho', 
+        'SKU', 'Nome do Produto', 'Categoria', 'Marca', 'Quantidade',
+        'Unidade', 'Estoque Mínimo', 'Status Estoque', 'Nível de Estoque', 'Localização',
+        'TAG', 'Patrimônio', 'C.A (EPI)', 'Número de Série', 'Tamanho',
         'Cor', 'Peso', 'Observações', 'Última Atualização'
       ];
 
@@ -605,7 +605,7 @@ class ProdutoController {
         const cor = (row['Cor'] || '').toString().trim() || null;
         const peso = (row['Peso'] || '').toString().trim() || null;
         const observacao = (row['Observações'] || row['Observacoes'] || row['Observação'] || row['Observacao'] || row['Obs'] || '').toString().trim() || null;
-        
+
         // Mapeia o Status do Estoque / Condição do Item (ex: NOVO, REUSO, OUTROS, BOM, SUCATA)
         const statusEstoqueTexto = (row['Status Estoque'] || row['Condição'] || row['Condicao'] || row['Condição do Item'] || row['Estado'] || row['Status'] || '').toString().trim().toUpperCase();
         let condicaoFinal = 'NOVO';

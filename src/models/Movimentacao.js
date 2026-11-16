@@ -9,8 +9,7 @@ const TIPOS_VALIDOS = ['ENTRADA', 'SAIDA', 'EMPRESTIMO', 'DEVOLUCAO', 'TROCA'];
 
 function getFatorTipo(tipo) {
   if (tipo === 'ENTRADA' || tipo === 'DEVOLUCAO') return 1;
-  if (tipo === 'SAIDA' || tipo === 'EMPRESTIMO') return -1;
-  if (tipo === 'TROCA') return 0;
+  if (tipo === 'SAIDA' || tipo === 'EMPRESTIMO' || tipo === 'TROCA') return -1;
   return 0;
 }
 
@@ -203,15 +202,15 @@ class Movimentacao {
         throw new Error('Produto selecionado não existe.');
       }
 
-      // Valida saldo e impede saída ou empréstimo de produto zerado
+      // Valida saldo e impede saída, empréstimo ou troca de produto zerado
       if (fator < 0) {
-        const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
+        const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : (tipo === 'TROCA' ? 'troca' : 'saída');
         const un = prod.unidade_medida || 'UN';
         if (Number(prod.quantidade) <= 0) {
           throw new Error(`Operação Bloqueada: O produto "${prod.nome}" está com estoque ZERADO (0 ${un}). Não é permitido realizar ${op} de produtos sem estoque disponível. Realize uma Entrada para reabastecer.`);
         }
         if (Number(prod.quantidade) < qtd) {
-          throw new Error(`Saldo insuficiente para o ${op} de "${prod.nome}". Saldo disponível: ${prod.quantidade} ${un}, solicitado: ${qtd} ${un}.`);
+          throw new Error(`Saldo insuficiente para ${op === 'troca' ? 'a troca' : 'o ' + op} de "${prod.nome}". Saldo disponível: ${prod.quantidade} ${un}, solicitado: ${qtd} ${un}.`);
         }
       }
 
@@ -294,13 +293,13 @@ class Movimentacao {
       }
 
       if (fator < 0) {
-        const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
+        const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : (tipo === 'TROCA' ? 'troca' : 'saída');
         const un = produto.unidade_medida || 'UN';
         if (Number(produto.quantidade) <= 0) {
           throw new Error(`Operação Bloqueada: O produto "${produto.nome}" está com estoque ZERADO (0 ${un}). Não é permitido realizar ${op} de produtos sem estoque disponível. Realize uma Entrada para reabastecer.`);
         }
         if (Number(produto.quantidade) < qtd) {
-          throw new Error(`Saldo insuficiente para o ${op} de "${produto.nome}". Saldo disponível: ${produto.quantidade} ${un}, solicitado: ${qtd} ${un}.`);
+          throw new Error(`Saldo insuficiente para ${op === 'troca' ? 'a troca' : 'o ' + op} de "${produto.nome}". Saldo disponível: ${produto.quantidade} ${un}, solicitado: ${qtd} ${un}.`);
         }
       }
 

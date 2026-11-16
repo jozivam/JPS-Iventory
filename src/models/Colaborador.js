@@ -201,7 +201,7 @@ class Colaborador {
 
     // Métricas consolidadas da Ficha
     const totalSaidasQtd = movimentacoes
-      .filter(m => m.tipo === 'SAIDA')
+      .filter(m => m.tipo === 'SAIDA' || m.tipo === 'TROCA')
       .reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
 
     const totalEmprestimosQtd = movimentacoes
@@ -261,7 +261,7 @@ class Colaborador {
         .reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
 
       const totalSaidas = movsDoColab
-        .filter(m => m.tipo === 'SAIDA')
+        .filter(m => m.tipo === 'SAIDA' || m.tipo === 'TROCA')
         .reduce((acc, m) => acc + Number(m.quantidade || 0), 0);
 
       const totalDevolucoes = movsDoColab

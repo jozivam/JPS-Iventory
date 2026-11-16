@@ -89,17 +89,33 @@
 <div class="table-card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
   <form action="/colaboradores" method="GET" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin: 0;">
     
-    <!-- Campo de Busca -->
-    <div style="flex: 1; min-width: 240px; position: relative;">
-      <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim);"></i>
+    <!-- Campo de Busca com Dropdown Inteligente e Autocomplete Desabilitado -->
+    <div style="flex: 1; min-width: 240px; position: relative;" id="colab-busca-wrapper">
+      <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); z-index: 2; pointer-events: none;"></i>
       <input 
         type="text" 
+        id="colab-busca-input"
         name="busca" 
         class="form-control" 
         placeholder="Buscar por nome, cargo, matrícula, departamento ou e-mail..." 
         value="<%= filtros.busca %>"
-        style="padding-left: 2.5rem; height: 40px;"
+        autocomplete="off"
+        style="padding-left: 2.5rem; padding-right: 2.4rem; height: 40px; font-weight: 500;"
       >
+      <button 
+        type="button" 
+        id="btn-limpar-colab-busca" 
+        title="Limpar busca"
+        onclick="limparBuscaColaboradorTela()"
+        style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: <%= filtros.busca ? 'flex' : 'none' %>; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 50%; z-index: 2;"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <!-- Dropdown Flutuante de Sugestões -->
+      <div id="colab-busca-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 12px 28px rgba(0,0,0,0.12); max-height: 320px; overflow-y: auto; z-index: 1050; padding: 0.35rem 0;">
+        <!-- Sugestões injetadas via JS -->
+      </div>
     </div>
 
     <!-- Filtro Tipo de Perfil -->
@@ -1081,6 +1097,158 @@
         fecharModalSeguro(overlay.id);
       }
     });
+  });
+
+  // =========================================================================
+  // DROPDOWN INTELIGENTE DE BUSCA DE COLABORADORES
+  // =========================================================================
+  const LISTA_COLABORADORES_TELA = <%- JSON.stringify(colaboradores || []) %>;
+  const inputBuscaTela = document.getElementById('colab-busca-input');
+  const dropdownBuscaTela = document.getElementById('colab-busca-dropdown');
+  const btnLimparBuscaTela = document.getElementById('btn-limpar-colab-busca');
+  let colabTelaFocadoIndex = -1;
+  let colabsTelaFiltrados = [];
+
+  function renderizarDropdownBuscaTela(termo = '') {
+    const q = termo.trim().toLowerCase();
+    if (!q) {
+      dropdownBuscaTela.style.display = 'none';
+      return;
+    }
+
+    colabsTelaFiltrados = LISTA_COLABORADORES_TELA.filter(c => {
+      const nome = (c.nome || '').toLowerCase();
+      const mat = (c.matricula || '').toLowerCase();
+      const cargo = (c.cargo || '').toLowerCase();
+      const dep = (c.departamento || '').toLowerCase();
+      const email = (c.email || '').toLowerCase();
+      return nome.includes(q) || mat.includes(q) || cargo.includes(q) || dep.includes(q) || email.includes(q);
+    });
+
+    colabTelaFocadoIndex = -1;
+
+    if (colabsTelaFiltrados.length === 0) {
+      dropdownBuscaTela.innerHTML = `
+        <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+          <i class="fa-solid fa-user-slash" style="margin-bottom: 0.35rem; display: block; font-size: 1.2rem; color: var(--border-color);"></i>
+          Nenhum colaborador encontrado para "<strong>${termo}</strong>"
+        </div>
+      `;
+      dropdownBuscaTela.style.display = 'block';
+      return;
+    }
+
+    const html = colabsTelaFiltrados.map((c, idx) => {
+      const iniciais = (c.nome || 'C').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      const isSistema = c.tipo_perfil === 'SISTEMA';
+
+      return `
+        <div class="colab-busca-item" data-index="${idx}" data-id="${c.id}" onclick="selecionarColaboradorTela('${c.nome.replace(/'/g, "\\'")}')" style="padding: 0.65rem 0.95rem; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.12s ease; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+            <div style="width: 34px; height: 34px; border-radius: 50%; background: ${isSistema ? '#EDE9FE' : '#FEF3C7'}; color: ${isSistema ? '#6D28D9' : '#B45309'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.78rem; flex-shrink: 0;">
+              ${iniciais}
+            </div>
+            <div style="min-width: 0;">
+              <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${c.nome}
+              </div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;">
+                <span style="font-family: var(--font-mono); font-weight: 700; color: var(--text-body); background: var(--bg-surface); padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border-color);">${c.matricula || 'S/ MAT'}</span>
+                <span>• ${c.cargo || 'Função não inf.'}</span>
+                ${c.departamento ? `<span>(${c.departamento})</span>` : ''}
+              </div>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;" onclick="event.stopPropagation()">
+            <a href="/fichas?colaborador_id=${c.id}" class="btn btn-sm btn-outline" title="Abrir Ficha de Material e Cautela" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; border-color: #C7D2FE; color: #4338CA; background: #EEF2FF;">
+              <i class="fa-solid fa-file-invoice"></i> Ficha
+            </a>
+            <button type="button" class="btn btn-sm btn-outline" onclick="abrirModalDetalhesColaborador(${c.id})" title="Ver Cadastro Completo" style="font-size: 0.72rem; padding: 0.25rem 0.55rem;">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    dropdownBuscaTela.innerHTML = html;
+    dropdownBuscaTela.style.display = 'block';
+  }
+
+  function selecionarColaboradorTela(nome) {
+    if (inputBuscaTela) {
+      inputBuscaTela.value = nome;
+      dropdownBuscaTela.style.display = 'none';
+      inputBuscaTela.form.submit();
+    }
+  }
+
+  function limparBuscaColaboradorTela() {
+    if (inputBuscaTela) {
+      inputBuscaTela.value = '';
+      btnLimparBuscaTela.style.display = 'none';
+      dropdownBuscaTela.style.display = 'none';
+      window.location.href = '/colaboradores';
+    }
+  }
+
+  if (inputBuscaTela) {
+    inputBuscaTela.addEventListener('input', (e) => {
+      const val = e.target.value;
+      btnLimparBuscaTela.style.display = val ? 'flex' : 'none';
+      renderizarDropdownBuscaTela(val);
+    });
+
+    inputBuscaTela.addEventListener('focus', () => {
+      if (inputBuscaTela.value.trim()) {
+        renderizarDropdownBuscaTela(inputBuscaTela.value);
+      }
+    });
+
+    inputBuscaTela.addEventListener('keydown', (e) => {
+      const items = dropdownBuscaTela.querySelectorAll('.colab-busca-item');
+      if (dropdownBuscaTela.style.display === 'none') return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (items.length === 0) return;
+        colabTelaFocadoIndex = (colabTelaFocadoIndex + 1) % items.length;
+        atualizarFocoTela(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (items.length === 0) return;
+        colabTelaFocadoIndex = (colabTelaFocadoIndex - 1 + items.length) % items.length;
+        atualizarFocoTela(items);
+      } else if (e.key === 'Enter') {
+        if (colabTelaFocadoIndex >= 0 && items[colabTelaFocadoIndex]) {
+          e.preventDefault();
+          const colab = colabsTelaFiltrados[colabTelaFocadoIndex];
+          if (colab) selecionarColaboradorTela(colab.nome);
+        }
+      } else if (e.key === 'Escape') {
+        dropdownBuscaTela.style.display = 'none';
+      }
+    });
+  }
+
+  function atualizarFocoTela(items) {
+    items.forEach((it, idx) => {
+      if (idx === colabTelaFocadoIndex) {
+        it.style.background = '#f1f5f9';
+        it.scrollIntoView({ block: 'nearest' });
+      } else {
+        it.style.background = '#ffffff';
+      }
+    });
+  }
+
+  // Fecha dropdown de busca de colaborador ao clicar fora
+  document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('colab-busca-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      if (dropdownBuscaTela) dropdownBuscaTela.style.display = 'none';
+    }
   });
 </script>
 

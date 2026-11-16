@@ -10,13 +10,15 @@ class BalcaoController {
     try {
       const { tipo, produto_id, colaborador_id, sucesso, erro } = req.query;
 
-      const [produtos, emprestimosPendentes, estatisticas, ultimosAtendimentos, colaboradores] = await Promise.all([
+      const [produtos, emprestimosPendentes, estatisticas, ultimosAtendimentos, todosColaboradores] = await Promise.all([
         Produto.findAll(),
         Movimentacao.findEmprestimosPendentes(),
         Movimentacao.getEstatisticasBalcao(),
         Movimentacao.findAll({ limite: 10 }),
-        Colaborador.findAll({ status: 'ATIVO' })
+        Colaborador.listarComResumoFicha()
       ]);
+
+      const colaboradores = (todosColaboradores || []).filter(c => c.status === 'ATIVO');
 
       let produtoPreSelecionado = null;
       if (produto_id) {
@@ -71,19 +73,19 @@ class BalcaoController {
         throw new Error('A quantidade deve ser um número maior que zero.');
       }
 
-      // Validação estrita: impede saída ou empréstimo de produto zerado ou saldo insuficiente
-      if (tipo === 'SAIDA' || tipo === 'EMPRESTIMO') {
+      // Validação estrita: impede saída, empréstimo ou troca de produto zerado ou saldo insuficiente
+      if (tipo === 'SAIDA' || tipo === 'EMPRESTIMO' || tipo === 'TROCA') {
         const prod = await Produto.findById(parseInt(produto_id, 10));
         if (!prod) {
           throw new Error('Produto selecionado não foi encontrado no inventário.');
         }
         const un = prod.unidade_medida || 'UN';
-        const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
+        const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : (tipo === 'TROCA' ? 'troca' : 'saída');
         if (Number(prod.quantidade) <= 0) {
           throw new Error(`Operação Bloqueada: O produto "${prod.nome}" está com estoque ZERADO (0 ${un}). Não é permitido realizar ${op} de itens zerados. Realize primeiro uma operação de Entrada para repor o estoque.`);
         }
         if (Number(prod.quantidade) < qtd) {
-          throw new Error(`Saldo insuficiente para ${op}: O produto "${prod.nome}" possui apenas ${prod.quantidade} ${un} disponíveis em estoque, mas foi solicitada a movimentação de ${qtd} ${un}.`);
+          throw new Error(`Saldo insuficiente para ${op === 'troca' ? 'a troca' : 'o ' + op}: O produto "${prod.nome}" possui apenas ${prod.quantidade} ${un} disponíveis em estoque, mas foi solicitada a movimentação de ${qtd} ${un}.`);
         }
       }
 
@@ -110,7 +112,7 @@ class BalcaoController {
       } else if (tipo === 'SAIDA') {
         textoSucesso = `Saída de ${qtd} item(ns) de "${resultado.produto_nome}" registrada com sucesso! Saldo restante: ${resultado.novo_saldo}.`;
       } else if (tipo === 'TROCA') {
-        textoSucesso = `Troca de "${resultado.produto_nome}" registrada com sucesso no balcão!`;
+        textoSucesso = `Troca de ${qtd} item(ns) de "${resultado.produto_nome}" registrada com sucesso! O novo item foi entregue ao colaborador com baixa no estoque. Saldo restante: ${resultado.novo_saldo}.`;
       } else {
         textoSucesso = `Operação de ${tipo} realizada com sucesso para "${resultado.produto_nome}"!`;
       }

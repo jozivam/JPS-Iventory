@@ -242,7 +242,7 @@
                 <span class="badge" style="background: #DC2626; color: #ffffff; font-size: 0.72rem; padding: 2px 7px;">0 DISPONÍVEL</span>
               </div>
               <div style="color: #7F1D1D;" id="texto-alerta-zerado">
-                Não é permitido registrar <strong>Saída</strong> ou <strong>Empréstimo</strong> deste item porque não há unidades físicas em estoque.
+                Não é permitido registrar <strong>Saída</strong>, <strong>Empréstimo</strong> ou <strong>Troca</strong> deste item porque não há unidades físicas em estoque.
               </div>
               <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #FECACA; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: #64748B;">
@@ -305,33 +305,52 @@
 
       <!-- Colaborador e Responsável -->
       <div class="form-row-responsive">
-        <div class="form-group">
-          <label class="form-label" for="balcao-colaborador-input" id="label-colaborador">
-            Colaborador / Solicitante <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Opcional - Padrão: Balcão)</span>
+        <!-- Seleção de Colaborador com Campo de Busca e Dropdown Inteligente -->
+        <div class="form-group" style="position: relative;" id="balcao-colaborador-wrapper">
+          <label class="form-label" for="balcao-colaborador-busca" id="label-colaborador">
+            Colaborador / Solicitante <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Digite para autocompletar e filtrar)</span>
           </label>
+          
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="fa-solid fa-user" style="position: absolute; left: 1rem; color: var(--text-dim); pointer-events: none; z-index: 2;"></i>
+            
+            <input 
+              type="text" 
+              id="balcao-colaborador-busca" 
+              class="form-control" 
+              placeholder="Digite o nome, matrícula ou cargo do colaborador..." 
+              autocomplete="off"
+              style="padding-left: 2.5rem; padding-right: 2.5rem; font-weight: 600; height: 46px;"
+              value="<%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? `${colaboradorPreSelecionado.nome}${colaboradorPreSelecionado.matricula ? ' (' + colaboradorPreSelecionado.matricula + ')' : ''}` : '' %>"
+            >
+
+            <button 
+              type="button" 
+              id="btn-limpar-colaborador-busca" 
+              title="Limpar seleção e buscar outro colaborador"
+              onclick="limparColaboradorSelecionado()"
+              style="position: absolute; right: 0.6rem; background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: <%= (typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado) ? 'flex' : 'none' %>; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 50%;"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Dropdown Flutuante de Colaboradores -->
+          <div id="balcao-colaborador-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 12px 28px rgba(0,0,0,0.12); max-height: 290px; overflow-y: auto; z-index: 1050; padding: 0.35rem 0;">
+            <!-- Itens de colaboradores filtrados serão injetados via JS -->
+          </div>
+
+          <!-- Inputs ocultos para submissão do formulário -->
+          <input type="hidden" name="colaborador" id="balcao-colaborador-input" value="<%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? colaboradorPreSelecionado.nome : '' %>">
           <input type="hidden" name="colaborador_id" id="balcao-colaborador-id" value="<%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? colaboradorPreSelecionado.id : '' %>">
-          <input 
-            type="text" 
-            id="balcao-colaborador-input" 
-            name="colaborador" 
-            class="form-control" 
-            list="lista-colaboradores-cadastrados"
-            value="<%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? colaboradorPreSelecionado.nome : '' %>"
-            placeholder="Ex: Carlos Pereira (ou deixe em branco para Balcão)"
-            autocomplete="off"
-          >
-          <datalist id="lista-colaboradores-cadastrados">
-            <% if (typeof colaboradores !== 'undefined' && colaboradores && colaboradores.length > 0) { %>
-              <% colaboradores.forEach(col => { %>
-                <option value="<%= col.nome %>"><%= col.cargo ? `${col.cargo} • ${col.departamento || ''}` : col.matricula %></option>
-              <% }) %>
-            <% } %>
-          </datalist>
 
           <!-- Badge Interativo: Ficha Vinculada -->
-          <div id="badge-ficha-vinculada" style="margin-top: 0.4rem; font-size: 0.78rem; display: <%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? 'flex' : 'none' %>; align-items: center; justify-content: space-between; background: #EEF2FF; border: 1px solid #C7D2FE; padding: 0.35rem 0.65rem; border-radius: 6px; color: #3730A3;">
-            <span><i class="fa-solid fa-file-invoice"></i> Vinculado à <strong>Ficha de <span id="nome-colaborador-ficha-badge"><%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? colaboradorPreSelecionado.nome : '' %></span></strong></span>
-            <a href="<%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? '/fichas?colaborador_id=' + colaboradorPreSelecionado.id : '#' %>" id="link-ver-ficha-balcao" target="_blank" style="font-weight: 700; color: #4F46E5; text-decoration: underline;">
+          <div id="badge-ficha-vinculada" style="margin-top: 0.5rem; font-size: 0.8rem; display: <%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? 'flex' : 'none' %>; align-items: center; justify-content: space-between; background: #EEF2FF; border: 1px solid #C7D2FE; padding: 0.45rem 0.75rem; border-radius: 6px; color: #3730A3;">
+            <div style="display: flex; align-items: center; gap: 0.45rem;">
+              <i class="fa-solid fa-file-invoice"></i>
+              <span>Ficha vinculada: <strong><span id="nome-colaborador-ficha-badge"><%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? colaboradorPreSelecionado.nome : '' %></span></strong></span>
+            </div>
+            <a href="<%= typeof colaboradorPreSelecionado !== 'undefined' && colaboradorPreSelecionado ? '/fichas?colaborador_id=' + colaboradorPreSelecionado.id : '#' %>" id="link-ver-ficha-balcao" target="_blank" style="font-weight: 700; color: #4F46E5; text-decoration: underline; font-size: 0.76rem;">
               Ver Ficha <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem;"></i>
             </a>
           </div>
@@ -716,10 +735,10 @@
       color: '#5B21B6',
       border: '#DDD6FE',
       icone: 'fa-repeat',
-      texto: 'Troca de item defeituoso/avariado ou substituição de especificação/tamanho para o colaborador.',
-      btnTexto: 'Confirmar Registro de Troca',
+      texto: 'Troca de material/EPI com baixa no estoque físico do novo item entregue ao colaborador.',
+      btnTexto: 'Confirmar Troca no Balcão (Baixa de Estoque)',
       btnCor: '#8B5CF6',
-      labelColab: 'Colaborador que Solicitou a Troca <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Opcional - Padrão: Balcão)</span>'
+      labelColab: 'Colaborador que Solicitou a Troca <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Digite para autocompletar e filtrar)</span>'
     }
   };
 
@@ -1034,7 +1053,8 @@
 
     const saldo = Number(prod.quantidade);
     const un = prod.unidade_medida || 'UN';
-    const isOperacaoSaida = (tipo === 'SAIDA' || tipo === 'EMPRESTIMO');
+    const isOperacaoSaida = (tipo === 'SAIDA' || tipo === 'EMPRESTIMO' || tipo === 'TROCA');
+    const nomeOp = tipo === 'EMPRESTIMO' ? 'Empréstimo' : (tipo === 'TROCA' ? 'Troca' : 'Saída');
 
     if (isOperacaoSaida) {
       // Caso 1: Estoque Zerado ou Negativo
@@ -1049,7 +1069,7 @@
           btnSubmit.style.cursor = 'not-allowed';
           btnSubmit.style.opacity = '0.9';
           if (btnSubmitTexto) {
-            btnSubmitTexto.innerHTML = `<i class="fa-solid fa-ban" style="margin-right: 5px;"></i> Item Zerado — ${tipo === 'EMPRESTIMO' ? 'Empréstimo' : 'Saída'} Bloqueada`;
+            btnSubmitTexto.innerHTML = `<i class="fa-solid fa-ban" style="margin-right: 5px;"></i> Item Zerado — ${nomeOp} Bloqueada`;
           }
         }
         return false;
@@ -1062,7 +1082,7 @@
           alertaInsuficiente.style.display = 'block';
           const txt = document.getElementById('texto-alerta-saldo-insuficiente');
           if (txt) {
-            txt.innerHTML = `O item possui apenas <strong>${saldo} ${un}</strong> disponíveis em estoque, mas foi solicitada a ${tipo === 'EMPRESTIMO' ? 'saída por empréstimo' : 'baixa'} de <strong>${qtd} ${un}</strong>. Reduza a quantidade para continuar.`;
+            txt.innerHTML = `O item possui apenas <strong>${saldo} ${un}</strong> disponíveis em estoque, mas foi solicitada a ${tipo === 'EMPRESTIMO' ? 'saída por empréstimo' : (tipo === 'TROCA' ? 'troca com baixa' : 'baixa')} de <strong>${qtd} ${un}</strong>. Reduza a quantidade para continuar.`;
           }
         }
 
@@ -1079,7 +1099,7 @@
         return false;
       }
 
-      // Caso 3: Saldo OK para Saída/Empréstimo
+      // Caso 3: Saldo OK para Saída/Empréstimo/Troca
       if (alertaZerado) alertaZerado.style.display = 'none';
       if (alertaInsuficiente) alertaInsuficiente.style.display = 'none';
 
@@ -1093,7 +1113,7 @@
       }
       return true;
     } else {
-      // Para Entrada, Devolução ou Troca (operações que abastecem ou trocam)
+      // Para Entrada ou Devolução (operações que abastecem o estoque)
       if (alertaZerado) alertaZerado.style.display = 'none';
       if (alertaInsuficiente) alertaInsuficiente.style.display = 'none';
 
@@ -1129,10 +1149,10 @@
     }
 
     const prod = LISTA_PRODUTOS.find(p => String(p.id) === String(produtoId));
-    if (prod && (tipo === 'SAIDA' || tipo === 'EMPRESTIMO')) {
+    if (prod && (tipo === 'SAIDA' || tipo === 'EMPRESTIMO' || tipo === 'TROCA')) {
       const saldo = Number(prod.quantidade);
       const un = prod.unidade_medida || 'UN';
-      const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : 'saída';
+      const op = tipo === 'EMPRESTIMO' ? 'empréstimo' : (tipo === 'TROCA' ? 'troca' : 'saída');
 
       if (saldo <= 0) {
         e.preventDefault();
@@ -1149,6 +1169,216 @@
     }
   });
 
+  // =========================================================================
+  // SELETOR DE COLABORADOR INTELIGENTE COM BUSCA / DROPDOWN (COMBOBOX)
+  // =========================================================================
+  const LISTA_COLABORADORES_BALCAO = <%- JSON.stringify(colaboradores || []) %>;
+  let colabFocadoIndex = -1;
+  let colabsFiltradosAtuais = [];
+
+  const inputBuscaColab = document.getElementById('balcao-colaborador-busca');
+  const dropdownColab = document.getElementById('balcao-colaborador-dropdown');
+  const inputHiddenColabNome = document.getElementById('balcao-colaborador-input');
+  const inputHiddenColabId = document.getElementById('balcao-colaborador-id');
+  const btnLimparColab = document.getElementById('btn-limpar-colaborador-busca');
+  const badgeFicha = document.getElementById('badge-ficha-vinculada');
+  const nomeColabFicha = document.getElementById('nome-colaborador-ficha-badge');
+  const linkFichaBalcao = document.getElementById('link-ver-ficha-balcao');
+
+  function renderizarDropdownColaboradores(termo = '') {
+    const q = termo.trim().toLowerCase();
+
+    if (!q) {
+      colabsFiltradosAtuais = LISTA_COLABORADORES_BALCAO;
+    } else {
+      colabsFiltradosAtuais = LISTA_COLABORADORES_BALCAO.filter(c => {
+        const nome = (c.nome || '').toLowerCase();
+        const mat = (c.matricula || '').toLowerCase();
+        const cargo = (c.cargo || '').toLowerCase();
+        const dep = (c.departamento || '').toLowerCase();
+        return nome.includes(q) || mat.includes(q) || cargo.includes(q) || dep.includes(q);
+      });
+    }
+
+    colabFocadoIndex = -1;
+
+    let html = '';
+
+    // Opção padrão para Balcão Geral
+    if (!q || 'balcão balcao geral'.includes(q)) {
+      html += `
+        <div class="combobox-colab-item" data-index="-1" onclick="selecionarColaboradorCombobox(null)" style="padding: 0.65rem 0.95rem; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.12s ease; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: #F8FAFC;">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;">
+              <i class="fa-solid fa-store"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">Balcão Geral (Sem Vínculo)</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted);">Atendimento direto sem debitar na ficha pessoal</div>
+            </div>
+          </div>
+          <span class="badge" style="background: #F1F5F9; color: #64748B; font-size: 0.72rem;">PADRÃO</span>
+        </div>
+      `;
+    }
+
+    if (colabsFiltradosAtuais.length === 0 && (!q || !'balcão balcao geral'.includes(q))) {
+      dropdownColab.innerHTML = `
+        <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+          <i class="fa-solid fa-user-xmark" style="margin-bottom: 0.35rem; display: block; font-size: 1.2rem; color: var(--border-color);"></i>
+          Nenhum colaborador encontrado para "<strong>${termo}</strong>"
+        </div>
+      `;
+      dropdownColab.style.display = 'block';
+      return;
+    }
+
+    html += colabsFiltradosAtuais.map((c, idx) => {
+      const iniciais = (c.nome || 'C').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      const temPendencia = c.temPendencia || (c.ferramentasEmAberto && c.ferramentasEmAberto > 0);
+      const qtdPend = c.ferramentasEmAberto || 0;
+      const isSistema = c.tipo_perfil === 'SISTEMA';
+
+      return `
+        <div class="combobox-colab-item" data-index="${idx}" data-id="${c.id}" onclick="selecionarColaboradorCombobox(${c.id})" style="padding: 0.65rem 0.95rem; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.12s ease;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <div style="width: 34px; height: 34px; border-radius: 50%; background: ${isSistema ? '#EDE9FE' : '#FEF3C7'}; color: ${isSistema ? '#6D28D9' : '#B45309'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.78rem; flex-shrink: 0;">
+                ${iniciais}
+              </div>
+              <div>
+                <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">
+                  ${c.nome}
+                </div>
+                <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;">
+                  <span style="font-family: var(--font-mono); font-weight: 700; color: var(--text-body); background: var(--bg-surface); padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border-color);">${c.matricula || 'S/ MAT'}</span>
+                  <span>• ${c.cargo || 'Função não inf.'}</span>
+                  ${c.departamento ? `<span>(${c.departamento})</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <div style="text-align: right; flex-shrink: 0;">
+              <span class="badge" style="background: ${temPendencia ? '#FEF3C7' : '#D1FAE5'}; color: ${temPendencia ? '#92400E' : '#065F46'}; font-weight: 700; font-size: 0.72rem;">
+                ${temPendencia ? `⚠️ ${qtdPend} com ele` : '✅ Regular'}
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    dropdownColab.innerHTML = html;
+    dropdownColab.style.display = 'block';
+  }
+
+  function selecionarColaboradorCombobox(colabId) {
+    if (colabId === null) {
+      inputHiddenColabNome.value = 'Balcão';
+      inputHiddenColabId.value = '';
+      inputBuscaColab.value = 'Balcão Geral';
+      btnLimparColab.style.display = 'flex';
+      dropdownColab.style.display = 'none';
+      if (badgeFicha) badgeFicha.style.display = 'none';
+      return;
+    }
+
+    const colab = LISTA_COLABORADORES_BALCAO.find(c => c.id === colabId);
+    if (!colab) return;
+
+    inputHiddenColabNome.value = colab.nome;
+    inputHiddenColabId.value = colab.id;
+    inputBuscaColab.value = `${colab.nome}${colab.matricula ? ' (' + colab.matricula + ')' : ''}`;
+    btnLimparColab.style.display = 'flex';
+    dropdownColab.style.display = 'none';
+
+    // Atualiza badge de ficha vinculada
+    if (badgeFicha && nomeColabFicha && linkFichaBalcao) {
+      nomeColabFicha.textContent = colab.nome;
+      linkFichaBalcao.href = `/fichas?colaborador_id=${colab.id}`;
+      badgeFicha.style.display = 'flex';
+    }
+  }
+
+  function limparColaboradorSelecionado() {
+    inputBuscaColab.value = '';
+    inputHiddenColabNome.value = '';
+    inputHiddenColabId.value = '';
+    btnLimparColab.style.display = 'none';
+    if (badgeFicha) badgeFicha.style.display = 'none';
+    dropdownColab.style.display = 'none';
+    inputBuscaColab.focus();
+    renderizarDropdownColaboradores('');
+  }
+
+  // Eventos de teclado e clique para o campo de busca de colaborador
+  if (inputBuscaColab) {
+    inputBuscaColab.addEventListener('focus', () => {
+      renderizarDropdownColaboradores(inputBuscaColab.value);
+    });
+
+    inputBuscaColab.addEventListener('input', (e) => {
+      const val = e.target.value;
+      btnLimparColab.style.display = val ? 'flex' : 'none';
+      renderizarDropdownColaboradores(val);
+      if (!val.trim()) {
+        inputHiddenColabNome.value = '';
+        inputHiddenColabId.value = '';
+        if (badgeFicha) badgeFicha.style.display = 'none';
+      } else {
+        inputHiddenColabNome.value = val.trim();
+      }
+    });
+
+    inputBuscaColab.addEventListener('keydown', (e) => {
+      const items = dropdownColab.querySelectorAll('.combobox-colab-item');
+      if (dropdownColab.style.display === 'none' && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        renderizarDropdownColaboradores(inputBuscaColab.value);
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (items.length === 0) return;
+        colabFocadoIndex = (colabFocadoIndex + 1) % items.length;
+        atualizarFocoComboboxColab(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (items.length === 0) return;
+        colabFocadoIndex = (colabFocadoIndex - 1 + items.length) % items.length;
+        atualizarFocoComboboxColab(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (colabFocadoIndex >= 0 && items[colabFocadoIndex]) {
+          const id = items[colabFocadoIndex].getAttribute('data-id');
+          selecionarColaboradorCombobox(id ? parseInt(id, 10) : null);
+        } else if (colabsFiltradosAtuais.length > 0) {
+          selecionarColaboradorCombobox(colabsFiltradosAtuais[0].id);
+        }
+      } else if (e.key === 'Escape') {
+        dropdownColab.style.display = 'none';
+      }
+    });
+  }
+
+  function atualizarFocoComboboxColab(items) {
+    items.forEach((it, idx) => {
+      if (idx === colabFocadoIndex) {
+        it.style.background = '#f1f5f9';
+        it.scrollIntoView({ block: 'nearest' });
+      } else {
+        it.style.background = '#ffffff';
+      }
+    });
+  }
+
+  // Fecha dropdown de colaborador ao clicar fora
+  document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('balcao-colaborador-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      if (dropdownColab) dropdownColab.style.display = 'none';
+    }
+  });
+
   // Inicializa visual do tipo pré-selecionado
   window.addEventListener('DOMContentLoaded', () => {
     const tipoAtual = document.getElementById('input-tipo-operacao').value || 'SAIDA';
@@ -1158,43 +1388,7 @@
     }
     // Valida imediatamente caso venha com produto pré-selecionado
     validarEstoqueOperacao();
-    sincronizarColaboradorFicha();
   });
-
-  // Sincronização do Colaborador com a Ficha Individual
-  const inputColab = document.getElementById('balcao-colaborador-input');
-  const hiddenColabId = document.getElementById('balcao-colaborador-id');
-  const badgeFicha = document.getElementById('badge-ficha-vinculada');
-  const linkFichaBalcao = document.getElementById('link-ver-ficha-balcao');
-  const nomeColabFicha = document.getElementById('nome-colaborador-ficha-badge');
-
-  function sincronizarColaboradorFicha() {
-    if (!inputColab) return;
-    const digitado = inputColab.value.trim();
-    if (!digitado || digitado.toLowerCase() === 'balcão') {
-      if (hiddenColabId) hiddenColabId.value = '';
-      if (badgeFicha) badgeFicha.style.display = 'none';
-      return;
-    }
-
-    const colab = LISTA_COLABORADORES_BALCAO.find(c => 
-      c.nome.toLowerCase() === digitado.toLowerCase() ||
-      (c.matricula && c.matricula.toLowerCase() === digitado.toLowerCase())
-    );
-
-    if (colab) {
-      if (hiddenColabId) hiddenColabId.value = colab.id;
-      if (badgeFicha) badgeFicha.style.display = 'flex';
-      if (nomeColabFicha) nomeColabFicha.textContent = colab.nome;
-      if (linkFichaBalcao) linkFichaBalcao.href = `/fichas?colaborador_id=${colab.id}`;
-    } else {
-      if (hiddenColabId) hiddenColabId.value = '';
-      if (badgeFicha) badgeFicha.style.display = 'none';
-    }
-  }
-
-  inputColab?.addEventListener('input', sincronizarColaboradorFicha);
-  inputColab?.addEventListener('change', sincronizarColaboradorFicha);
 </script>
 
 <%- include('../layouts/footer') %>
