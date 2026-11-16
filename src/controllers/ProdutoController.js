@@ -118,14 +118,14 @@ class ProdutoController {
 
       const qtdInicial = parseInt(quantidade, 10) || 0;
 
-      // Cria produto
+      // Cria produto com quantidade 0 se houver carga inicial para evitar duplicação pelo registro de entrada
       const produtoId = await Produto.create({
         sku,
         nome: nome && nome.trim() ? nome.trim() : 'Item sem descrição',
         categoria: categoriaFinal,
         marca: marca && marca.trim() ? marca.trim() : null,
         unidade_medida: unidade_medida || 'UN',
-        quantidade: qtdInicial,
+        quantidade: 0,
         estoque_minimo: parseInt(estoque_minimo, 10) || 0,
         localizacao,
         tamanho,
@@ -664,7 +664,7 @@ class ProdutoController {
           });
           atualizados++;
         } else {
-          // CADASTRA novo produto
+          // CADASTRA novo produto com quantidade inicial 0 para que a entrada abaixo totalize o valor exato da planilha
           const novoSku = sku || Produto.gerarSku(categoria);
           const novoId = await Produto.create({
             sku: novoSku,
@@ -672,7 +672,7 @@ class ProdutoController {
             categoria: categoria || 'Outros',
             marca,
             unidade_medida: unidade || 'UN',
-            quantidade,
+            quantidade: 0,
             estoque_minimo: estoqueMinimo,
             preco_unitario: 0.0,
             localizacao,
