@@ -32,6 +32,7 @@ router.get('/produtos/modelo/excel', ProdutoController.baixarModelo);
 router.get('/produtos/exportar/excel', ProdutoController.exportarExcel);
 router.post('/produtos/importar/excel', upload.single('planilha'), ProdutoController.importarExcel);
 router.get('/produtos/:id/detalhes', ProdutoController.detalhes);
+router.get('/produtos/:id/movimentacoes', ProdutoController.movimentacoes);
 router.get('/produtos/:id/editar', ProdutoController.edit);
 router.post('/produtos/:id/editar', ProdutoController.update);
 router.post('/produtos/:id/excluir', ProdutoController.delete);

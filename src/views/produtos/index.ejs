@@ -258,6 +258,10 @@
               <!-- Ações -->
               <td style="text-align: right; white-space: nowrap;" onclick="event.stopPropagation()">
                 <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                  <!-- Histórico de Movimentações -->
+                  <a href="/movimentacoes?produto_id=<%= p.id %>" class="action-more-btn" title="Histórico de Movimentações deste Produto">
+                    <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i>
+                  </a>
                   <!-- Baixa no Balcão -->
                   <a href="/balcao?produto_id=<%= p.id %>&tipo=SAIDA" class="action-more-btn" title="Baixa no Balcão">
                     <i class="fa-solid fa-arrow-up" style="color: var(--danger);"></i>
@@ -368,6 +372,11 @@
             <!-- Baixa Rápida no Balcão -->
             <a href="/balcao?produto_id=<%= p.id %>&tipo=SAIDA" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); font-weight: 600;" title="Baixa no Balcão">
               <i class="fa-solid fa-minus"></i> Baixa
+            </a>
+
+            <!-- Histórico -->
+            <a href="/movimentacoes?produto_id=<%= p.id %>" class="action-more-btn" title="Histórico de Movimentações">
+              <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i>
             </a>
 
             <!-- Editar -->
@@ -576,9 +585,55 @@
           <div id="view-observacao" style="font-size: 0.88rem; color: var(--text-body); line-height: 1.5; white-space: pre-wrap;"></div>
         </div>
 
-        <div style="font-size: 0.75rem; color: var(--text-dim); border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between;">
+        <div style="font-size: 0.75rem; color: var(--text-dim); border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
           <span>Cadastrado em: <strong id="view-criado-em">-</strong></span>
           <span>Última atualização: <strong id="view-atualizado-em">-</strong></span>
+        </div>
+
+        <!-- Banner Dinâmico: Item com Empréstimo em Aberto -->
+        <div id="modal-alerta-emprestado" style="display: none; background: #FEF3C7; border: 1px solid #F59E0B; border-radius: var(--radius-md); padding: 0.85rem 1.1rem; margin-top: 1.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <i class="fa-solid fa-triangle-exclamation" style="color: #D97706; font-size: 1.35rem;"></i>
+              <div>
+                <div style="font-weight: 700; color: #92400E; font-size: 0.9rem;">⚠️ Ferramenta Emprestada (Cautela Ativa)</div>
+                <div style="font-size: 0.82rem; color: #78350F; margin-top: 2px;">
+                  Item em posse de <strong id="modal-emprestado-colaborador">-</strong> (retirado em <span id="modal-emprestado-data">-</span>).
+                </div>
+              </div>
+            </div>
+            <a id="modal-btn-devolver-direto" href="#" class="btn btn-sm" style="background: #D97706; color: #ffffff; font-weight: 700; border: none; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 6px;">
+              <i class="fa-solid fa-rotate-left"></i> Devolver no Balcão
+            </a>
+          </div>
+        </div>
+
+        <!-- Bloco de Histórico de Movimentações Recentes do Produto -->
+        <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+              <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i> Histórico de Movimentações
+            </h4>
+            <a id="modal-link-historico-completo" href="#" class="btn btn-link btn-sm" style="font-size: 0.78rem; font-weight: 600; color: var(--primary); text-decoration: none; padding: 0;" target="_blank">
+              Ver Extrato Geral Completo ➔
+            </a>
+          </div>
+
+          <!-- Loading -->
+          <div id="modal-movs-loading" style="display: none; text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem;">
+            <i class="fa-solid fa-spinner fa-spin" style="margin-right: 0.4rem; color: var(--primary);"></i> Carregando movimentações do item...
+          </div>
+
+          <!-- Container da Lista de Movimentações -->
+          <div id="modal-movs-container" style="max-height: 230px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: var(--radius-md); background: #ffffff;">
+            <!-- Preenchido via JavaScript -->
+          </div>
+
+          <!-- Mensagem Vazio -->
+          <div id="modal-movs-vazio" style="display: none; text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; background: #F8FAFC; border: 1px dashed var(--border-color); border-radius: var(--radius-md);">
+            <i class="fa-solid fa-box-open" style="font-size: 1.5rem; color: var(--border-color); display: block; margin-bottom: 0.35rem;"></i>
+            Nenhuma movimentação registrada para este item até o momento.
+          </div>
         </div>
 
       </div>
@@ -702,7 +757,10 @@
     <div class="modal-footer" style="background: var(--bg-surface); display: flex; align-items: center; justify-content: space-between;">
       
       <!-- Lado Esquerdo: Ações Rápidas no Balcão (Modo Visualização) -->
-      <div id="modal-footer-acoes-mov" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <div id="modal-footer-acoes-mov" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+        <a id="modal-link-historico-footer" href="#" class="btn btn-outline btn-sm" style="color: var(--primary); border-color: #C7D2FE; background: #EEF2FF;" title="Ver todas as movimentações deste produto na tela de extrato">
+          <i class="fa-solid fa-clock-rotate-left"></i> Histórico Completo
+        </a>
         <a id="modal-link-baixa" href="#" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);" title="Lançar Baixa / Consumo no Balcão">
           <i class="fa-solid fa-arrow-up"></i> Baixa (Balcão)
         </a>
@@ -831,11 +889,153 @@
       }
     }
 
+    // Configura links de histórico completo
+    const linkHistCompl = document.getElementById('modal-link-historico-completo');
+    if (linkHistCompl) linkHistCompl.href = `/movimentacoes?produto_id=${p.id}`;
+    const linkHistFooter = document.getElementById('modal-link-historico-footer');
+    if (linkHistFooter) linkHistFooter.href = `/movimentacoes?produto_id=${p.id}`;
+
+    // Dispara carregamento das movimentações deste produto em segundo plano
+    carregarHistoricoProduto(p.id);
+
     // Reseta para o modo de visualização
     cancelarEdicaoModal();
 
     // Abre o modal
     window.abrirModal('modal-detalhes-produto');
+  }
+
+  async function carregarHistoricoProduto(produtoId) {
+    const alertaEmp = document.getElementById('modal-alerta-emprestado');
+    const loading = document.getElementById('modal-movs-loading');
+    const container = document.getElementById('modal-movs-container');
+    const vazio = document.getElementById('modal-movs-vazio');
+
+    if (alertaEmp) alertaEmp.style.display = 'none';
+    if (loading) loading.style.display = 'block';
+    if (container) {
+      container.innerHTML = '';
+      container.style.display = 'none';
+    }
+    if (vazio) vazio.style.display = 'none';
+
+    try {
+      const resp = await fetch(`/produtos/${produtoId}/movimentacoes`);
+      if (!resp.ok) throw new Error('Falha na resposta do servidor');
+      const movs = await resp.json();
+
+      if (loading) loading.style.display = 'none';
+
+      if (!movs || movs.length === 0) {
+        if (vazio) vazio.style.display = 'block';
+        return;
+      }
+
+      // Verifica se há empréstimo em aberto (cautela ativa)
+      const empPendente = movs.find(m => m.tipo === 'EMPRESTIMO' && (m.status_emprestimo === 'PENDENTE' || !m.data_devolucao));
+      if (empPendente && alertaEmp) {
+        const colabEl = document.getElementById('modal-emprestado-colaborador');
+        const dataEl = document.getElementById('modal-emprestado-data');
+        const btnDevolver = document.getElementById('modal-btn-devolver-direto');
+
+        if (colabEl) colabEl.textContent = empPendente.colaborador_nome || 'Colaborador';
+        const dataFmt = window.formatarDataHoraCliente ? window.formatarDataHoraCliente(empPendente.criado_em) : (empPendente.criado_em || '-');
+        if (dataEl) dataEl.textContent = dataFmt;
+        if (btnDevolver) btnDevolver.href = `/balcao?devolucao_id=${empPendente.id}&produto_id=${produtoId}&tipo=DEVOLUCAO`;
+        alertaEmp.style.display = 'block';
+      }
+
+      // Constrói tabela do histórico
+      let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">';
+      html += `
+        <thead>
+          <tr style="background: #F1F5F9; border-bottom: 1px solid var(--border-color); text-align: left; font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">
+            <th style="padding: 0.5rem 0.65rem;">Data / Hora</th>
+            <th style="padding: 0.5rem 0.65rem;">Operação</th>
+            <th style="padding: 0.5rem 0.65rem; text-align: center;">Qtd</th>
+            <th style="padding: 0.5rem 0.65rem;">Colaborador / Motivo</th>
+            <th style="padding: 0.5rem 0.65rem;">Atendente</th>
+          </tr>
+        </thead>
+        <tbody>
+      `;
+
+      movs.forEach(m => {
+        let badgeBg = '#E0F2FE';
+        let badgeColor = '#0369A1';
+        let badgeIcon = 'fa-arrow-down';
+        let badgeLabel = m.tipo;
+
+        if (m.tipo === 'SAIDA') {
+          badgeBg = '#FEE2E2';
+          badgeColor = '#B91C1C';
+          badgeIcon = 'fa-arrow-up';
+          badgeLabel = 'Saída';
+        } else if (m.tipo === 'ENTRADA') {
+          badgeBg = '#D1FAE5';
+          badgeColor = '#047857';
+          badgeIcon = 'fa-arrow-down';
+          badgeLabel = 'Entrada';
+        } else if (m.tipo === 'EMPRESTIMO') {
+          const isDevolvido = m.status_emprestimo === 'DEVOLVIDO' || m.data_devolucao;
+          badgeBg = isDevolvido ? '#EDE9FE' : '#FEF3C7';
+          badgeColor = isDevolvido ? '#6D28D9' : '#B45309';
+          badgeIcon = 'fa-hand-holding-hand';
+          badgeLabel = isDevolvido ? 'Empréstimo (Devolvido)' : 'Empréstimo (Ativo)';
+        } else if (m.tipo === 'DEVOLUCAO') {
+          badgeBg = '#EDE9FE';
+          badgeColor = '#6D28D9';
+          badgeIcon = 'fa-rotate-left';
+          badgeLabel = 'Devolução';
+        } else if (m.tipo === 'TROCA') {
+          badgeBg = '#FEF9C3';
+          badgeColor = '#854D0E';
+          badgeIcon = 'fa-repeat';
+          badgeLabel = 'Troca';
+        }
+
+        const sinal = (m.tipo === 'SAIDA' || m.tipo === 'EMPRESTIMO') ? '-' : (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO' ? '+' : '');
+        const qtdColor = (m.tipo === 'SAIDA' || m.tipo === 'EMPRESTIMO') ? 'var(--danger)' : (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO' ? 'var(--teal)' : 'var(--text-main)');
+        const dataFmt = window.formatarDataHoraCliente ? window.formatarDataHoraCliente(m.criado_em) : (m.criado_em || '-');
+
+        html += `
+          <tr style="border-bottom: 1px solid var(--border-light); background: #ffffff;">
+            <td style="padding: 0.5rem 0.65rem; color: var(--text-dim); font-size: 0.75rem; white-space: nowrap;">
+              <i class="fa-regular fa-clock" style="margin-right: 3px;"></i> ${dataFmt}
+            </td>
+            <td style="padding: 0.5rem 0.65rem;">
+              <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 4px;">
+                <i class="fa-solid ${badgeIcon}"></i> ${badgeLabel}
+              </span>
+            </td>
+            <td style="padding: 0.5rem 0.65rem; text-align: center; font-weight: 800; color: ${qtdColor}; font-size: 0.88rem;">
+              ${sinal}${m.quantidade}
+            </td>
+            <td style="padding: 0.5rem 0.65rem; color: var(--text-main); font-weight: 600;">
+              ${m.colaborador_nome || '-'}
+              ${m.motivo ? `<div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 400; margin-top: 1px;">${m.motivo}</div>` : ''}
+            </td>
+            <td style="padding: 0.5rem 0.65rem; color: var(--text-muted); font-size: 0.75rem;">
+              ${m.responsavel || '-'}
+            </td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table>';
+      if (container) {
+        container.innerHTML = html;
+        container.style.display = 'block';
+      }
+
+    } catch (err) {
+      console.error('Erro ao carregar histórico:', err);
+      if (loading) loading.style.display = 'none';
+      if (vazio) {
+        vazio.innerHTML = '<span style="color: var(--danger);">Não foi possível carregar o histórico das movimentações.</span>';
+        vazio.style.display = 'block';
+      }
+    }
   }
 
   function fecharModalProduto() {
@@ -981,6 +1181,9 @@
               <button type="button" class="btn btn-sm btn-outline" onclick="abrirModalProduto(${p.id})" title="Ver ficha e detalhes completos" style="font-size: 0.72rem; padding: 0.25rem 0.55rem;">
                 <i class="fa-solid fa-eye"></i> Detalhes
               </button>
+              <a href="/movimentacoes?produto_id=${p.id}" class="btn btn-sm btn-outline" title="Ver Histórico de Movimentações deste item" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; color: var(--primary);">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+              </a>
               <a href="/balcao?produto_id=${p.id}" class="btn btn-sm btn-outline" title="Movimentar este item no Balcão" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; color: var(--primary); border-color: #C7D2FE; background: #EEF2FF;">
                 <i class="fa-solid fa-store"></i> Balcão
               </a>

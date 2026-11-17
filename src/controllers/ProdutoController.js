@@ -313,6 +313,20 @@ class ProdutoController {
   }
 
   /**
+   * Endpoint JSON de Histórico de Movimentações do Produto
+   */
+  static async movimentacoes(req, res) {
+    try {
+      const { id } = req.params;
+      const movs = await Movimentacao.findAll({ produto_id: parseInt(id, 10), limite: 30 });
+      res.json(movs || []);
+    } catch (error) {
+      console.error('Erro ao buscar movimentações do produto:', error);
+      res.status(500).json({ erro: error.message });
+    }
+  }
+
+  /**
    * Exclui um produto
    */
   static async delete(req, res) {

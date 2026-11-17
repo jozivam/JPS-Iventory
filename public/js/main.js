@@ -19,6 +19,22 @@ window.fecharModal = (modalId) => {
   }
 };
 
+// Formatação Global de Data e Hora no fuso horário do navegador
+window.formatarDataHoraCliente = (dateStr) => {
+  if (!dateStr || dateStr === '-') return '-';
+  let str = String(dateStr).trim();
+  if (!str.includes('T') && !str.includes('Z') && !str.includes('+') && str.length >= 16) {
+    const ano = str.substring(0, 4);
+    const mes = str.substring(5, 7);
+    const dia = str.substring(8, 10);
+    const horaMin = str.substring(11, 16);
+    return `${dia}/${mes}/${ano} ${horaMin}`;
+  }
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Fechamento de Alertas
   document.querySelectorAll('.alert-close').forEach(btn => {
