@@ -221,7 +221,7 @@
                 <small style="color: var(--text-muted); font-size: 0.75rem;"><%= m.produto_unidade %></small>
               </td>
               <td>
-                <span style="font-size: 0.82rem; color: var(--text-muted);"><%= formatDate(m.criado_em) %></span>
+                <span class="data-hora-local" data-timestamp="<%= m.criado_em %>" style="font-size: 0.82rem; color: var(--text-muted);"><%= formatDate(m.criado_em) %></span>
               </td>
               <td>
                 <div style="font-size: 0.82rem; color: var(--text-main); font-weight: 600;"><%= m.responsavel %></div>
@@ -328,7 +328,7 @@
               <% } %>
             </div>
             <div>
-              <i class="fa-regular fa-clock"></i> <%= formatDate(m.criado_em) %>
+              <i class="fa-regular fa-clock"></i> <span class="data-hora-local" data-timestamp="<%= m.criado_em %>"><%= formatDate(m.criado_em) %></span>
             </div>
           </div>
         </div>
@@ -635,7 +635,7 @@
       if (statusWrap) statusWrap.style.display = 'none';
     }
 
-    document.getElementById('mov-view-data').textContent = m.criado_em || '-';
+    document.getElementById('mov-view-data').textContent = window.formatarDataHoraCliente ? window.formatarDataHoraCliente(m.criado_em) : (m.criado_em || '-');
     document.getElementById('mov-view-produto').textContent = m.produto_nome || '-';
     document.getElementById('mov-view-sku').textContent = `SKU: ${m.produto_sku || '-'}`;
     document.getElementById('mov-view-responsavel').textContent = m.responsavel || '-';

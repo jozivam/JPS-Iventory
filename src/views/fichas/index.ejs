@@ -517,7 +517,7 @@
                 <span style="font-family: var(--font-mono); font-weight: 700;"><%= emp.produto_sku %></span> • Retirado: <strong><%= emp.quantidade %> <%= emp.produto_unidade %></strong>
               </div>
               <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 3px;">
-                <i class="fa-regular fa-calendar"></i> <%= new Date(emp.criado_em).toLocaleDateString('pt-BR') %> às <%= new Date(emp.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) %>
+                <i class="fa-regular fa-calendar"></i> <span class="data-hora-local" data-timestamp="<%= emp.criado_em %>"><%= formatDate(emp.criado_em) %></span>
                 <% if (emp.responsavel) { %> • Por: <%= emp.responsavel %><% } %>
               </div>
             </div>
@@ -614,12 +614,9 @@
               <tr>
                 <!-- Data e Hora -->
                 <td style="white-space: nowrap; font-size: 0.82rem;">
-                  <div style="font-weight: 700; color: var(--text-main);">
-                    <%= new Date(m.criado_em).toLocaleDateString('pt-BR') %>
-                  </div>
-                  <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 1px;">
-                    <%= new Date(m.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) %>
-                  </div>
+                  <span class="data-hora-local" data-timestamp="<%= m.criado_em %>" style="font-weight: 700; color: var(--text-main);">
+                    <%= formatDate(m.criado_em) %>
+                  </span>
                 </td>
 
                 <!-- Tipo -->
@@ -766,7 +763,7 @@
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.45rem; border-top: 1px solid var(--border-light); font-size: 0.72rem; color: var(--text-dim);">
-              <span><%= new Date(m.criado_em).toLocaleDateString('pt-BR') %> às <%= new Date(m.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) %></span>
+              <span><i class="fa-regular fa-clock"></i> <span class="data-hora-local" data-timestamp="<%= m.criado_em %>"><%= formatDate(m.criado_em) %></span></span>
               <span>Atendente: <%= m.responsavel || 'Almoxarife' %></span>
             </div>
           </div>

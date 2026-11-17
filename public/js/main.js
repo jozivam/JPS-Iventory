@@ -254,4 +254,31 @@ document.addEventListener('DOMContentLoaded', () => {
       fecharSidebar();
     }
   });
+
+  // 9. Sincronização e Formatação de Data/Hora no Fuso Local do Navegador do Usuário
+  window.formatarDataHoraCliente = (dateStr) => {
+    if (!dateStr || dateStr === '-') return '-';
+    let str = String(dateStr).trim();
+    // Se for formato SQL sem timezone (ex: "YYYY-MM-DD HH:MM:SS"), já foi gravado na hora local
+    if (!str.includes('T') && !str.includes('Z') && !str.includes('+') && str.length >= 16) {
+      const ano = str.substring(0, 4);
+      const mes = str.substring(5, 7);
+      const dia = str.substring(8, 10);
+      const horaMin = str.substring(11, 16);
+      return `${dia}/${mes}/${ano} ${horaMin}`;
+    }
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return str;
+    return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  function sincronizarDatasLocais() {
+    document.querySelectorAll('.data-hora-local').forEach(el => {
+      const raw = el.getAttribute('data-timestamp');
+      if (raw) {
+        el.textContent = window.formatarDataHoraCliente(raw);
+      }
+    });
+  }
+  sincronizarDatasLocais();
 });

@@ -447,7 +447,7 @@
             <div style="font-size: 0.78rem; color: #78350F; margin-bottom: 0.6rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
               <span><i class="fa-solid fa-barcode"></i> <%= emp.produto_sku %></span>
               <span><i class="fa-solid fa-user"></i> <strong><%= emp.colaborador || emp.responsavel %></strong></span>
-              <span><i class="fa-regular fa-clock"></i> <%= formatDate(emp.criado_em) %></span>
+              <span><i class="fa-regular fa-clock"></i> <span class="data-hora-local" data-timestamp="<%= emp.criado_em %>"><%= formatDate(emp.criado_em) %></span></span>
             </div>
 
             <% if (emp.motivo) { %>
@@ -561,7 +561,7 @@
                 <% } %>
               </td>
               <td>
-                <span style="font-size: 0.82rem; color: var(--text-muted);"><%= formatDate(m.criado_em) %></span>
+                <span class="data-hora-local" data-timestamp="<%= m.criado_em %>" style="font-size: 0.82rem; color: var(--text-muted);"><%= formatDate(m.criado_em) %></span>
               </td>
               <td>
                 <% if (m.documento_ref) { %>
@@ -634,7 +634,7 @@
 
           <div class="movement-mobile-footer">
             <span><i class="fa-solid fa-user"></i> <%= m.colaborador || m.responsavel %></span>
-            <span><i class="fa-regular fa-clock"></i> <%= formatDate(m.criado_em) %></span>
+            <span><i class="fa-regular fa-clock"></i> <span class="data-hora-local" data-timestamp="<%= m.criado_em %>"><%= formatDate(m.criado_em) %></span></span>
           </div>
         </div>
       <% }) %>
@@ -1172,7 +1172,6 @@
   // =========================================================================
   // SELETOR DE COLABORADOR INTELIGENTE COM BUSCA / DROPDOWN (COMBOBOX)
   // =========================================================================
-  const LISTA_COLABORADORES_BALCAO = <%- JSON.stringify(colaboradores || []) %>;
   let colabFocadoIndex = -1;
   let colabsFiltradosAtuais = [];
 
