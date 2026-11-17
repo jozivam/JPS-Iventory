@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Caixa isométrica moderna do JPS Almoxarifado -->
+    <!-- Tampa superior -->
+    <path
+        android:fillColor="#818CF8"
+        android:pathData="M54,28 L76,40 L54,52 L32,40 Z" />
+    <!-- Face esquerda -->
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="M32,40 L54,52 L54,78 L32,66 Z" />
+    <!-- Face direita -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M76,40 L54,52 L54,78 L76,66 Z" />
+    <!-- Faixa de lacre central -->
+    <path
+        android:fillColor="#E0E7FF"
+        android:pathData="M43,34 L65,46 L61,48.2 L39,36.2 Z" />
+</vector>

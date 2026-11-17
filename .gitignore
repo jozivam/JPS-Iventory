@@ -4,3 +4,13 @@ node_modules/
 config/*.sqlite-shm
 config/*.sqlite-wal
 .DS_Store
+
+# Android Build & Assinaturas Locais
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.keystore
+*.jks
+*.apk

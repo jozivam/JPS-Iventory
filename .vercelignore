@@ -1,0 +1,5 @@
+android/
+.github/
+*.apk
+*.keystore
+*.jks

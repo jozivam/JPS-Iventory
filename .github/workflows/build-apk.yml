@@ -1,0 +1,165 @@
+name: Gerar APK Android (JPS Almoxarifado)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Versão do aplicativo (ex: 1.0.0)'
+        required: false
+        default: '1.0.0'
+        type: string
+      app_url:
+        description: 'URL do sistema JPS Almoxarifado'
+        required: false
+        default: 'https://jps-iventory-lovat.vercel.app'
+        type: string
+      publish_release:
+        description: 'Publicar APK na aba Releases (download direto sem ZIP)'
+        required: false
+        default: true
+        type: boolean
+  push:
+    branches:
+      - main
+    paths:
+      - 'android/**'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Compilar APK Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Configurar Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Definir versão e URL do aplicativo
+        id: meta
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION_NAME="${{ github.event.inputs.version_name }}"
+            APP_URL="${{ github.event.inputs.app_url }}"
+            RELEASE_TAG="v${VERSION_NAME}"
+            SHOULD_RELEASE="${{ github.event.inputs.publish_release }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION_NAME="${GITHUB_REF_NAME#v}"
+            APP_URL="https://jps-iventory-lovat.vercel.app"
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+            SHOULD_RELEASE="true"
+          else
+            VERSION_NAME="1.0.${{ github.run_number }}"
+            APP_URL="https://jps-iventory-lovat.vercel.app"
+            RELEASE_TAG="apk-latest"
+            SHOULD_RELEASE="true"
+          fi
+
+          VERSION_CODE="${{ github.run_number }}"
+          APK_FILENAME="JPS-Almoxarifado-v${VERSION_NAME}.apk"
+
+          echo "APP_VERSION_NAME=${VERSION_NAME}" >> "$GITHUB_ENV"
+          echo "APP_VERSION_CODE=${VERSION_CODE}" >> "$GITHUB_ENV"
+          echo "APP_URL=${APP_URL}" >> "$GITHUB_ENV"
+          echo "APK_FILENAME=${APK_FILENAME}" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> "$GITHUB_ENV"
+          echo "SHOULD_RELEASE=${SHOULD_RELEASE}" >> "$GITHUB_ENV"
+
+          echo "Versão: ${VERSION_NAME} (code ${VERSION_CODE})"
+          echo "URL: ${APP_URL}"
+          echo "Arquivo final: ${APK_FILENAME}"
+
+      - name: Preparar assinatura (Keystore) do APK
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS_SECRET: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          KEYSTORE_FILE="${{ runner.temp }}/release.keystore"
+
+          if [[ -n "$KEYSTORE_B64" ]]; then
+            echo "Usando Keystore permanente configurada nos Secrets do GitHub."
+            echo "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_FILE"
+            echo "ANDROID_KEYSTORE_PATH=${KEYSTORE_FILE}" >> "$GITHUB_ENV"
+            echo "ANDROID_KEYSTORE_PASSWORD=${KEYSTORE_PASS}" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_ALIAS=${KEY_ALIAS_SECRET}" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_PASSWORD=${KEY_PASS}" >> "$GITHUB_ENV"
+          else
+            echo "Keystore não encontrada nos Secrets. Gerando chave de assinatura para instalação direta."
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE_FILE" \
+              -storetype PKCS12 \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -alias jpskey \
+              -storepass jps2026 \
+              -keypass jps2026 \
+              -dname "CN=JPS Almoxarifado, OU=TI, O=JPS, L=Brasil, S=MT, C=BR"
+            echo "ANDROID_KEYSTORE_PATH=${KEYSTORE_FILE}" >> "$GITHUB_ENV"
+            echo "ANDROID_KEYSTORE_PASSWORD=jps2026" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_ALIAS=jpskey" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_PASSWORD=jps2026" >> "$GITHUB_ENV"
+          fi
+
+      - name: Compilar APK de Release
+        working-directory: android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Preparar arquivo APK final
+        shell: bash
+        run: |
+          mkdir -p dist
+          APK_SOURCE="android/app/build/outputs/apk/release/app-release.apk"
+          if [[ ! -f "$APK_SOURCE" ]]; then
+            echo "Erro: APK não encontrado em $APK_SOURCE"
+            ls -la android/app/build/outputs/apk/release/ || true
+            exit 1
+          fi
+          cp "$APK_SOURCE" "dist/${APK_FILENAME}"
+          ls -lh "dist/${APK_FILENAME}"
+
+      - name: Publicar APK como Artifact do Workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: JPS-Almoxarifado-APK-v${{ env.APP_VERSION_NAME }}
+          path: dist/${{ env.APK_FILENAME }}
+          retention-days: 30
+
+      - name: Publicar APK na aba Releases (Download direto no celular)
+        if: env.SHOULD_RELEASE == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: "JPS Almoxarifado APK (v${{ env.APP_VERSION_NAME }})"
+          body: |
+            ### 📱 JPS Almoxarifado — Aplicativo Android
+
+            - **Versão:** `v${{ env.APP_VERSION_NAME }}` (Build #${{ env.APP_VERSION_CODE }})
+            - **Servidor conectado:** ${{ env.APP_URL }}
+            - **Compatibilidade:** Android 7.0 (API 24) ou superior
+
+            #### 📥 Como instalar no celular:
+            1. Toque no arquivo **`${{ env.APK_FILENAME }}`** abaixo para baixar diretamente no celular.
+            2. Abra o arquivo baixado e autorize a opção **"Instalar apps desconhecidos"** se solicitado pelo Android.
+            3. Pronto! O ícone **JPS Almoxarifado** aparecerá na tela inicial do aparelho.
+          files: dist/${{ env.APK_FILENAME }}
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

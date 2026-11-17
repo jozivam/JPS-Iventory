@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JPS Almoxarifado</string>
+    <string name="offline_title">Sem conexão com o servidor</string>
+    <string name="offline_subtitle">Verifique sua internet (Wi-Fi ou dados móveis) e toque no botão abaixo para reconectar ao JPS Almoxarifado.</string>
+    <string name="btn_retry">Tentar Novamente</string>
+    <string name="press_back_again">Toque em Voltar novamente para sair</string>
+    <string name="downloading_file">Baixando arquivo…</string>
+</resources>
