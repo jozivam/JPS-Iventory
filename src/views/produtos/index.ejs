@@ -100,16 +100,34 @@
 <!-- Barra de Filtros e Pesquisa Especializada no Inventário -->
 <div class="fixoria-filter-bar">
   <form action="/produtos" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%;">
-    <!-- Campo de Busca Especializado no Inventário -->
-    <div class="filter-search-box">
-      <i class="fa-solid fa-magnifying-glass"></i>
+    <!-- Campo de Busca Especializado com Dropdown Inteligente e Combobox -->
+    <div class="filter-search-box" style="position: relative; flex: 1; min-width: 280px;" id="inventario-busca-wrapper">
+      <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); z-index: 2; pointer-events: none;"></i>
+      
       <input 
         type="text" 
         name="busca" 
-        id="quick-table-search" 
+        id="inventario-busca-input" 
         placeholder="Buscar no inventário (item, SKU, TAG, Patrimônio, C.A ou localização)..." 
         value="<%= filtros.busca || '' %>"
+        autocomplete="off"
+        style="padding-left: 2.5rem; padding-right: 2.5rem; height: 42px; font-weight: 500;"
       >
+
+      <button 
+        type="button" 
+        id="btn-limpar-inventario-busca" 
+        title="Limpar busca"
+        onclick="limparBuscaInventario()"
+        style="position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: <%= filtros.busca ? 'flex' : 'none' %>; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 50%; z-index: 2;"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <!-- Dropdown Flutuante de Produtos no Inventário -->
+      <div id="inventario-busca-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 12px 28px rgba(0,0,0,0.12); max-height: 320px; overflow-y: auto; z-index: 1050; padding: 0.35rem 0;">
+        <!-- Itens filtrados serão injetados via JS -->
+      </div>
     </div>
 
     <!-- Pílulas de Seleção -->
@@ -875,6 +893,189 @@
     document.getElementById('btn-cancelar-edicao').style.display = 'none';
     document.getElementById('btn-salvar-edicao').style.display = 'none';
   }
+
+  // =========================================================================
+  // DROPDOWN INTELIGENTE DE BUSCA NO INVENTÁRIO (COMBOBOX)
+  // =========================================================================
+  const LISTA_PRODUTOS_INVENTARIO = <%- JSON.stringify(produtos || []) %>;
+  const inputBuscaInventario = document.getElementById('inventario-busca-input');
+  const dropdownBuscaInventario = document.getElementById('inventario-busca-dropdown');
+  const btnLimparBuscaInventario = document.getElementById('btn-limpar-inventario-busca');
+  let prodInventarioFocadoIndex = -1;
+  let prodsInventarioFiltrados = [];
+
+  function filtrarTabelaEmTempoReal(termo) {
+    const q = (termo || '').trim().toLowerCase();
+    
+    // Filtra linhas da tabela desktop
+    document.querySelectorAll('.clean-table tbody tr').forEach(row => {
+      if (row.querySelector('td[colspan]')) return;
+      const text = row.textContent.toLowerCase();
+      row.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
+
+    // Filtra cards mobile
+    document.querySelectorAll('.inventory-mobile-card').forEach(card => {
+      const text = card.textContent.toLowerCase();
+      card.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
+    });
+  }
+
+  function renderizarDropdownInventario(termo = '') {
+    const q = termo.trim().toLowerCase();
+
+    if (!q) {
+      if (dropdownBuscaInventario) dropdownBuscaInventario.style.display = 'none';
+      return;
+    }
+
+    prodsInventarioFiltrados = LISTA_PRODUTOS_INVENTARIO.filter(p => {
+      const nome = (p.nome || '').toLowerCase();
+      const sku = (p.sku || '').toLowerCase();
+      const marca = (p.marca || '').toLowerCase();
+      const cat = (p.categoria || '').toLowerCase();
+      const loc = (p.localizacao || '').toLowerCase();
+      const tag = (p.tag || '').toLowerCase();
+      const pat = (p.patrimonio || '').toLowerCase();
+      const ca = (p.ca || '').toLowerCase();
+      const serie = (p.numero_serie || '').toLowerCase();
+      return nome.includes(q) || sku.includes(q) || marca.includes(q) || cat.includes(q) || loc.includes(q) || tag.includes(q) || pat.includes(q) || ca.includes(q) || serie.includes(q);
+    });
+
+    prodInventarioFocadoIndex = -1;
+
+    if (prodsInventarioFiltrados.length === 0) {
+      dropdownBuscaInventario.innerHTML = `
+        <div style="padding: 1.1rem; text-align: center; color: var(--text-muted); font-size: 0.84rem;">
+          <i class="fa-solid fa-magnifying-glass" style="margin-bottom: 0.35rem; display: block; font-size: 1.25rem; color: var(--border-color);"></i>
+          Nenhum produto encontrado para "<strong>${termo}</strong>"
+        </div>
+      `;
+      dropdownBuscaInventario.style.display = 'block';
+      return;
+    }
+
+    const html = prodsInventarioFiltrados.map((p, idx) => {
+      const temEstoque = Number(p.quantidade) > 0;
+      return `
+        <div class="inventario-dropdown-item" data-index="${idx}" data-id="${p.id}" onclick="selecionarProdutoInventario(${p.id})" style="padding: 0.65rem 0.95rem; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.12s ease;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; color: var(--text-main); font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                <span>${p.nome}</span>
+                ${p.marca ? `<span style="font-size: 0.72rem; font-weight: 600; color: var(--primary); background: var(--primary-light); padding: 1px 6px; border-radius: 4px;">${p.marca}</span>` : ''}
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+                <span style="font-family: var(--font-mono); font-weight: 700; color: var(--text-body); background: var(--bg-surface); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border-color);">${p.sku}</span>
+                <span>• ${p.categoria}</span>
+                ${p.localizacao ? `<span>• <i class="fa-solid fa-location-dot" style="color: var(--primary);"></i> ${p.localizacao}</span>` : ''}
+                ${p.tag ? `<span style="font-family: var(--font-mono); font-weight: 600; color: var(--primary);">TAG: ${p.tag}</span>` : ''}
+                ${p.patrimonio ? `<span style="font-family: var(--font-mono); font-weight: 600;">PAT: ${p.patrimonio}</span>` : ''}
+              </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0;" onclick="event.stopPropagation()">
+              <span class="badge" style="background: ${temEstoque ? '#D1FAE5' : '#FEE2E2'}; color: ${temEstoque ? '#065F46' : '#991B1B'}; font-weight: 700; font-size: 0.76rem;">
+                ${temEstoque ? `${p.quantidade} ${p.unidade_medida || 'UN'}` : `0 ${p.unidade_medida || 'UN'}`}
+              </span>
+              <button type="button" class="btn btn-sm btn-outline" onclick="abrirModalProduto(${p.id})" title="Ver ficha e detalhes completos" style="font-size: 0.72rem; padding: 0.25rem 0.55rem;">
+                <i class="fa-solid fa-eye"></i> Detalhes
+              </button>
+              <a href="/balcao?produto_id=${p.id}" class="btn btn-sm btn-outline" title="Movimentar este item no Balcão" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; color: var(--primary); border-color: #C7D2FE; background: #EEF2FF;">
+                <i class="fa-solid fa-store"></i> Balcão
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    dropdownBuscaInventario.innerHTML = html;
+    dropdownBuscaInventario.style.display = 'block';
+  }
+
+  function selecionarProdutoInventario(produtoId) {
+    const p = PRODUTOS_MAP[produtoId];
+    if (!p) return;
+
+    inputBuscaInventario.value = p.nome;
+    if (dropdownBuscaInventario) dropdownBuscaInventario.style.display = 'none';
+    if (btnLimparBuscaInventario) btnLimparBuscaInventario.style.display = 'flex';
+    filtrarTabelaEmTempoReal(p.nome);
+    abrirModalProduto(p.id);
+  }
+
+  function limparBuscaInventario() {
+    if (inputBuscaInventario) {
+      inputBuscaInventario.value = '';
+      if (btnLimparBuscaInventario) btnLimparBuscaInventario.style.display = 'none';
+      if (dropdownBuscaInventario) dropdownBuscaInventario.style.display = 'none';
+      filtrarTabelaEmTempoReal('');
+      window.location.href = '/produtos';
+    }
+  }
+
+  if (inputBuscaInventario) {
+    inputBuscaInventario.addEventListener('input', (e) => {
+      const val = e.target.value;
+      if (btnLimparBuscaInventario) btnLimparBuscaInventario.style.display = val ? 'flex' : 'none';
+      filtrarTabelaEmTempoReal(val);
+      renderizarDropdownInventario(val);
+    });
+
+    inputBuscaInventario.addEventListener('focus', () => {
+      if (inputBuscaInventario.value.trim()) {
+        renderizarDropdownInventario(inputBuscaInventario.value);
+      }
+    });
+
+    inputBuscaInventario.addEventListener('keydown', (e) => {
+      if (!dropdownBuscaInventario || dropdownBuscaInventario.style.display === 'none') return;
+      const items = dropdownBuscaInventario.querySelectorAll('.inventario-dropdown-item');
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (items.length === 0) return;
+        prodInventarioFocadoIndex = (prodInventarioFocadoIndex + 1) % items.length;
+        atualizarFocoInventario(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (items.length === 0) return;
+        prodInventarioFocadoIndex = (prodInventarioFocadoIndex - 1 + items.length) % items.length;
+        atualizarFocoInventario(items);
+      } else if (e.key === 'Enter') {
+        if (prodInventarioFocadoIndex >= 0 && items[prodInventarioFocadoIndex]) {
+          e.preventDefault();
+          const id = items[prodInventarioFocadoIndex].getAttribute('data-id');
+          if (id) selecionarProdutoInventario(parseInt(id, 10));
+        } else if (prodsInventarioFiltrados.length > 0) {
+          e.preventDefault();
+          selecionarProdutoInventario(prodsInventarioFiltrados[0].id);
+        }
+      } else if (e.key === 'Escape') {
+        dropdownBuscaInventario.style.display = 'none';
+      }
+    });
+  }
+
+  function atualizarFocoInventario(items) {
+    items.forEach((it, idx) => {
+      if (idx === prodInventarioFocadoIndex) {
+        it.style.background = '#f1f5f9';
+        it.scrollIntoView({ block: 'nearest' });
+      } else {
+        it.style.background = '#ffffff';
+      }
+    });
+  }
+
+  // Fecha dropdown ao clicar fora
+  document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('inventario-busca-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      if (dropdownBuscaInventario) dropdownBuscaInventario.style.display = 'none';
+    }
+  });
 </script>
 
 <%- include('../layouts/footer') %>
