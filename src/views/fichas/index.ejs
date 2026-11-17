@@ -54,66 +54,67 @@
   </div>
 </div>
 
-<!-- ========================================================================= -->
-<!-- CARDS DE INDICADORES GERAIS (ESTATÍSTICAS CONSOLIDADAS DO ALMOXARIFADO)   -->
-<!-- ========================================================================= -->
-<div class="balcao-kpi-grid hide-on-print" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 1.25rem;">
-  
-  <!-- Colaboradores Ativos -->
-  <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid var(--primary);">
-    <div style="width: 44px; height: 44px; border-radius: 10px; background: #EEF2FF; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-      <i class="fa-solid fa-address-book"></i>
-    </div>
-    <div>
-      <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Colaboradores Ativos</div>
-      <div style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); line-height: 1.2;">
-        <%= estatisticasGerais.totalColaboradores %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">pessoa(s)</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Colaboradores com Cautela Aberta -->
-  <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #F59E0B;">
-    <div style="width: 44px; height: 44px; border-radius: 10px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-      <i class="fa-solid fa-hand-holding-hand"></i>
-    </div>
-    <div>
-      <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Com Cautela Aberta</div>
-      <div style="font-size: 1.4rem; font-weight: 800; color: #B45309; line-height: 1.2;">
-        <%= estatisticasGerais.comPendencia %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">técnico(s)</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Ferramentas em Campo -->
-  <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #8B5CF6;">
-    <div style="width: 44px; height: 44px; border-radius: 10px; background: #F5F3FF; color: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-      <i class="fa-solid fa-wrench"></i>
-    </div>
-    <div>
-      <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Ferramentas em Campo</div>
-      <div style="font-size: 1.4rem; font-weight: 800; color: #6D28D9; line-height: 1.2;">
-        <%= estatisticasGerais.totalFerramentasCauteladas %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">unidade(s)</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Total de Saídas / Consumo -->
-  <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #EF4444;">
-    <div style="width: 44px; height: 44px; border-radius: 10px; background: #FEE2E2; color: #DC2626; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-      <i class="fa-solid fa-arrow-up"></i>
-    </div>
-    <div>
-      <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Baixas / Consumo</div>
-      <div style="font-size: 1.4rem; font-weight: 800; color: #B91C1C; line-height: 1.2;">
-        <%= estatisticasGerais.totalSaidasRegistradas %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">itens</span>
-      </div>
-    </div>
-  </div>
-
-</div>
-
 <% if (!colaboradorAtual) { %>
+
+  <!-- ========================================================================= -->
+  <!-- CARDS DE INDICADORES GERAIS (ESTATÍSTICAS CONSOLIDADAS DO ALMOXARIFADO)   -->
+  <!-- Exibidos apenas na lista geral de colaboradores, mantendo a ficha limpa   -->
+  <!-- ========================================================================= -->
+  <div class="balcao-kpi-grid hide-on-print" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 1.25rem;">
+    
+    <!-- Colaboradores Ativos -->
+    <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid var(--primary);">
+      <div style="width: 44px; height: 44px; border-radius: 10px; background: #EEF2FF; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+        <i class="fa-solid fa-address-book"></i>
+      </div>
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Colaboradores Ativos</div>
+        <div style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); line-height: 1.2;">
+          <%= estatisticasGerais.totalColaboradores %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">pessoa(s)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colaboradores com Cautela Aberta -->
+    <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #F59E0B;">
+      <div style="width: 44px; height: 44px; border-radius: 10px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+        <i class="fa-solid fa-hand-holding-hand"></i>
+      </div>
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Com Cautela Aberta</div>
+        <div style="font-size: 1.4rem; font-weight: 800; color: #B45309; line-height: 1.2;">
+          <%= estatisticasGerais.comPendencia %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">técnico(s)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ferramentas em Campo -->
+    <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #8B5CF6;">
+      <div style="width: 44px; height: 44px; border-radius: 10px; background: #F5F3FF; color: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+        <i class="fa-solid fa-wrench"></i>
+      </div>
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Ferramentas em Campo</div>
+        <div style="font-size: 1.4rem; font-weight: 800; color: #6D28D9; line-height: 1.2;">
+          <%= estatisticasGerais.totalFerramentasCauteladas %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">unidade(s)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total de Saídas / Consumo -->
+    <div class="table-card" style="padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #EF4444;">
+      <div style="width: 44px; height: 44px; border-radius: 10px; background: #FEE2E2; color: #DC2626; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+        <i class="fa-solid fa-arrow-up"></i>
+      </div>
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Baixas / Consumo</div>
+        <div style="font-size: 1.4rem; font-weight: 800; color: #B91C1C; line-height: 1.2;">
+          <%= estatisticasGerais.totalSaidasRegistradas %> <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">itens</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
 
   <!-- ========================================================================= -->
   <!-- VISÃO 1: LISTA PRINCIPAL DE FICHAS DE COLABORADORES (OTIMIZADA)           -->

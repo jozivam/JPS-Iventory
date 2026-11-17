@@ -44,8 +44,8 @@ app.use((req, res, next) => {
     const d = new Date(str);
     if (isNaN(d.getTime())) return str;
     try {
-      return d.toLocaleDateString('pt-BR', { timeZone: appTimeZone }) + ' ' + 
-             d.toLocaleTimeString('pt-BR', { timeZone: appTimeZone, hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleDateString('pt-BR', { timeZone: appTimeZone }) + ' ' +
+        d.toLocaleTimeString('pt-BR', { timeZone: appTimeZone, hour: '2-digit', minute: '2-digit' });
     } catch (e) {
       return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     }
