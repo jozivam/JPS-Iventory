@@ -1992,3 +1992,17 @@ body.sidebar-locked {
     flex: 1 1 100%;
   }
 }
+
+
+/* ========================================================================= */
+/* OTIMIZAÇÃO DE PERFORMANCE PARA CELULAR / WEBVIEW ANDROID                  */
+/* ========================================================================= */
+.inventory-mobile-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 150px;
+}
+
+.clean-table tbody tr {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+}

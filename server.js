@@ -15,6 +15,13 @@ const PORT = process.env.PORT || 3001;
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src', 'views'));
 
+// Service Worker sempre sem cache HTTP para atualizações imediatas no celular/APK
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+});
+
 // Middleware de arquivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 

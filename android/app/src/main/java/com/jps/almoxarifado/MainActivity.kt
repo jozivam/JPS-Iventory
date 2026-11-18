@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
@@ -16,6 +17,7 @@ import android.print.PrintManager
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.ServiceWorkerController
 import android.webkit.URLUtil
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -47,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     private var lastBackPressedAt: Long = 0L
     private var hasLoadedOnce: Boolean = false
     private var lastFailedUrl: String? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -85,27 +88,66 @@ class MainActivity : AppCompatActivity() {
         configurarSwipeRefresh()
         configurarWebView()
         configurarBotaoVoltar()
+        registrarMonitorDeRede()
 
         btnRetry.setOnClickListener {
-            if (isOnline()) {
-                offlineOverlay.visibility = View.GONE
-                val targetUrl = lastFailedUrl ?: BuildConfig.APP_URL
-                lastFailedUrl = null
-                webView.loadUrl(targetUrl)
-            } else {
-                Toast.makeText(this, getString(R.string.offline_title), Toast.LENGTH_SHORT).show()
-            }
+            offlineOverlay.visibility = View.GONE
+            atualizarModoCache(isOnline())
+            val targetUrl = lastFailedUrl ?: BuildConfig.APP_URL
+            lastFailedUrl = null
+            webView.loadUrl(targetUrl)
         }
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState)
             splashOverlay.visibility = View.GONE
             hasLoadedOnce = true
-        } else if (isOnline()) {
-            webView.loadUrl(BuildConfig.APP_URL)
         } else {
-            splashOverlay.visibility = View.GONE
-            offlineOverlay.visibility = View.VISIBLE
+            // Sempre tenta carregar (usa rede se online, ou cache/Service Worker se offline na obra!)
+            atualizarModoCache(isOnline())
+            webView.loadUrl(BuildConfig.APP_URL)
+        }
+    }
+
+    private fun atualizarModoCache(online: Boolean) {
+        try {
+            webView.settings.cacheMode = if (online) {
+                WebSettings.LOAD_DEFAULT
+            } else {
+                WebSettings.LOAD_CACHE_ELSE_NETWORK
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun notificarRedeParaWeb(online: Boolean) {
+        runOnUiThread {
+            atualizarModoCache(online)
+            try {
+                webView.evaluateJavascript(
+                    "window.dispatchEvent(new CustomEvent('jps-network-change', { detail: { online: $online } }));",
+                    null
+                )
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun registrarMonitorDeRede() {
+        try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val cb = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    notificarRedeParaWeb(true)
+                }
+
+                override fun onLost(network: Network) {
+                    notificarRedeParaWeb(isOnline())
+                }
+            }
+            cm.registerDefaultNetworkCallback(cb)
+            networkCallback = cb
+        } catch (_: Exception) {
         }
     }
 
@@ -123,16 +165,31 @@ class MainActivity : AppCompatActivity() {
         swipeRefresh.setOnRefreshListener {
             if (isOnline()) {
                 offlineOverlay.visibility = View.GONE
+                atualizarModoCache(true)
                 webView.reload()
             } else {
                 swipeRefresh.isRefreshing = false
-                offlineOverlay.visibility = View.VISIBLE
+                Toast.makeText(
+                    this,
+                    "Modo Offline — exibindo dados salvos no aparelho",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun configurarWebView() {
+        // Habilita Service Worker no WebView para funcionamento offline real
+        try {
+            val swController = ServiceWorkerController.getInstance()
+            val swSettings = swController.serviceWorkerWebSettings
+            swSettings.allowContentAccess = true
+            swSettings.allowFileAccess = true
+            swSettings.cacheMode = WebSettings.LOAD_DEFAULT
+        } catch (_: Exception) {
+        }
+
         val settings = webView.settings
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
@@ -144,9 +201,13 @@ class MainActivity : AppCompatActivity() {
         settings.builtInZoomControls = false
         settings.displayZoomControls = false
         settings.setSupportZoom(false)
-        settings.cacheMode = WebSettings.LOAD_DEFAULT
+        settings.cacheMode = if (isOnline()) {
+            WebSettings.LOAD_DEFAULT
+        } else {
+            WebSettings.LOAD_CACHE_ELSE_NETWORK
+        }
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-        settings.userAgentString = "${settings.userAgentString} JPSAlmoxarifadoApp/1.0"
+        settings.userAgentString = "${settings.userAgentString} JPSAlmoxarifadoApp/1.1"
 
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
@@ -178,6 +239,7 @@ class MainActivity : AppCompatActivity() {
 
                 // Mantém a navegação do sistema dentro do próprio app
                 if (scheme == "http" || scheme == "https") {
+                    atualizarModoCache(isOnline())
                     return false
                 }
 
@@ -198,12 +260,13 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 progressBar.visibility = View.GONE
                 swipeRefresh.isRefreshing = false
+                offlineOverlay.visibility = View.GONE
 
                 if (!hasLoadedOnce) {
                     hasLoadedOnce = true
                     splashOverlay.animate()
                         .alpha(0f)
-                        .setDuration(220)
+                        .setDuration(200)
                         .withEndAction {
                             splashOverlay.visibility = View.GONE
                             splashOverlay.alpha = 1f
@@ -234,11 +297,14 @@ class MainActivity : AppCompatActivity() {
             ) {
                 super.onReceivedError(view, request, error)
                 if (request?.isForMainFrame == true) {
+                    // Só mostra tela de offline total se o cache ainda não tiver nada salvo
                     lastFailedUrl = request.url?.toString() ?: BuildConfig.APP_URL
                     progressBar.visibility = View.GONE
                     swipeRefresh.isRefreshing = false
                     splashOverlay.visibility = View.GONE
-                    offlineOverlay.visibility = View.VISIBLE
+                    if (!hasLoadedOnce) {
+                        offlineOverlay.visibility = View.VISIBLE
+                    }
                 }
             }
         }
@@ -361,6 +427,17 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         CookieManager.getInstance().flush()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        networkCallback?.let { cb ->
+            try {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                cm.unregisterNetworkCallback(cb)
+            } catch (_: Exception) {
+            }
+        }
     }
 
     inner class AndroidBridge {

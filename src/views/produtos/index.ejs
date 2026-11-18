@@ -804,6 +804,7 @@
 <script>
   // Dicionário dos produtos carregados na página
   const PRODUTOS_MAP = <%- JSON.stringify(produtos.reduce((acc, p) => { acc[p.id] = p; return acc; }, {})) %>;
+  window.PRODUTOS_MAP = PRODUTOS_MAP;
   let produtoAtualModal = null;
 
   function abrirModalProduto(id) {
@@ -1097,7 +1098,7 @@
   // =========================================================================
   // DROPDOWN INTELIGENTE DE BUSCA NO INVENTÁRIO (COMBOBOX)
   // =========================================================================
-  const LISTA_PRODUTOS_INVENTARIO = <%- JSON.stringify(produtos || []) %>;
+  const LISTA_PRODUTOS_INVENTARIO = Object.values(PRODUTOS_MAP);
   const inputBuscaInventario = document.getElementById('inventario-busca-input');
   const dropdownBuscaInventario = document.getElementById('inventario-busca-dropdown');
   const btnLimparBuscaInventario = document.getElementById('btn-limpar-inventario-busca');

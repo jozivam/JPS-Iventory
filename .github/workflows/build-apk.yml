@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Versão do aplicativo (ex: 1.0.0)'
+        description: 'Versão do aplicativo (ex: 1.1.0)'
         required: false
-        default: '1.0.0'
+        default: '1.1.0'
         type: string
       app_url:
         description: 'URL do sistema JPS Almoxarifado'
@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configurar Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -63,7 +63,7 @@ jobs:
             RELEASE_TAG="${GITHUB_REF_NAME}"
             SHOULD_RELEASE="true"
           else
-            VERSION_NAME="1.0.${{ github.run_number }}"
+            VERSION_NAME="1.1.${{ github.run_number }}"
             APP_URL="https://jps-iventory-lovat.vercel.app"
             RELEASE_TAG="apk-latest"
             SHOULD_RELEASE="true"

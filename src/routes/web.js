@@ -14,6 +14,7 @@ const BuscaController = require('../controllers/BuscaController');
 const BalcaoController = require('../controllers/BalcaoController');
 const ColaboradorController = require('../controllers/ColaboradorController');
 const FichaController = require('../controllers/FichaController');
+const OfflineSyncController = require('../controllers/OfflineSyncController');
 
 // --- PÁGINA INICIAL (Direciona diretamente para o Inventário) ---
 router.get('/', (req, res) => {
@@ -67,6 +68,10 @@ router.post('/colaboradores/:id/editar', ColaboradorController.update);
 router.post('/colaboradores/:id/nivel-acesso', ColaboradorController.updateNivelAcesso);
 router.post('/colaboradores/:id/excluir', ColaboradorController.delete);
 router.get('/api/colaboradores', ColaboradorController.apiListar);
+
+// --- SINCRONIZAÇÃO OFFLINE-FIRST (CANTEIRO DE OBRA / APK) ---
+router.get('/api/offline/ping', OfflineSyncController.ping);
+router.post('/api/offline/sync', OfflineSyncController.sync);
 
 // --- ROTA DE DIAGNÓSTICO (Health Check) ---
 router.get('/api/diagnostico', async (req, res) => {

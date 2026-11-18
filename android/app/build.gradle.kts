@@ -13,8 +13,8 @@ android {
         applicationId = "com.jps.almoxarifado"
         minSdk = 24
         targetSdk = 34
-        versionCode = (System.getenv("APP_VERSION_CODE")?.toIntOrNull()) ?: 1
-        versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
+        versionCode = (System.getenv("APP_VERSION_CODE")?.toIntOrNull()) ?: 2
+        versionName = System.getenv("APP_VERSION_NAME") ?: "1.1.0"
 
         val appUrl = System.getenv("APP_URL") ?: "https://jps-iventory-lovat.vercel.app"
         buildConfigField("String", "APP_URL", "\"$appUrl\"")
