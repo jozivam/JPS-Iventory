@@ -355,6 +355,7 @@ class Produto {
   static async getCategorias() {
     const categoriasBase = [
       'Ferramentas',
+      'Consumíveis',
       'EPI / Segurança',
       'Elétrica e TI',
       'Hidráulica',
