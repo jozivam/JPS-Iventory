@@ -654,13 +654,19 @@
         }
 
         if (resp.ok && data.ok) {
-          // Atualiza o cache do SW em segundo plano e recarrega com aviso de sucesso
+          // Atualiza o cache do SW em segundo plano e recarrega preservando filtros ativos (categoria, busca, status...)
           const destino = pathname.startsWith('/balcao')
             ? '/balcao'
             : pathname.startsWith('/colaboradores')
             ? '/colaboradores'
-            : '/produtos';
-          window.location.href = destino + '?sucesso=' + encodeURIComponent(data.mensagem || 'Operação realizada com sucesso!');
+            : (window.location.pathname === '/suprimentos' ? '/suprimentos' : '/produtos');
+
+          const params = new URLSearchParams(
+            window.location.pathname === destino ? window.location.search : (fields.return_query || '')
+          );
+          params.delete('erro');
+          params.set('sucesso', data.mensagem || 'Operação realizada com sucesso!');
+          window.location.href = `${destino}?${params.toString()}`;
           return;
         }
 

@@ -221,15 +221,19 @@ class OfflineSyncController {
           });
         }
         const prodId = matchEditarProd[1];
+        const prodAtual = await Produto.findById(prodId);
         await Produto.update(prodId, {
           ...fields,
-          quantidade: fields.quantidade !== undefined ? parseInt(fields.quantidade, 10) : undefined,
-          estoque_minimo: fields.estoque_minimo !== undefined ? parseInt(fields.estoque_minimo, 10) : undefined
+          sku_atual: prodAtual ? prodAtual.sku : fields.sku,
+          observacao_atual: prodAtual ? prodAtual.observacao : null,
+          condicao_atual: prodAtual ? prodAtual.condicao : 'NOVO',
+          quantidade: fields.quantidade !== undefined ? parseInt(fields.quantidade, 10) : (prodAtual ? prodAtual.quantidade : 0),
+          estoque_minimo: fields.estoque_minimo !== undefined ? parseInt(fields.estoque_minimo, 10) : (prodAtual ? prodAtual.estoque_minimo : 0)
         });
 
         return res.json({
           ok: true,
-          mensagem: `Alterações do produto #${prodId} sincronizadas!`
+          mensagem: `Produto "${fields.nome || (prodAtual ? prodAtual.nome : '#' + prodId)}" atualizado com sucesso!`
         });
       }
 

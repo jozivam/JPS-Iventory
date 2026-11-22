@@ -284,10 +284,10 @@
                     <a href="/balcao?produto_id=<%= p.id %>&tipo=ENTRADA" class="action-more-btn" title="Entrada no Balcão">
                       <i class="fa-solid fa-arrow-down" style="color: var(--teal);"></i>
                     </a>
-                    <!-- Editar -->
-                    <a href="/produtos/<%= p.id %>/editar" class="action-more-btn" title="Editar Produto">
+                    <!-- Editar em Modal (mantém os filtros atuais) -->
+                    <button type="button" class="action-more-btn" title="Editar Produto" onclick="abrirModalEditarDireto(<%= p.id %>)">
                       <i class="fa-solid fa-pen-to-square"></i>
-                    </a>
+                    </button>
                   <% } %>
                   <% if (podeExcluirProdutos) { %>
                     <!-- Excluir -->
@@ -401,10 +401,10 @@
             </a>
 
             <% if (podeGerenciarProdutos) { %>
-              <!-- Editar -->
-              <a href="/produtos/<%= p.id %>/editar" class="action-more-btn" title="Editar">
+              <!-- Editar em Modal (mantém os filtros atuais) -->
+              <button type="button" class="action-more-btn" title="Editar" onclick="abrirModalEditarDireto(<%= p.id %>)">
                 <i class="fa-solid fa-pen-to-square"></i>
-              </a>
+              </button>
             <% } %>
 
             <% if (podeExcluirProdutos) { %>
@@ -666,6 +666,7 @@
       <!-- MODO EDIÇÃO RÁPIDA DENTRO DO MODAL -->
       <div id="secao-modo-edicao" style="display: none;">
         <form id="form-modal-editar" method="POST">
+          <input type="hidden" name="return_query" id="modal-edit-return-query" value="">
           <div class="form-grid">
             
             <div class="form-group">
@@ -701,7 +702,12 @@
               <label class="form-label" for="modal-edit-unidade">Unidade de Medida</label>
               <select id="modal-edit-unidade" name="unidade_medida" class="form-select">
                 <option value="UN">UN - Unidade</option>
+                <option value="GL">GL - Galão</option>
                 <option value="CX">CX - Caixa</option>
+                <option value="PCT">PCT - Pacote</option>
+                <option value="FD">FD - Fardo</option>
+                <option value="FR">FR - Frasco</option>
+                <option value="RL">RL - Rolo</option>
                 <option value="PAR">PAR - Par</option>
                 <option value="KG">KG - Quilograma</option>
                 <option value="L">L - Litro</option>
@@ -839,12 +845,19 @@
   const PRODUTOS_MAP = <%- JSON.stringify(produtos.reduce((acc, p) => { acc[p.id] = p; return acc; }, {})) %>;
   window.PRODUTOS_MAP = PRODUTOS_MAP;
   let produtoAtualModal = null;
+  let abertoDiretoEdicao = false;
 
-  function abrirModalProduto(id) {
+  function abrirModalEditarDireto(id) {
+    abertoDiretoEdicao = true;
+    abrirModalProduto(id, true);
+  }
+
+  function abrirModalProduto(id, irParaEdicao = false) {
     const p = PRODUTOS_MAP[id];
     if (!p) return;
 
     produtoAtualModal = p;
+    abertoDiretoEdicao = !!irParaEdicao;
 
     // Preenche cabeçalho
     document.getElementById('modal-view-title').textContent = p.nome || 'Produto sem nome';
@@ -941,8 +954,12 @@
     // Dispara carregamento das movimentações deste produto em segundo plano
     carregarHistoricoProduto(p.id);
 
-    // Reseta para o modo de visualização
-    cancelarEdicaoModal();
+    // Abre diretamente no modo edição (lápis) ou reseta para visualização (clique na linha)
+    if (irParaEdicao) {
+      ativarModoEdicaoModal();
+    } else {
+      cancelarEdicaoModal(true);
+    }
 
     // Abre o modal
     window.abrirModal('modal-detalhes-produto');
@@ -1089,13 +1106,30 @@
     if (!produtoAtualModal) return;
     const p = produtoAtualModal;
 
-    // Configura action do form
+    // Configura action do form e preserva os filtros ativos na URL
     const form = document.getElementById('form-modal-editar');
     form.action = `/produtos/${p.id}/editar`;
+    const returnQueryInput = document.getElementById('modal-edit-return-query');
+    if (returnQueryInput) {
+      const paramsAtuais = new URLSearchParams(window.location.search);
+      paramsAtuais.delete('sucesso');
+      paramsAtuais.delete('erro');
+      returnQueryInput.value = paramsAtuais.toString();
+    }
+
+    // Garante que a categoria atual do item exista no select
+    const selectCat = document.getElementById('modal-edit-categoria');
+    const catAtual = p.categoria || 'Outros';
+    if (selectCat && !Array.from(selectCat.options).some(opt => opt.value === catAtual)) {
+      const opt = document.createElement('option');
+      opt.value = catAtual;
+      opt.textContent = catAtual;
+      selectCat.appendChild(opt);
+    }
 
     // Popula campos de edição
     document.getElementById('modal-edit-sku').value = p.sku || '';
-    document.getElementById('modal-edit-categoria').value = p.categoria || 'Outros';
+    document.getElementById('modal-edit-categoria').value = catAtual;
     document.getElementById('modal-edit-marca').value = p.marca || '';
     document.getElementById('modal-edit-nome').value = p.nome || '';
     document.getElementById('modal-edit-quantidade').value = p.quantidade !== undefined ? p.quantidade : 0;
@@ -1126,7 +1160,13 @@
     document.getElementById('btn-salvar-edicao').style.display = 'inline-block';
   }
 
-  function cancelarEdicaoModal() {
+  function cancelarEdicaoModal(apenasResetar = false) {
+    if (!apenasResetar && abertoDiretoEdicao) {
+      abertoDiretoEdicao = false;
+      fecharModalProduto();
+      return;
+    }
+
     const secaoView = document.getElementById('secao-modo-visualizacao');
     const secaoEdit = document.getElementById('secao-modo-edicao');
     const footerMov = document.getElementById('modal-footer-acoes-mov');

@@ -3,6 +3,38 @@ const Produto = require('../models/Produto');
 const Movimentacao = require('../models/Movimentacao');
 const db = require('../../config/database');
 
+function montarUrlRetornoProdutos(req, chaveMsg, textoMsg) {
+  const params = new URLSearchParams();
+  const fontes = [];
+
+  if (req.body && req.body.return_query) {
+    fontes.push(new URLSearchParams(String(req.body.return_query)));
+  } else if (req.headers && req.headers.referer) {
+    try {
+      const ref = new URL(req.headers.referer);
+      if (ref.pathname === '/produtos') {
+        fontes.push(ref.searchParams);
+      }
+    } catch (_) {}
+  }
+
+  const chavesPermitidas = ['busca', 'categoria', 'status'];
+  for (const fonte of fontes) {
+    for (const k of chavesPermitidas) {
+      const v = fonte.get(k);
+      if (v && String(v).trim()) {
+        params.set(k, String(v).trim());
+      }
+    }
+  }
+
+  if (chaveMsg && textoMsg) {
+    params.set(chaveMsg, textoMsg);
+  }
+  const qs = params.toString();
+  return '/produtos' + (qs ? '?' + qs : '');
+}
+
 class ProdutoController {
   /**
    * Listagem do Inventário com Filtros e Indicadores
@@ -254,7 +286,7 @@ class ProdutoController {
       });
 
       const nomeItem = nome && nome.trim() ? `"${nome.trim()}"` : 'Produto';
-      res.redirect('/produtos?sucesso=' + encodeURIComponent(`${nomeItem} atualizado com sucesso!`));
+      res.redirect(montarUrlRetornoProdutos(req, 'sucesso', `${nomeItem} atualizado com sucesso!`));
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
       const categorias = await Produto.getCategorias();
@@ -336,13 +368,13 @@ class ProdutoController {
 
       if (produto) {
         await Produto.delete(id);
-        res.redirect('/produtos?sucesso=' + encodeURIComponent(`Produto "${produto.nome}" excluído com sucesso.`));
+        res.redirect(montarUrlRetornoProdutos(req, 'sucesso', `Produto "${produto.nome}" excluído com sucesso.`));
       } else {
-        res.redirect('/produtos?erro=' + encodeURIComponent('Produto não encontrado.'));
+        res.redirect(montarUrlRetornoProdutos(req, 'erro', 'Produto não encontrado.'));
       }
     } catch (error) {
       console.error('Erro ao excluir produto:', error);
-      res.redirect('/produtos?erro=' + encodeURIComponent('Falha ao excluir produto: ' + error.message));
+      res.redirect(montarUrlRetornoProdutos(req, 'erro', 'Falha ao excluir produto: ' + error.message));
     }
   }
 
