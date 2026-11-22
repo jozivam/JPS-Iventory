@@ -80,10 +80,10 @@ router.get('/fichas/:colaborador_id', (req, res) => res.redirect('/fichas?colabo
 
 // --- COLABORADORES E USUÁRIOS DO SISTEMA ---
 router.get('/colaboradores', ColaboradorController.index);
-router.post('/colaboradores', requireRole('ADMIN', 'ALMOXARIFE'), ColaboradorController.store);
+router.post('/colaboradores', requireRole('ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'), ColaboradorController.store);
 router.get('/colaboradores/:id/ficha', (req, res) => res.redirect('/fichas?colaborador_id=' + req.params.id));
 router.get('/colaboradores/:id/detalhes', ColaboradorController.detalhes);
-router.post('/colaboradores/:id/editar', requireRole('ADMIN', 'ALMOXARIFE'), ColaboradorController.update);
+router.post('/colaboradores/:id/editar', requireRole('ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'), ColaboradorController.update);
 router.post('/colaboradores/:id/nivel-acesso', requireRole('ADMIN'), ColaboradorController.updateNivelAcesso);
 router.post('/colaboradores/:id/excluir', requireRole('ADMIN'), ColaboradorController.delete);
 router.get('/api/colaboradores', ColaboradorController.apiListar);

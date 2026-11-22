@@ -21,12 +21,12 @@
     <p>Cadastre a equipe técnica para requisições no balcão e gerencie os níveis de acesso dos operadores do sistema.</p>
   </div>
 
-  <% const podeCadastrarColab = typeof usuarioLogado !== 'undefined' && usuarioLogado && ['ADMIN', 'ALMOXARIFE'].includes(usuarioLogado.nivel_acesso); %>
+  <% const podeCadastrarColab = typeof usuarioLogado !== 'undefined' && usuarioLogado && ['ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'].includes(usuarioLogado.nivel_acesso); %>
   <% const isAdminLogado = typeof usuarioLogado !== 'undefined' && usuarioLogado && usuarioLogado.nivel_acesso === 'ADMIN'; %>
   <% if (podeCadastrarColab) { %>
     <div class="page-actions-group">
       <button type="button" class="btn btn-primary" onclick="abrirModalNovoColaborador()">
-        <i class="fa-solid fa-user-plus"></i> Novo Colaborador / Usuário
+        <i class="fa-solid fa-user-plus"></i> <%= isAdminLogado ? 'Novo Colaborador / Usuário' : 'Novo Colaborador' %>
       </button>
     </div>
   <% } %>
@@ -374,12 +374,16 @@
               <a href="/fichas?colaborador_id=<%= c.id %>" class="btn btn-outline btn-sm" style="color: #4F46E5; border-color: #C7D2FE; font-weight: 700;">
                 <i class="fa-solid fa-file-invoice"></i> Ficha
               </a>
-              <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
-                <i class="fa-solid fa-shield-halved"></i> Acesso
-              </button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalEditarColaborador('<%= c.id %>')">
-                <i class="fa-solid fa-pen-to-square"></i>
-              </button>
+              <% if (isAdminLogado) { %>
+                <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
+                  <i class="fa-solid fa-shield-halved"></i> Acesso
+                </button>
+              <% } %>
+              <% if (podeCadastrarColab && (isAdminLogado || c.tipo_perfil !== 'SISTEMA')) { %>
+                <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalEditarColaborador('<%= c.id %>')">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+              <% } %>
             </div>
           </div>
         </div>
@@ -437,7 +441,7 @@
           </span>
         </div>
 
-        <form id="form-alterar-nivel-acesso" action="" method="POST">
+        <form id="form-alterar-nivel-acesso" action="" method="POST" style="<%= isAdminLogado ? '' : 'display: none;' %>">
           <input type="hidden" name="colaborador_id" id="modal-acesso-colab-id">
           
           <!-- Escolha entre Técnico (Apenas Balcão) e Usuário do Sistema -->
@@ -626,26 +630,28 @@
           <label class="form-label" style="font-weight: 700; margin-bottom: 0.5rem;">
             Finalidade do Cadastro:
           </label>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div style="display: grid; grid-template-columns: <%= isAdminLogado ? '1fr 1fr' : '1fr' %>; gap: 0.75rem;">
             <label style="background: #ffffff; border: 1.5px solid var(--border-light); border-radius: 8px; padding: 0.75rem; cursor: pointer; display: flex; align-items: flex-start; gap: 0.5rem;">
               <input type="radio" name="tipo_perfil" value="TECNICO" id="form-radio-tecnico" checked onchange="toggleFormNivelAcesso(this.value)" style="margin-top: 3px;">
               <div>
                 <strong style="display: block; font-size: 0.88rem; color: var(--text-main);">Colaborador Técnico</strong>
                 <span style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.3; display: block; margin-top: 2px;">
-                  Solicitante de balcão (retiradas, ferramentas e baixas de materiais).
+                  Solicitante de balcão e ficha individual (retiradas, EPIs, ferramentas e devoluções).
                 </span>
               </div>
             </label>
 
-            <label style="background: #ffffff; border: 1.5px solid var(--border-light); border-radius: 8px; padding: 0.75rem; cursor: pointer; display: flex; align-items: flex-start; gap: 0.5rem;">
-              <input type="radio" name="tipo_perfil" value="SISTEMA" id="form-radio-sistema" onchange="toggleFormNivelAcesso(this.value)" style="margin-top: 3px;">
-              <div>
-                <strong style="display: block; font-size: 0.88rem; color: var(--text-main);">Usuário do Sistema</strong>
-                <span style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.3; display: block; margin-top: 2px;">
-                  Operador da plataforma (almoxarife, gestor ou auditor).
-                </span>
-              </div>
-            </label>
+            <% if (isAdminLogado) { %>
+              <label style="background: #ffffff; border: 1.5px solid var(--border-light); border-radius: 8px; padding: 0.75rem; cursor: pointer; display: flex; align-items: flex-start; gap: 0.5rem;">
+                <input type="radio" name="tipo_perfil" value="SISTEMA" id="form-radio-sistema" onchange="toggleFormNivelAcesso(this.value)" style="margin-top: 3px;">
+                <div>
+                  <strong style="display: block; font-size: 0.88rem; color: var(--text-main);">Usuário do Sistema</strong>
+                  <span style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.3; display: block; margin-top: 2px;">
+                    Operador da plataforma (administrador, almoxarife, operador de fichas ou visualizador).
+                  </span>
+                </div>
+              </label>
+            <% } %>
           </div>
         </div>
 
@@ -867,6 +873,8 @@
 
 <script>
   let colaboradorAtualId = null;
+  const IS_ADMIN_LOGADO = <%= isAdminLogado ? 'true' : 'false' %>;
+  const PODE_CADASTRAR_COLAB = <%= podeCadastrarColab ? 'true' : 'false' %>;
   const LISTA_COLABORADORES = <%- JSON.stringify(colaboradores || []) %>;
 
   // Funções Seguras para Abertura e Fechamento de Modais
@@ -908,6 +916,11 @@
     
     const linkFicha = document.getElementById('link-modal-ver-ficha');
     if (linkFicha) linkFicha.href = `/fichas?colaborador_id=${c.id}`;
+    const btnModalEditar = document.getElementById('btn-modal-editar-dados');
+    if (btnModalEditar) {
+      const podeEditarEste = PODE_CADASTRAR_COLAB && (IS_ADMIN_LOGADO || c.tipo_perfil !== 'SISTEMA');
+      btnModalEditar.style.display = podeEditarEste ? 'inline-flex' : 'none';
+    }
     
     const statusPill = document.getElementById('modal-view-status-pill');
     if (c.status === 'ATIVO') {
@@ -1126,12 +1139,12 @@
     }
     document.getElementById('btn-submit-form-colab').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Atualizar Dados';
 
-    if (c.tipo_perfil === 'SISTEMA') {
+    if (c.tipo_perfil === 'SISTEMA' && document.getElementById('form-radio-sistema')) {
       document.getElementById('form-radio-sistema').checked = true;
       toggleFormNivelAcesso('SISTEMA');
       document.getElementById('form-colab-nivel-acesso').value = c.nivel_acesso || 'ALMOXARIFE';
     } else {
-      document.getElementById('form-radio-tecnico').checked = true;
+      if (document.getElementById('form-radio-tecnico')) document.getElementById('form-radio-tecnico').checked = true;
       toggleFormNivelAcesso('TECNICO');
     }
 

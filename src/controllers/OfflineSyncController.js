@@ -235,7 +235,7 @@ class OfflineSyncController {
 
       // 5. Cadastro de Colaborador (/colaboradores)
       if (action === '/colaboradores') {
-        if (!['ADMIN', 'ALMOXARIFE'].includes(req.user?.nivel_acesso)) {
+        if (!['ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'].includes(req.user?.nivel_acesso)) {
           return res.status(403).json({
             ok: false,
             conflito: true,
