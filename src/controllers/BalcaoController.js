@@ -68,6 +68,16 @@ class BalcaoController {
         throw new Error('Por favor, selecione um produto para realizar o lançamento.');
       }
 
+      // Regras do nível Operador de Fichas: apenas lançamentos em fichas de colaboradores (sem entrada/reposição de estoque)
+      if (req.user?.nivel_acesso === 'OPERADOR_FICHAS') {
+        if (tipo === 'ENTRADA') {
+          throw new Error('Acesso restrito: seu perfil (Operador de Fichas) permite apenas lançamentos em fichas de colaboradores (Saída, Empréstimo, Devolução ou Troca), não entrada/reposição de estoque.');
+        }
+        if (!colaborador_id && (!colaborador || !colaborador.trim())) {
+          throw new Error('Para o perfil Operador de Fichas, é obrigatório selecionar o colaborador cuja ficha receberá o lançamento.');
+        }
+      }
+
       const qtd = parseInt(quantidade, 10);
       if (!qtd || qtd <= 0) {
         throw new Error('A quantidade deve ser um número maior que zero.');

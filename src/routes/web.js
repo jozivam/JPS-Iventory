@@ -59,8 +59,8 @@ router.post('/produtos/:id/excluir', requireRole('ADMIN'), ProdutoController.del
 
 // --- BALCÃO (ATENDIMENTO, LANÇAMENTOS E EMPRÉSTIMOS) ---
 router.get('/balcao', BalcaoController.index);
-router.post('/balcao/registrar', requireRole('ADMIN', 'ALMOXARIFE'), BalcaoController.registrar);
-router.post('/balcao/devolver/:id', requireRole('ADMIN', 'ALMOXARIFE'), BalcaoController.devolver);
+router.post('/balcao/registrar', requireRole('ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'), BalcaoController.registrar);
+router.post('/balcao/devolver/:id', requireRole('ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'), BalcaoController.devolver);
 
 // --- MOVIMENTAÇÕES (HISTÓRICO E GESTÃO) ---
 router.get('/movimentacoes', EstoqueController.index);
@@ -89,7 +89,7 @@ router.post('/colaboradores/:id/excluir', requireRole('ADMIN'), ColaboradorContr
 router.get('/api/colaboradores', ColaboradorController.apiListar);
 
 // --- SINCRONIZAÇÃO OFFLINE-FIRST (CANTEIRO DE OBRA / APK) ---
-router.post('/api/offline/sync', requireRole('ADMIN', 'ALMOXARIFE'), OfflineSyncController.sync);
+router.post('/api/offline/sync', requireRole('ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'), OfflineSyncController.sync);
 
 // --- ROTA DE DIAGNÓSTICO (Health Check - Restrito a Administradores) ---
 router.get('/api/diagnostico', requireRole('ADMIN'), async (req, res) => {

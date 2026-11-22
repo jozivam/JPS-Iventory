@@ -38,6 +38,23 @@ class OfflineSyncController {
           responsavel, motivo, documento_ref
         } = fields;
 
+        if (req.user?.nivel_acesso === 'OPERADOR_FICHAS') {
+          if (tipo === 'ENTRADA') {
+            return res.status(403).json({
+              ok: false,
+              conflito: true,
+              erro: 'Seu perfil (Operador de Fichas) não possui permissão para registrar Entradas de estoque.'
+            });
+          }
+          if (!colaborador_id && (!colaborador || !String(colaborador).trim())) {
+            return res.status(422).json({
+              ok: false,
+              conflito: true,
+              erro: 'Selecione o colaborador para vincular este lançamento à ficha.'
+            });
+          }
+        }
+
         if (!produto_id) {
           return res.status(422).json({ ok: false, conflito: true, erro: 'Produto não informado.' });
         }
@@ -114,6 +131,13 @@ class OfflineSyncController {
 
       // 3. Cadastro de Novo Produto (/produtos)
       if (action === '/produtos') {
+        if (!['ADMIN', 'ALMOXARIFE'].includes(req.user?.nivel_acesso)) {
+          return res.status(403).json({
+            ok: false,
+            conflito: true,
+            erro: 'Seu nível de acesso não permite cadastrar novos produtos.'
+          });
+        }
         const {
           sku, nome, categoria, categoria_personalizada, marca, unidade_medida,
           quantidade, estoque_minimo, localizacao,
@@ -189,6 +213,13 @@ class OfflineSyncController {
       // 4. Edição de Produto (/produtos/:id/editar)
       const matchEditarProd = action.match(/^\/produtos\/(\d+)\/editar$/);
       if (matchEditarProd) {
+        if (!['ADMIN', 'ALMOXARIFE'].includes(req.user?.nivel_acesso)) {
+          return res.status(403).json({
+            ok: false,
+            conflito: true,
+            erro: 'Seu nível de acesso não permite editar produtos.'
+          });
+        }
         const prodId = matchEditarProd[1];
         await Produto.update(prodId, {
           ...fields,
@@ -204,6 +235,13 @@ class OfflineSyncController {
 
       // 5. Cadastro de Colaborador (/colaboradores)
       if (action === '/colaboradores') {
+        if (!['ADMIN', 'ALMOXARIFE'].includes(req.user?.nivel_acesso)) {
+          return res.status(403).json({
+            ok: false,
+            conflito: true,
+            erro: 'Seu nível de acesso não permite cadastrar colaboradores.'
+          });
+        }
         if (fields.tipo_perfil === 'SISTEMA' && req.user?.nivel_acesso !== 'ADMIN') {
           return res.status(403).json({
             ok: false,

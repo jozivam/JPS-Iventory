@@ -245,7 +245,9 @@ function requireRole(...niveisPermitidos) {
     const mensagemErro =
       req.user.nivel_acesso === 'VISUALIZADOR'
         ? 'Acesso negado: seu perfil (Visualizador) possui permissão apenas de consulta.'
-        : 'Acesso restrito: esta ação exige permissão de Administrador.';
+        : req.user.nivel_acesso === 'OPERADOR_FICHAS'
+          ? 'Acesso negado: seu perfil (Operador de Fichas) permite visualização e lançamentos em fichas de colaboradores, mas não permite cadastrar ou editar produtos e cadastros.'
+          : 'Acesso restrito: esta ação exige permissão de Administrador.';
 
     if (isJsonRequest(req)) {
       return res.status(403).json({

@@ -56,6 +56,10 @@
             <span class="status-pill" title="Perfil somente consulta" style="background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; font-size: 0.73rem; padding: 0.25rem 0.65rem; display: inline-flex; align-items: center; gap: 0.35rem;">
               <i class="fa-solid fa-eye"></i> Somente Leitura
             </span>
+          <% } else if (typeof usuarioLogado !== 'undefined' && usuarioLogado && usuarioLogado.nivel_acesso === 'OPERADOR_FICHAS') { %>
+            <span class="status-pill" title="Visualização e lançamentos em fichas de colaboradores" style="background: #CCFBF1; color: #0F766E; border: 1px solid #99F6E4; font-size: 0.73rem; padding: 0.25rem 0.65rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-solid fa-clipboard-check"></i> Operador de Fichas
+            </span>
           <% } %>
           <a href="/movimentacoes" class="btn-topbar-icon" title="Movimentações">
             <i class="fa-regular fa-envelope"></i>

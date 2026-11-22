@@ -94,44 +94,52 @@
       <i class="fa-solid fa-cash-register" style="color: var(--primary);"></i> Novo Lançamento no Balcão
     </h3>
 
+<%
+  const nivelBalcao = (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? usuarioLogado.nivel_acesso : '';
+  const isOperadorFichasBalcao = nivelBalcao === 'OPERADOR_FICHAS';
+  const podeEntradaEstoqueBalcao = ['ADMIN', 'ALMOXARIFE'].includes(nivelBalcao);
+  const tipoEfetivoBalcao = (isOperadorFichasBalcao && tipoPreSelecionado === 'ENTRADA') ? 'SAIDA' : tipoPreSelecionado;
+%>
     <form action="/balcao/registrar" method="POST" id="form-balcao">
       
-      <!-- Seletor Interativo dos 5 Tipos de Operação -->
+      <!-- Seletor Interativo dos Tipos de Operação -->
       <div style="margin-bottom: 1.25rem;">
         <label class="form-label" style="margin-bottom: 0.5rem; display: block;">
           Natureza da Operação:
         </label>
         
-        <input type="hidden" name="tipo" id="input-tipo-operacao" value="<%= tipoPreSelecionado %>">
+        <input type="hidden" name="tipo" id="input-tipo-operacao" value="<%= tipoEfetivoBalcao %>">
         
         <div class="balcao-types-grid" id="grid-tipos-operacao">
           
           <!-- Saída -->
-          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'SAIDA' ? 'ativo' : '' %>" data-tipo="SAIDA" data-cor="#EF4444" data-titulo="Saída de Consumo" onclick="selecionarTipo('SAIDA', this)">
+          <button type="button" class="btn-tipo-op <%= tipoEfetivoBalcao === 'SAIDA' ? 'ativo' : '' %>" data-tipo="SAIDA" data-cor="#EF4444" data-titulo="Saída de Consumo" onclick="selecionarTipo('SAIDA', this)">
             <i class="fa-solid fa-arrow-up"></i>
             <span>Saída</span>
           </button>
 
           <!-- Empréstimo -->
-          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'EMPRESTIMO' ? 'ativo' : '' %>" data-tipo="EMPRESTIMO" data-cor="#F59E0B" data-titulo="Empréstimo de Ferramenta" onclick="selecionarTipo('EMPRESTIMO', this)">
+          <button type="button" class="btn-tipo-op <%= tipoEfetivoBalcao === 'EMPRESTIMO' ? 'ativo' : '' %>" data-tipo="EMPRESTIMO" data-cor="#F59E0B" data-titulo="Empréstimo de Ferramenta" onclick="selecionarTipo('EMPRESTIMO', this)">
             <i class="fa-solid fa-hand-holding-hand"></i>
             <span>Empréstimo</span>
           </button>
 
           <!-- Devolução -->
-          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'DEVOLUCAO' ? 'ativo' : '' %>" data-tipo="DEVOLUCAO" data-cor="#06B6D4" data-titulo="Devolução de Ferramenta" onclick="selecionarTipo('DEVOLUCAO', this)">
+          <button type="button" class="btn-tipo-op <%= tipoEfetivoBalcao === 'DEVOLUCAO' ? 'ativo' : '' %>" data-tipo="DEVOLUCAO" data-cor="#06B6D4" data-titulo="Devolução de Ferramenta" onclick="selecionarTipo('DEVOLUCAO', this)">
             <i class="fa-solid fa-rotate-left"></i>
             <span>Devolução</span>
           </button>
 
-          <!-- Entrada -->
-          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'ENTRADA' ? 'ativo' : '' %>" data-tipo="ENTRADA" data-cor="#10B981" data-titulo="Entrada / Reposição" onclick="selecionarTipo('ENTRADA', this)">
-            <i class="fa-solid fa-arrow-down"></i>
-            <span>Entrada</span>
-          </button>
+          <% if (podeEntradaEstoqueBalcao) { %>
+            <!-- Entrada -->
+            <button type="button" class="btn-tipo-op <%= tipoEfetivoBalcao === 'ENTRADA' ? 'ativo' : '' %>" data-tipo="ENTRADA" data-cor="#10B981" data-titulo="Entrada / Reposição" onclick="selecionarTipo('ENTRADA', this)">
+              <i class="fa-solid fa-arrow-down"></i>
+              <span>Entrada</span>
+            </button>
+          <% } %>
 
           <!-- Troca -->
-          <button type="button" class="btn-tipo-op <%= tipoPreSelecionado === 'TROCA' ? 'ativo' : '' %>" data-tipo="TROCA" data-cor="#8B5CF6" data-titulo="Troca de Produto" onclick="selecionarTipo('TROCA', this)">
+          <button type="button" class="btn-tipo-op <%= tipoEfetivoBalcao === 'TROCA' ? 'ativo' : '' %>" data-tipo="TROCA" data-cor="#8B5CF6" data-titulo="Troca de Produto" onclick="selecionarTipo('TROCA', this)">
             <i class="fa-solid fa-repeat"></i>
             <span>Troca</span>
           </button>
@@ -244,6 +252,7 @@
               <div style="color: #7F1D1D;" id="texto-alerta-zerado">
                 Não é permitido registrar <strong>Saída</strong>, <strong>Empréstimo</strong> ou <strong>Troca</strong> deste item porque não há unidades físicas em estoque.
               </div>
+              <% if (podeEntradaEstoqueBalcao) { %>
               <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #FECACA; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
                 <span style="font-size: 0.8rem; color: #64748B;">
                   Precisa abastecer o almoxarifado?
@@ -252,6 +261,7 @@
                   <i class="fa-solid fa-arrow-down"></i> Mudar para Entrada / Reposição
                 </button>
               </div>
+              <% } %>
             </div>
           </div>
         </div>
@@ -308,7 +318,7 @@
         <!-- Seleção de Colaborador com Campo de Busca e Dropdown Inteligente -->
         <div class="form-group" style="position: relative;" id="balcao-colaborador-wrapper">
           <label class="form-label" for="balcao-colaborador-busca" id="label-colaborador">
-            Colaborador / Solicitante <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Digite para autocompletar e filtrar)</span>
+            Colaborador / Solicitante <% if (isOperadorFichasBalcao) { %><span style="color: var(--danger);">*</span><% } %> <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Digite para autocompletar e filtrar)</span>
           </label>
           
           <div style="position: relative; display: flex; align-items: center;">

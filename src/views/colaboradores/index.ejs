@@ -21,11 +21,15 @@
     <p>Cadastre a equipe técnica para requisições no balcão e gerencie os níveis de acesso dos operadores do sistema.</p>
   </div>
 
-  <div class="page-actions-group">
-    <button type="button" class="btn btn-primary" onclick="abrirModalNovoColaborador()">
-      <i class="fa-solid fa-user-plus"></i> Novo Colaborador / Usuário
-    </button>
-  </div>
+  <% const podeCadastrarColab = typeof usuarioLogado !== 'undefined' && usuarioLogado && ['ADMIN', 'ALMOXARIFE'].includes(usuarioLogado.nivel_acesso); %>
+  <% const isAdminLogado = typeof usuarioLogado !== 'undefined' && usuarioLogado && usuarioLogado.nivel_acesso === 'ADMIN'; %>
+  <% if (podeCadastrarColab) { %>
+    <div class="page-actions-group">
+      <button type="button" class="btn btn-primary" onclick="abrirModalNovoColaborador()">
+        <i class="fa-solid fa-user-plus"></i> Novo Colaborador / Usuário
+      </button>
+    </div>
+  <% } %>
 </div>
 
 <!-- Cards de Indicadores (KPIs) -->
@@ -134,6 +138,7 @@
         <option value="SOLICITANTE" <%= filtros.nivel_acesso === 'SOLICITANTE' ? 'selected' : '' %>>Solicitante de Balcão</option>
         <option value="ADMIN" <%= filtros.nivel_acesso === 'ADMIN' ? 'selected' : '' %>>Administrador</option>
         <option value="ALMOXARIFE" <%= filtros.nivel_acesso === 'ALMOXARIFE' ? 'selected' : '' %>>Almoxarife / Atendente</option>
+        <option value="OPERADOR_FICHAS" <%= filtros.nivel_acesso === 'OPERADOR_FICHAS' ? 'selected' : '' %>>Operador de Fichas</option>
         <option value="VISUALIZADOR" <%= filtros.nivel_acesso === 'VISUALIZADOR' ? 'selected' : '' %>>Visualizador</option>
       </select>
     </div>
@@ -225,6 +230,10 @@
                     <span class="status-pill in-stock">
                       <i class="fa-solid fa-boxes-packing" style="font-size: 0.7rem;"></i> Almoxarife (Operador)
                     </span>
+                  <% } else if (c.nivel_acesso === 'OPERADOR_FICHAS') { %>
+                    <span class="status-pill" style="background: #CCFBF1; color: #0F766E; border: 1px solid #99F6E4;">
+                      <i class="fa-solid fa-clipboard-check" style="font-size: 0.7rem;"></i> Operador de Fichas
+                    </span>
                   <% } else { %>
                     <span class="status-pill" style="background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD;">
                       <i class="fa-solid fa-eye" style="font-size: 0.7rem;"></i> Visualizador
@@ -275,17 +284,23 @@
                   <a href="/fichas?colaborador_id=<%= c.id %>" class="btn btn-outline btn-sm" title="Ver Ficha Individual de Movimentações" style="color: #4F46E5; border-color: #C7D2FE; font-weight: 700;">
                     <i class="fa-solid fa-file-invoice"></i> Ficha
                   </a>
-                  <button type="button" class="btn btn-outline btn-sm" title="Ver Detalhes e Nível de Acesso" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
-                    <i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i>
-                  </button>
-                  <button type="button" class="btn btn-outline btn-sm" title="Editar Cadastro" onclick="abrirModalEditarColaborador('<%= c.id %>')">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                  </button>
-                  <form action="/colaboradores/<%= c.id %>/excluir" method="POST" style="display: inline;" onsubmit="return confirm('Tem certeza de que deseja remover o cadastro de <%= c.nome %>?')">
-                    <button type="submit" class="btn btn-outline btn-sm" title="Excluir Colaborador" style="color: var(--danger); border-color: #FECACA;">
-                      <i class="fa-solid fa-trash-can"></i>
+                  <% if (isAdminLogado) { %>
+                    <button type="button" class="btn btn-outline btn-sm" title="Ver Detalhes e Nível de Acesso" onclick="abrirModalDetalhesColaborador('<%= c.id %>')">
+                      <i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i>
                     </button>
-                  </form>
+                  <% } %>
+                  <% if (podeCadastrarColab && (isAdminLogado || c.tipo_perfil !== 'SISTEMA')) { %>
+                    <button type="button" class="btn btn-outline btn-sm" title="Editar Cadastro" onclick="abrirModalEditarColaborador('<%= c.id %>')">
+                      <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                  <% } %>
+                  <% if (isAdminLogado) { %>
+                    <form action="/colaboradores/<%= c.id %>/excluir" method="POST" style="display: inline;" onsubmit="return confirm('Tem certeza de que deseja remover o cadastro de <%= c.nome %>?')">
+                      <button type="submit" class="btn btn-outline btn-sm" title="Excluir Colaborador" style="color: var(--danger); border-color: #FECACA;">
+                        <i class="fa-solid fa-trash-can"></i>
+                      </button>
+                    </form>
+                  <% } %>
                 </div>
               </td>
 
@@ -339,9 +354,15 @@
           <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; border-top: 1px solid var(--border-light); font-size: 0.78rem;">
             <div>
               <% if (c.tipo_perfil === 'SISTEMA') { %>
-                <span class="status-pill" style="background: #EDE9FE; color: #6D28D9; border: 1px solid #DDD6FE; font-size: 0.72rem;">
-                  <i class="fa-solid fa-id-card-clip"></i> <%= c.nivel_acesso %>
-                </span>
+                <% if (c.nivel_acesso === 'OPERADOR_FICHAS') { %>
+                  <span class="status-pill" style="background: #CCFBF1; color: #0F766E; border: 1px solid #99F6E4; font-size: 0.72rem;">
+                    <i class="fa-solid fa-clipboard-check"></i> Operador de Fichas
+                  </span>
+                <% } else { %>
+                  <span class="status-pill" style="background: #EDE9FE; color: #6D28D9; border: 1px solid #DDD6FE; font-size: 0.72rem;">
+                    <i class="fa-solid fa-id-card-clip"></i> <%= c.nivel_acesso %>
+                  </span>
+                <% } %>
               <% } else { %>
                 <span class="status-pill" style="background: #FEF3C7; color: #B45309; border: 1px solid #FCD34D; font-size: 0.72rem;">
                   <i class="fa-solid fa-wrench"></i> Técnico (Balcão)
@@ -460,6 +481,7 @@
             <select name="nivel_acesso" id="select-nivel-acesso" class="form-control" style="font-weight: 600;">
               <option value="ALMOXARIFE">📦 Almoxarife / Atendente (Lança no Balcão, Movimentações e Inventário)</option>
               <option value="ADMIN">👑 Administrador Geral (Controle total de configurações, dados e equipe)</option>
+              <option value="OPERADOR_FICHAS">📋 Operador de Fichas (Visualização e Lançamento em Fichas de Colaboradores)</option>
               <option value="VISUALIZADOR">👁️ Visualizador / Auditor (Apenas consulta de estoque e relatórios)</option>
             </select>
             <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;">
@@ -724,6 +746,7 @@
           <select name="nivel_acesso" id="form-colab-nivel-acesso" class="form-control" style="margin-bottom: 0.85rem;">
             <option value="ALMOXARIFE" selected>Almoxarife / Atendente (Balcão, Movimentações e Itens)</option>
             <option value="ADMIN">Administrador (Controle Total do Sistema)</option>
+            <option value="OPERADOR_FICHAS">Operador de Fichas (Visualização e Lançamento em Fichas)</option>
             <option value="VISUALIZADOR">Visualizador (Apenas Leitura e Relatórios)</option>
           </select>
 
@@ -880,9 +903,21 @@
     if (c.tipo_perfil === 'SISTEMA') {
       radioSistema.checked = true;
       badgePerfil.className = 'status-pill';
-      badgePerfil.style.background = '#EDE9FE';
-      badgePerfil.style.color = '#6D28D9';
-      badgePerfil.innerHTML = `<i class="fa-solid fa-id-card-clip"></i> ${c.nivel_acesso || 'SISTEMA'}`;
+      const nomesNivel = {
+        ADMIN: 'Administrador',
+        ALMOXARIFE: 'Almoxarife',
+        OPERADOR_FICHAS: 'Operador de Fichas',
+        VISUALIZADOR: 'Visualizador'
+      };
+      if (c.nivel_acesso === 'OPERADOR_FICHAS') {
+        badgePerfil.style.background = '#CCFBF1';
+        badgePerfil.style.color = '#0F766E';
+        badgePerfil.innerHTML = `<i class="fa-solid fa-clipboard-check"></i> ${nomesNivel[c.nivel_acesso]}`;
+      } else {
+        badgePerfil.style.background = '#EDE9FE';
+        badgePerfil.style.color = '#6D28D9';
+        badgePerfil.innerHTML = `<i class="fa-solid fa-id-card-clip"></i> ${nomesNivel[c.nivel_acesso] || c.nivel_acesso || 'SISTEMA'}`;
+      }
       alternarCamposNivelAcesso('SISTEMA');
       if (selectNivel) selectNivel.value = c.nivel_acesso || 'ALMOXARIFE';
       if (document.getElementById('modal-acesso-login')) document.getElementById('modal-acesso-login').value = c.login || '';

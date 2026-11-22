@@ -95,7 +95,7 @@ function gerarSqlRecriacao() {
   sql += `    email VARCHAR(150),\n`;
   sql += `    telefone VARCHAR(50),\n`;
   sql += `    tipo_perfil VARCHAR(50) NOT NULL DEFAULT 'TECNICO' CHECK (tipo_perfil IN ('TECNICO', 'SISTEMA')),\n`;
-  sql += `    nivel_acesso VARCHAR(50) NOT NULL DEFAULT 'SOLICITANTE' CHECK (nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'VISUALIZADOR')),\n`;
+  sql += `    nivel_acesso VARCHAR(50) NOT NULL DEFAULT 'SOLICITANTE' CHECK (nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS', 'VISUALIZADOR')),\n`;
   sql += `    status VARCHAR(20) NOT NULL DEFAULT 'ATIVO' CHECK (status IN ('ATIVO', 'INATIVO')),\n`;
   sql += `    login VARCHAR(100) UNIQUE,\n`;
   sql += `    senha_hash VARCHAR(255),\n`;

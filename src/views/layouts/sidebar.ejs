@@ -51,8 +51,14 @@
     const iniciaisUsuario = userObj && userObj.nome
       ? userObj.nome.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()
       : 'US';
+    const nomesNivelSidebar = {
+      ADMIN: 'Administrador',
+      ALMOXARIFE: 'Almoxarife',
+      OPERADOR_FICHAS: 'Operador de Fichas',
+      VISUALIZADOR: 'Visualizador'
+    };
     const nivelLabel = userObj
-      ? (userObj.nivel_acesso === 'ADMIN' ? 'Administrador' : (userObj.nivel_acesso === 'ALMOXARIFE' ? 'Almoxarife' : 'Visualizador'))
+      ? (nomesNivelSidebar[userObj.nivel_acesso] || userObj.nivel_acesso || 'Operador')
       : 'Não autenticado';
     const subtituloUsuario = (userObj && userObj.cargo) ? `${userObj.cargo} • ${nivelLabel}` : nivelLabel;
   %>

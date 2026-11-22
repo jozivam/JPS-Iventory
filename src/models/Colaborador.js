@@ -6,6 +6,8 @@ const isVercel = !!process.env.VERCEL;
 const isSupabaseDriver = process.env.DB_DRIVER === 'supabase';
 const useSupabase = isVercel || isSupabaseDriver;
 
+const NIVEIS_SISTEMA_VALIDOS = ['ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS', 'VISUALIZADOR'];
+
 class Colaborador {
   /**
    * Lista todos os colaboradores com filtros opcionais
@@ -436,7 +438,7 @@ class Colaborador {
     const perfilFinal = tipo_perfil === 'SISTEMA' ? 'SISTEMA' : 'TECNICO';
     let nivelFinal = 'SOLICITANTE';
     if (perfilFinal === 'SISTEMA') {
-      nivelFinal = ['ADMIN', 'ALMOXARIFE', 'VISUALIZADOR'].includes(nivel_acesso) ? nivel_acesso : 'ALMOXARIFE';
+      nivelFinal = NIVEIS_SISTEMA_VALIDOS.includes(nivel_acesso) ? nivel_acesso : 'ALMOXARIFE';
     }
 
     // Gera matrícula automática caso não informada
@@ -547,7 +549,7 @@ class Colaborador {
     const perfilFinal = tipo_perfil === 'SISTEMA' ? 'SISTEMA' : 'TECNICO';
     let nivelFinal = 'SOLICITANTE';
     if (perfilFinal === 'SISTEMA') {
-      nivelFinal = ['ADMIN', 'ALMOXARIFE', 'VISUALIZADOR'].includes(nivel_acesso) ? nivel_acesso : 'ALMOXARIFE';
+      nivelFinal = NIVEIS_SISTEMA_VALIDOS.includes(nivel_acesso) ? nivel_acesso : 'ALMOXARIFE';
     }
 
     let loginFinal = null;
@@ -637,7 +639,7 @@ class Colaborador {
     const perfilFinal = tipo_perfil === 'SISTEMA' ? 'SISTEMA' : 'TECNICO';
     let nivelFinal = 'SOLICITANTE';
     if (perfilFinal === 'SISTEMA') {
-      nivelFinal = ['ADMIN', 'ALMOXARIFE', 'VISUALIZADOR'].includes(nivel_acesso) ? nivel_acesso : 'ALMOXARIFE';
+      nivelFinal = NIVEIS_SISTEMA_VALIDOS.includes(nivel_acesso) ? nivel_acesso : 'ALMOXARIFE';
     }
 
     let loginFinal = colabAtual.login;

@@ -63,7 +63,7 @@ function initDatabase() {
       email TEXT,
       telefone TEXT,
       tipo_perfil TEXT NOT NULL DEFAULT 'TECNICO' CHECK(tipo_perfil IN ('TECNICO', 'SISTEMA')),
-      nivel_acesso TEXT NOT NULL DEFAULT 'SOLICITANTE' CHECK(nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'VISUALIZADOR')),
+      nivel_acesso TEXT NOT NULL DEFAULT 'SOLICITANTE' CHECK(nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS', 'VISUALIZADOR')),
       status TEXT NOT NULL DEFAULT 'ATIVO' CHECK(status IN ('ATIVO', 'INATIVO')),
       login TEXT UNIQUE,
       senha_hash TEXT,
@@ -148,6 +148,42 @@ function initDatabase() {
       db.exec(`ALTER TABLE colaboradores ADD COLUMN ${col.nome} ${col.tipo}`);
     }
   });
+
+  // Migração segura para atualizar CHECK de nivel_acesso em colaboradores (adiciona OPERADOR_FICHAS)
+  const colabSql = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'colaboradores'").get()?.sql || '';
+  if (colabSql && !colabSql.includes('OPERADOR_FICHAS')) {
+    db.exec(`
+      PRAGMA foreign_keys = OFF;
+      CREATE TABLE colaboradores_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        matricula TEXT UNIQUE,
+        cargo TEXT,
+        departamento TEXT,
+        email TEXT,
+        telefone TEXT,
+        tipo_perfil TEXT NOT NULL DEFAULT 'TECNICO' CHECK(tipo_perfil IN ('TECNICO', 'SISTEMA')),
+        nivel_acesso TEXT NOT NULL DEFAULT 'SOLICITANTE' CHECK(nivel_acesso IN ('SOLICITANTE', 'ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS', 'VISUALIZADOR')),
+        status TEXT NOT NULL DEFAULT 'ATIVO' CHECK(status IN ('ATIVO', 'INATIVO')),
+        login TEXT UNIQUE,
+        senha_hash TEXT,
+        observacoes TEXT,
+        criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
+        atualizado_em DATETIME DEFAULT (datetime('now', 'localtime'))
+      );
+      INSERT INTO colaboradores_new (
+        id, nome, matricula, cargo, departamento, email, telefone,
+        tipo_perfil, nivel_acesso, status, login, senha_hash, observacoes, criado_em, atualizado_em
+      )
+      SELECT
+        id, nome, matricula, cargo, departamento, email, telefone,
+        tipo_perfil, nivel_acesso, status, login, senha_hash, observacoes, criado_em, atualizado_em
+      FROM colaboradores;
+      DROP TABLE colaboradores;
+      ALTER TABLE colaboradores_new RENAME TO colaboradores;
+      PRAGMA foreign_keys = ON;
+    `);
+  }
 
   // Garante que o administrador Jozivam Silva exista se a tabela de colaboradores estiver vazia
   const countColab = db.prepare('SELECT COUNT(*) as total FROM colaboradores').get();
