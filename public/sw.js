@@ -3,8 +3,8 @@
  * Cacheia assets, fontes, ícones e telas principais para funcionamento rápido e offline.
  */
 
-const STATIC_CACHE = 'jps-almox-static-v3';
-const PAGES_CACHE = 'jps-almox-pages-v3';
+const STATIC_CACHE = 'jps-almox-static-v4';
+const PAGES_CACHE = 'jps-almox-pages-v4';
 
 const CORE_ASSETS = [
   '/css/style.css',
@@ -21,6 +21,7 @@ const CORE_PAGES = [
   '/movimentacoes',
   '/colaboradores',
   '/fichas',
+  '/relatorios',
   '/produtos/novo'
 ];
 
@@ -103,7 +104,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.pathname.startsWith('/api/offline/')) return;
   if (url.pathname === '/login' || url.pathname === '/logout') return;
-  if (url.pathname.includes('/exportar/excel') || url.pathname.includes('/modelo/excel')) return;
+  if (url.pathname.includes('/exportar/excel') || url.pathname.includes('/modelo/excel') || url.pathname.startsWith('/relatorios/exportar/') || url.pathname === '/relatorios/pdf') return;
 
   // 1. Assets Estáticos + Fontes + Ícones -> Cache-First com atualização em segundo plano
   if (isStaticAsset(url)) {

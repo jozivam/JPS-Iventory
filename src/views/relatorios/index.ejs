@@ -1,0 +1,770 @@
+<%- include('../layouts/header') %>
+
+<style>
+  .rel-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .rel-type-card {
+    background: #ffffff;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    text-decoration: none;
+    color: var(--text-main);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    transition: var(--transition);
+    cursor: pointer;
+  }
+
+  .rel-type-card:hover {
+    border-color: var(--primary);
+    background: #f8fafc;
+    transform: translateY(-1px);
+  }
+
+  .rel-type-card.ativo {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.14);
+  }
+
+  .rel-type-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.95rem;
+  }
+
+  .rel-type-card.ativo .rel-type-icon {
+    background: var(--primary);
+    color: #ffffff;
+  }
+
+  .rel-type-title {
+    font-size: 0.84rem;
+    font-weight: 800;
+    line-height: 1.25;
+    color: var(--text-main);
+  }
+
+  .rel-type-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+    line-height: 1.3;
+  }
+
+  .rel-dual-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  @media (max-width: 768px) {
+    .rel-dual-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<!-- Cabeçalho da Central de Relatórios -->
+<div class="page-header-flex">
+  <div class="page-title-wrap">
+    <h2>Central de Relatórios</h2>
+    <p>Gere relatórios gerenciais e operacionais precisos com exportação direta em <strong>PDF</strong> ou <strong>Excel (.xlsx)</strong>.</p>
+  </div>
+
+  <div class="page-actions-group" style="flex-wrap: wrap;">
+    <a
+      href="/relatorios/pdf?<%= queryStringFiltros %>&auto_print=1"
+      target="_blank"
+      class="btn btn-primary"
+      style="background: #DC2626; border-color: #DC2626;"
+      title="Abrir documento formatado e salvar em PDF"
+    >
+      <i class="fa-solid fa-file-pdf"></i> Exportar PDF
+    </a>
+
+    <a
+      href="/relatorios/exportar/excel?<%= queryStringFiltros %>"
+      class="btn btn-primary"
+      style="background: #059669; border-color: #059669;"
+      title="Baixar planilha Excel (.xlsx) completa com os filtros atuais"
+    >
+      <i class="fa-solid fa-file-excel"></i> Exportar Excel (.xlsx)
+    </a>
+
+    <a
+      href="/relatorios/pdf?<%= queryStringFiltros %>"
+      target="_blank"
+      class="btn btn-outline"
+      title="Visualizar prévia limpa de impressão A4"
+    >
+      <i class="fa-solid fa-eye"></i> Prévia A4
+    </a>
+  </div>
+</div>
+
+<!-- Seletor de Tipo de Relatório -->
+<div class="rel-type-grid">
+  <%
+    const labelsCurto = {
+      geral: { titulo: 'Resumo Geral', desc: 'KPIs, top itens, equipe e categorias' },
+      movimentacoes: { titulo: 'Movimentações', desc: 'Extrato completo por período e tipo' },
+      colaboradores: { titulo: 'Por Colaborador', desc: 'Consumo, trocas e cautelas por setor' },
+      emprestimos: { titulo: 'Cautelas / Empréstimos', desc: 'Ferramentas em posse e dias decorridos' },
+      inventario: { titulo: 'Posição de Inventário', desc: 'Saldos, mínimos, TAGs e giro no período' },
+      reposicao: { titulo: 'Alerta de Reposição', desc: 'Itens zerados/baixos e sugestão de compra' }
+    };
+  %>
+  <% tiposDisponiveis.forEach(t => {
+    const info = labelsCurto[t.id] || { titulo: t.titulo, desc: t.subtitulo };
+    const linkParams = new URLSearchParams();
+    linkParams.set('tipo_relatorio', t.id);
+    if (filtros.periodo) linkParams.set('periodo', filtros.periodo);
+    if (filtros.data_inicio) linkParams.set('data_inicio', filtros.data_inicio);
+    if (filtros.data_fim) linkParams.set('data_fim', filtros.data_fim);
+  %>
+    <a href="/relatorios?<%= linkParams.toString() %>" class="rel-type-card <%= tipoRelatorio === t.id ? 'ativo' : '' %>">
+      <div class="rel-type-icon">
+        <i class="fa-solid <%= t.icone %>"></i>
+      </div>
+      <div>
+        <div class="rel-type-title"><%= info.titulo %></div>
+        <div class="rel-type-sub"><%= info.desc %></div>
+      </div>
+    </a>
+  <% }) %>
+</div>
+
+<!-- Painel de Filtros Avançados -->
+<div class="table-card" style="padding: 1.15rem 1.25rem; margin-bottom: 1.25rem;">
+  <form id="form-filtros-relatorio" action="/relatorios" method="GET" style="display: flex; flex-direction: column; gap: 0.9rem; margin: 0;">
+    <input type="hidden" name="tipo_relatorio" value="<%= tipoRelatorio %>">
+    <input type="hidden" name="periodo" id="rel-input-periodo" value="<%= filtros.periodo %>">
+
+    <!-- Linha 1: Atalhos Rápidos de Período + Info do Relatório -->
+    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.65rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-light);">
+      <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+        <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-right: 0.2rem;">
+          <i class="fa-regular fa-calendar-days"></i> Período:
+        </span>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === 'hoje' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodoRel('hoje')">Hoje</button>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === '7dias' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodoRel('7dias')">Últimos 7 dias</button>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === '15dias' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodoRel('15dias')">15 dias</button>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === '30dias' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodoRel('30dias')">30 dias</button>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === 'mes' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodoRel('mes')">Este Mês</button>
+        <button type="button" class="btn btn-sm <%= filtros.periodo === 'todos' ? 'btn-primary' : 'btn-outline' %>" onclick="aplicarPeriodoRel('todos')">Todo Período</button>
+      </div>
+
+      <div style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">
+        <i class="fa-regular fa-clock"></i> Intervalo ativo: <strong style="color: var(--text-main);"><%= periodoDescricao %></strong>
+      </div>
+    </div>
+
+    <!-- Linha 2: Datas e Filtros Contextuais -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.65rem; align-items: end;">
+      <div>
+        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Data Inicial</label>
+        <input type="date" name="data_inicio" id="rel-data-inicio" class="form-control" style="height: 38px;" value="<%= filtros.data_inicio %>" onchange="limparAtalhoPeriodoRel()">
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Data Final</label>
+        <input type="date" name="data_fim" id="rel-data-fim" class="form-control" style="height: 38px;" value="<%= filtros.data_fim %>" onchange="limparAtalhoPeriodoRel()">
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Categoria</label>
+        <select name="categoria" class="form-control" style="height: 38px;">
+          <option value="">Todas as Categorias</option>
+          <% opcoesFiltro.categorias.forEach(cat => { %>
+            <option value="<%= cat %>" <%= filtros.categoria === cat ? 'selected' : '' %>><%= cat %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <% if (tipoRelatorio === 'movimentacoes' || tipoRelatorio === 'geral') { %>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Tipo de Operação</label>
+          <select name="tipo_mov" class="form-control" style="height: 38px;">
+            <option value="">Todas as Operações</option>
+            <option value="ENTRADA" <%= filtros.tipo_mov === 'ENTRADA' ? 'selected' : '' %>>Entrada</option>
+            <option value="SAIDA" <%= filtros.tipo_mov === 'SAIDA' ? 'selected' : '' %>>Saída</option>
+            <option value="EMPRESTIMO" <%= filtros.tipo_mov === 'EMPRESTIMO' ? 'selected' : '' %>>Empréstimo</option>
+            <option value="DEVOLUCAO" <%= filtros.tipo_mov === 'DEVOLUCAO' ? 'selected' : '' %>>Devolução</option>
+            <option value="TROCA" <%= filtros.tipo_mov === 'TROCA' ? 'selected' : '' %>>Troca</option>
+          </select>
+        </div>
+      <% } %>
+
+      <% if (['geral', 'movimentacoes', 'colaboradores', 'emprestimos'].includes(tipoRelatorio)) { %>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Colaborador</label>
+          <select name="colaborador_id" class="form-control" style="height: 38px;">
+            <option value="">Todos os Colaboradores</option>
+            <% opcoesFiltro.colaboradores.forEach(c => { %>
+              <option value="<%= c.id %>" <%= String(filtros.colaborador_id) === String(c.id) ? 'selected' : '' %>>
+                <%= c.nome %><%= c.matricula ? ` (${c.matricula})` : '' %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Departamento / Setor</label>
+          <select name="departamento" class="form-control" style="height: 38px;">
+            <option value="">Todos os Setores</option>
+            <% opcoesFiltro.departamentos.forEach(dep => { %>
+              <option value="<%= dep %>" <%= filtros.departamento === dep ? 'selected' : '' %>><%= dep %></option>
+            <% }) %>
+          </select>
+        </div>
+      <% } %>
+
+      <% if (tipoRelatorio === 'emprestimos') { %>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Status da Cautela</label>
+          <select name="status_emprestimo" class="form-control" style="height: 38px;">
+            <option value="PENDENTE" <%= filtros.status_emprestimo === 'PENDENTE' ? 'selected' : '' %>>Em Aberto (Pendentes)</option>
+            <option value="DEVOLVIDO" <%= filtros.status_emprestimo === 'DEVOLVIDO' ? 'selected' : '' %>>Devolvidos</option>
+            <option value="TODOS" <%= filtros.status_emprestimo === 'TODOS' ? 'selected' : '' %>>Todos</option>
+          </select>
+        </div>
+      <% } %>
+
+      <% if (tipoRelatorio === 'inventario') { %>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Status de Estoque</label>
+          <select name="status_estoque" class="form-control" style="height: 38px;">
+            <option value="">Todos os Status</option>
+            <option value="NORMAL" <%= filtros.status_estoque === 'NORMAL' ? 'selected' : '' %>>Em Estoque (Normal)</option>
+            <option value="BAIXO" <%= filtros.status_estoque === 'BAIXO' ? 'selected' : '' %>>Estoque Baixo</option>
+            <option value="CRITICO" <%= filtros.status_estoque === 'CRITICO' ? 'selected' : '' %>>Sem Estoque (Zerado)</option>
+          </select>
+        </div>
+      <% } %>
+
+      <% if (tipoRelatorio === 'inventario' || tipoRelatorio === 'reposicao') { %>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Condição</label>
+          <select name="condicao" class="form-control" style="height: 38px;">
+            <option value="">Todas as Condições</option>
+            <% opcoesFiltro.condicoes.forEach(cond => { %>
+              <option value="<%= cond %>" <%= filtros.condicao === cond ? 'selected' : '' %>><%= cond %></option>
+            <% }) %>
+          </select>
+        </div>
+      <% } %>
+
+      <div>
+        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Busca Livre</label>
+        <input type="text" name="busca" class="form-control" style="height: 38px;" placeholder="SKU, item, O.S., motivo..." value="<%= filtros.busca %>">
+      </div>
+
+      <div style="display: flex; gap: 0.4rem;">
+        <button type="submit" class="btn btn-primary" style="height: 38px; flex: 1;">
+          <i class="fa-solid fa-magnifying-glass-chart"></i> Gerar Relatório
+        </button>
+        <a href="/relatorios?tipo_relatorio=<%= tipoRelatorio %>" class="btn btn-outline" style="height: 38px;" title="Limpar filtros">
+          <i class="fa-solid fa-rotate-left"></i>
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- KPIs Consolidados -->
+<div class="balcao-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 1.25rem;">
+  <div class="table-card" style="padding: 1rem 1.15rem; border-left: 4px solid var(--primary);">
+    <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Inventário Filtrado</div>
+    <div style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">
+      <%= kpisInventario.totalProdutos %> <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">itens</span>
+    </div>
+    <div style="font-size: 0.74rem; color: var(--text-dim);"><%= kpisInventario.totalUnidades %> un. físicas</div>
+  </div>
+
+  <div class="table-card" style="padding: 1rem 1.15rem; border-left: 4px solid #10B981;">
+    <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Entradas no Período</div>
+    <div style="font-size: 1.35rem; font-weight: 800; color: #047857; margin-top: 2px;">
+      +<%= totaisMov.entradasQtd %> <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">un.</span>
+    </div>
+    <div style="font-size: 0.74rem; color: var(--text-dim);"><%= totaisMov.entradasCount %> lançamento(s)</div>
+  </div>
+
+  <div class="table-card" style="padding: 1rem 1.15rem; border-left: 4px solid #EF4444;">
+    <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Saídas & Trocas</div>
+    <div style="font-size: 1.35rem; font-weight: 800; color: #B91C1C; margin-top: 2px;">
+      -<%= totaisMov.saidasQtd + totaisMov.trocasQtd %> <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">un.</span>
+    </div>
+    <div style="font-size: 0.74rem; color: var(--text-dim);"><%= totaisMov.saidasCount %> saída(s) • <%= totaisMov.trocasCount %> troca(s)</div>
+  </div>
+
+  <div class="table-card" style="padding: 1rem 1.15rem; border-left: 4px solid #F59E0B;">
+    <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Cautelas em Aberto</div>
+    <div style="font-size: 1.35rem; font-weight: 800; color: #B45309; margin-top: 2px;">
+      <%= totalEmprestimosPendentesGlobalQtd %> <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">un.</span>
+    </div>
+    <div style="font-size: 0.74rem; color: var(--text-dim);"><%= totalEmprestimosPendentesGlobalCount %> empréstimo(s) pendente(s)</div>
+  </div>
+
+  <div class="table-card" style="padding: 1rem 1.15rem; border-left: 4px solid #8B5CF6;">
+    <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Alerta de Estoque</div>
+    <div style="font-size: 1.35rem; font-weight: 800; color: #6D28D9; margin-top: 2px;">
+      <%= kpisInventario.zerado + kpisInventario.baixo %> <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">itens</span>
+    </div>
+    <div style="font-size: 0.74rem; color: var(--text-dim);"><%= kpisInventario.zerado %> zerado(s) • <%= kpisInventario.baixo %> baixo(s)</div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- CONTEÚDO DINÂMICO CONFORME O TIPO DE RELATÓRIO SELECIONADO                -->
+<!-- ========================================================================= -->
+
+<% if (tipoRelatorio === 'geral') { %>
+
+  <div class="rel-dual-grid">
+    <!-- Top Itens Mais Retirados no Período -->
+    <div class="table-card" style="padding: 0; overflow: hidden;">
+      <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="font-size: 0.98rem; font-weight: 800; margin: 0; color: var(--text-main);">
+          <i class="fa-solid fa-fire" style="color: #EF4444; margin-right: 6px;"></i> Itens Mais Movimentados no Período
+        </h3>
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Top <%= topProdutosConsumo.length %></span>
+      </div>
+      <div class="table-responsive">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th style="text-align: center;">Saídas/Trocas</th>
+              <th style="text-align: center;">Empréstimos</th>
+              <th style="text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (topProdutosConsumo.length > 0) { %>
+              <% topProdutosConsumo.forEach((p, idx) => { %>
+                <tr>
+                  <td>
+                    <div style="font-weight: 700; font-size: 0.86rem; color: var(--text-main);"><%= idx + 1 %>. <%= p.nome %></div>
+                    <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);"><%= p.sku %> • <%= p.categoria %></div>
+                  </td>
+                  <td style="text-align: center; font-weight: 700; color: #B91C1C;"><%= p.totalConsumo %></td>
+                  <td style="text-align: center; font-weight: 700; color: #B45309;"><%= p.emprestimos %></td>
+                  <td style="text-align: right; font-weight: 800; color: var(--text-main);"><%= p.totalConsumo + p.emprestimos %> <small style="color: var(--text-dim);"><%= p.unidade %></small></td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhuma saída ou empréstimo registrado no período selecionado.</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Consumo por Colaborador (Top 10) -->
+    <div class="table-card" style="padding: 0; overflow: hidden;">
+      <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="font-size: 0.98rem; font-weight: 800; margin: 0; color: var(--text-main);">
+          <i class="fa-solid fa-users" style="color: var(--primary); margin-right: 6px;"></i> Retiradas por Colaborador
+        </h3>
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;"><%= resumoColaboradores.length %> pessoa(s)</span>
+      </div>
+      <div class="table-responsive">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>Colaborador / Setor</th>
+              <th style="text-align: center;">Consumo</th>
+              <th style="text-align: center;">Cautelas Abertas</th>
+              <th style="text-align: right;">Lanç.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (resumoColaboradores.length > 0) { %>
+              <% resumoColaboradores.slice(0, 12).forEach(c => { %>
+                <tr>
+                  <td>
+                    <div style="font-weight: 700; font-size: 0.86rem; color: var(--text-main);"><%= c.nome %></div>
+                    <div style="font-size: 0.72rem; color: var(--text-dim);"><%= c.departamento %> • <%= c.matricula %></div>
+                  </td>
+                  <td style="text-align: center; font-weight: 700; color: #B91C1C;"><%= c.saidasQtd + c.trocasQtd %></td>
+                  <td style="text-align: center;">
+                    <% if (c.cautelasAbertas > 0) { %>
+                      <span class="status-pill low-stock" style="font-size: 0.72rem; padding: 2px 8px;"><%= c.cautelasAbertas %> un.</span>
+                    <% } else { %>
+                      <span style="color: var(--text-dim); font-size: 0.8rem;">0</span>
+                    <% } %>
+                  </td>
+                  <td style="text-align: right; font-weight: 700;"><%= c.totalLancamentos %></td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhuma movimentação vinculada a colaboradores no período.</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estoque Consolidado por Categoria -->
+  <div class="table-card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light);">
+      <h3 style="font-size: 0.98rem; font-weight: 800; margin: 0; color: var(--text-main);">
+        <i class="fa-solid fa-layer-group" style="color: var(--teal); margin-right: 6px;"></i> Consolidado por Categoria de Estoque
+      </h3>
+    </div>
+    <div class="table-responsive">
+      <table class="clean-table">
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th style="text-align: center;">Itens Cadastrados</th>
+            <th style="text-align: center;">Unidades em Estoque</th>
+            <th style="text-align: center;">Saídas no Período</th>
+            <th style="text-align: center;">Estoque Baixo</th>
+            <th style="text-align: center;">Zerados</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% resumoCategorias.forEach(c => { %>
+            <tr>
+              <td style="font-weight: 700; color: var(--text-main);"><%= c.categoria %></td>
+              <td style="text-align: center;"><%= c.totalItens %></td>
+              <td style="text-align: center; font-weight: 800; color: var(--primary);"><%= c.totalUnidades %></td>
+              <td style="text-align: center; font-weight: 700; color: #B91C1C;"><%= c.saidasPeriodo %></td>
+              <td style="text-align: center;"><%= c.baixo %></td>
+              <td style="text-align: center; color: <%= c.zerados > 0 ? 'var(--danger)' : 'var(--text-dim)' %>; font-weight: 700;"><%= c.zerados %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<% } else if (tipoRelatorio === 'movimentacoes') { %>
+
+  <div class="table-card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+      <h3 style="font-size: 1rem; font-weight: 800; margin: 0;">Extrato Analítico de Movimentações (<%= movimentacoes.length %> registros)</h3>
+      <div style="font-size: 0.78rem; color: var(--text-muted); display: flex; gap: 0.85rem; flex-wrap: wrap;">
+        <span>Entradas: <strong style="color:#047857;">+<%= totaisMov.entradasQtd %></strong></span>
+        <span>Saídas: <strong style="color:#B91C1C;">-<%= totaisMov.saidasQtd %></strong></span>
+        <span>Empréstimos: <strong style="color:#B45309;"><%= totaisMov.emprestimosQtd %></strong></span>
+        <span>Devoluções: <strong style="color:#0E7490;">+<%= totaisMov.devolucoesQtd %></strong></span>
+        <span>Trocas: <strong style="color:#6D28D9;"><%= totaisMov.trocasQtd %></strong></span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="clean-table">
+        <thead>
+          <tr>
+            <th>Código / Data</th>
+            <th>Tipo</th>
+            <th>Produto / SKU</th>
+            <th style="text-align: center;">Qtd</th>
+            <th>Colaborador / Setor</th>
+            <th>Atendente</th>
+            <th>Doc / Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (movimentacoes.length > 0) { %>
+            <% movimentacoes.forEach(m => { %>
+              <tr>
+                <td>
+                  <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.78rem;">MOV-<%= String(m.id).padStart(4, '0') %></div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);"><%= m.data_br %></div>
+                </td>
+                <td>
+                  <span class="status-pill <%= m.tipo === 'ENTRADA' ? 'in-stock' : (m.tipo === 'SAIDA' ? 'out-of-stock' : 'low-stock') %>" style="font-size: 0.72rem;">
+                    <%= m.tipo_label %>
+                  </span>
+                </td>
+                <td>
+                  <div style="font-weight: 700; font-size: 0.86rem;"><%= m.produto_nome %></div>
+                  <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);"><%= m.produto_sku %> • <%= m.produto_categoria %></div>
+                </td>
+                <td style="text-align: center; font-weight: 800; color: <%= (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO') ? '#047857' : '#B91C1C' %>;">
+                  <%= (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO') ? '+' : '-' %><%= m.quantidade %> <small style="font-weight: 500; color: var(--text-dim);"><%= m.produto_unidade %></small>
+                </td>
+                <td>
+                  <div style="font-weight: 600; font-size: 0.84rem;"><%= m.colaborador_nome_exibicao %></div>
+                  <div style="font-size: 0.72rem; color: var(--text-dim);"><%= m.colaborador_departamento %></div>
+                </td>
+                <td style="font-size: 0.82rem; color: var(--text-body);"><%= m.responsavel || '-' %></td>
+                <td style="font-size: 0.78rem; color: var(--text-muted); max-width: 240px;">
+                  <% if (m.documento_ref) { %><span style="font-family: var(--font-mono); font-weight: 700; color: var(--text-main);"><%= m.documento_ref %></span><br><% } %>
+                  <%= m.motivo || '-' %>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">Nenhuma movimentação encontrada para os filtros selecionados.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<% } else if (tipoRelatorio === 'colaboradores') { %>
+
+  <div class="table-card" style="padding: 0; overflow: hidden; margin-bottom: 1.25rem;">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light);">
+      <h3 style="font-size: 1rem; font-weight: 800; margin: 0;">Consolidado por Colaborador (<%= resumoColaboradores.length %>)</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="clean-table">
+        <thead>
+          <tr>
+            <th>Colaborador</th>
+            <th>Cargo / Setor</th>
+            <th style="text-align: center;">Saídas</th>
+            <th style="text-align: center;">Trocas</th>
+            <th style="text-align: center;">Empréstimos</th>
+            <th style="text-align: center;">Devoluções</th>
+            <th style="text-align: center;">Cautelas Abertas</th>
+            <th style="text-align: right;">Total Retirado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (resumoColaboradores.length > 0) { %>
+            <% resumoColaboradores.forEach(c => { %>
+              <tr>
+                <td>
+                  <div style="font-weight: 700;"><%= c.nome %></div>
+                  <div style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-dim);"><%= c.matricula %></div>
+                </td>
+                <td>
+                  <div style="font-size: 0.84rem; font-weight: 600;"><%= c.cargo %></div>
+                  <div style="font-size: 0.73rem; color: var(--text-muted);"><%= c.departamento %></div>
+                </td>
+                <td style="text-align: center; font-weight: 700; color: #B91C1C;"><%= c.saidasQtd %></td>
+                <td style="text-align: center; font-weight: 700; color: #6D28D9;"><%= c.trocasQtd %></td>
+                <td style="text-align: center; font-weight: 700; color: #B45309;"><%= c.emprestimosQtd %></td>
+                <td style="text-align: center; font-weight: 700; color: #0E7490;"><%= c.devolucoesQtd %></td>
+                <td style="text-align: center;">
+                  <% if (c.cautelasAbertas > 0) { %>
+                    <span class="status-pill low-stock" style="font-size: 0.72rem;"><%= c.cautelasAbertas %> un.</span>
+                  <% } else { %>
+                    <span style="color: var(--text-dim);">0</span>
+                  <% } %>
+                </td>
+                <td style="text-align: right; font-weight: 800; color: var(--text-main);"><%= c.totalRetirado %> un.</td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">Nenhum lançamento encontrado para colaboradores neste período.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<% } else if (tipoRelatorio === 'emprestimos') { %>
+
+  <div class="table-card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light);">
+      <h3 style="font-size: 1rem; font-weight: 800; margin: 0;">Cautelas e Empréstimos de Ferramentas (<%= emprestimos.length %> registros)</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="clean-table">
+        <thead>
+          <tr>
+            <th>Código / Data</th>
+            <th>Ferramenta / TAG</th>
+            <th style="text-align: center;">Qtd</th>
+            <th>Colaborador / Setor</th>
+            <th style="text-align: center;">Tempo em Posse</th>
+            <th>Status</th>
+            <th>Atendente / Doc</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (emprestimos.length > 0) { %>
+            <% emprestimos.forEach(e => {
+              const isDevolvido = e.status_emprestimo === 'DEVOLVIDO' || !!e.data_devolucao;
+            %>
+              <tr>
+                <td>
+                  <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.78rem;">MOV-<%= String(e.id).padStart(4, '0') %></div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);"><%= e.data_br %></div>
+                </td>
+                <td>
+                  <div style="font-weight: 700; font-size: 0.86rem;"><%= e.produto_nome %></div>
+                  <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);">
+                    <%= e.produto_sku %><%= e.produto_tag ? ` • TAG: ${e.produto_tag}` : '' %><%= e.produto_patrimonio ? ` • PAT: ${e.produto_patrimonio}` : '' %>
+                  </div>
+                </td>
+                <td style="text-align: center; font-weight: 800;"><%= e.quantidade %> <small style="color: var(--text-dim);"><%= e.produto_unidade %></small></td>
+                <td>
+                  <div style="font-weight: 700; font-size: 0.85rem;"><%= e.colaborador_nome_exibicao %></div>
+                  <div style="font-size: 0.72rem; color: var(--text-dim);"><%= e.colaborador_departamento %></div>
+                </td>
+                <td style="text-align: center; font-weight: 700; color: <%= (!isDevolvido && e.dias_decorridos >= 7) ? 'var(--danger)' : 'var(--text-body)' %>;">
+                  <%= isDevolvido ? 'Encerrado' : (e.dias_decorridos === 0 ? 'Hoje' : `${e.dias_decorridos} dia(s)`) %>
+                </td>
+                <td>
+                  <% if (isDevolvido) { %>
+                    <span class="status-pill in-stock" style="font-size: 0.72rem;">Devolvido</span>
+                  <% } else { %>
+                    <span class="status-pill low-stock" style="font-size: 0.72rem;">Pendente</span>
+                  <% } %>
+                </td>
+                <td style="font-size: 0.78rem; color: var(--text-muted);">
+                  <div><%= e.responsavel || '-' %></div>
+                  <% if (e.documento_ref) { %><div style="font-family: var(--font-mono);"><%= e.documento_ref %></div><% } %>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">Nenhum empréstimo encontrado para os filtros selecionados.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<% } else if (tipoRelatorio === 'inventario') { %>
+
+  <div class="table-card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light);">
+      <h3 style="font-size: 1rem; font-weight: 800; margin: 0;">Posição Atual de Inventário (<%= produtos.length %> itens • <%= kpisInventario.totalUnidades %> unidades)</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="clean-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Produto / Identificação</th>
+            <th>Categoria / Condição</th>
+            <th style="text-align: center;">Saldo Atual</th>
+            <th style="text-align: center;">Mínimo</th>
+            <th style="text-align: center;">Saídas (Período)</th>
+            <th>Localização</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (produtos.length > 0) { %>
+            <% produtos.forEach(p => { %>
+              <tr>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;"><%= p.sku %></td>
+                <td>
+                  <div style="font-weight: 700; font-size: 0.86rem;"><%= p.nome %></div>
+                  <div style="font-size: 0.72rem; color: var(--text-dim);">
+                    <%= p.marca || '' %><%= p.tag ? ` • TAG: ${p.tag}` : '' %><%= p.patrimonio ? ` • PAT: ${p.patrimonio}` : '' %><%= p.ca ? ` • CA: ${p.ca}` : '' %>
+                  </div>
+                </td>
+                <td>
+                  <div style="font-size: 0.82rem; font-weight: 600;"><%= p.categoria || 'Outros' %></div>
+                  <div style="font-size: 0.71rem; color: var(--text-muted);"><%= p.condicao || 'NOVO' %></div>
+                </td>
+                <td style="text-align: center; font-weight: 800; font-size: 0.92rem;"><%= p.quantidade %> <small style="color: var(--text-dim);"><%= p.unidade_medida %></small></td>
+                <td style="text-align: center; color: var(--text-muted);"><%= p.estoque_minimo %></td>
+                <td style="text-align: center; font-weight: 700; color: <%= p.saidas_periodo > 0 ? '#B91C1C' : 'var(--text-dim)' %>;"><%= p.saidas_periodo %></td>
+                <td style="font-size: 0.8rem; color: var(--text-body);"><%= p.localizacao || '-' %></td>
+                <td>
+                  <% if (p.status_estoque === 'NORMAL') { %>
+                    <span class="status-pill in-stock" style="font-size: 0.72rem;">Normal</span>
+                  <% } else if (p.status_estoque === 'BAIXO') { %>
+                    <span class="status-pill low-stock" style="font-size: 0.72rem;">Baixo</span>
+                  <% } else { %>
+                    <span class="status-pill out-of-stock" style="font-size: 0.72rem;">Zerado</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">Nenhum produto encontrado para os filtros selecionados.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<% } else if (tipoRelatorio === 'reposicao') { %>
+
+  <div class="table-card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light);">
+      <h3 style="font-size: 1rem; font-weight: 800; margin: 0;">Itens em Alerta de Reposição / Compra (<%= itensReposicao.length %> itens)</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="clean-table">
+        <thead>
+          <tr>
+            <th>Prioridade</th>
+            <th>SKU</th>
+            <th>Produto / Categoria</th>
+            <th style="text-align: center;">Saldo Atual</th>
+            <th style="text-align: center;">Mínimo</th>
+            <th style="text-align: center;">Consumo 30d</th>
+            <th style="text-align: right;">Sugestão Reposição</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (itensReposicao.length > 0) { %>
+            <% itensReposicao.forEach(p => { %>
+              <tr>
+                <td>
+                  <% if (p.quantidade === 0) { %>
+                    <span class="status-pill out-of-stock" style="font-size: 0.72rem;">URGENTE • Zerado</span>
+                  <% } else { %>
+                    <span class="status-pill low-stock" style="font-size: 0.72rem;">ATENÇÃO • Baixo</span>
+                  <% } %>
+                </td>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;"><%= p.sku %></td>
+                <td>
+                  <div style="font-weight: 700; font-size: 0.86rem;"><%= p.nome %></div>
+                  <div style="font-size: 0.72rem; color: var(--text-dim);"><%= p.categoria || 'Outros' %><%= p.marca ? ` • ${p.marca}` : '' %><%= p.ca ? ` • CA: ${p.ca}` : '' %></div>
+                </td>
+                <td style="text-align: center; font-weight: 800; color: <%= p.quantidade === 0 ? 'var(--danger)' : '#B45309' %>;"><%= p.quantidade %> <%= p.unidade_medida %></td>
+                <td style="text-align: center; color: var(--text-muted);"><%= p.estoque_minimo %></td>
+                <td style="text-align: center; font-weight: 600;"><%= p.consumo_30d %></td>
+                <td style="text-align: right; font-weight: 800; color: var(--primary);">+<%= p.sugestao_compra %> <%= p.unidade_medida %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 2.5rem; color: #047857; font-weight: 600;">
+                <i class="fa-solid fa-circle-check" style="font-size: 1.5rem; display: block; margin-bottom: 0.4rem;"></i>
+                Nenhum item zerado ou abaixo do estoque mínimo com os filtros atuais!
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<% } %>
+
+<script>
+  function aplicarPeriodoRel(p) {
+    document.getElementById('rel-input-periodo').value = p;
+    document.getElementById('rel-data-inicio').value = '';
+    document.getElementById('rel-data-fim').value = '';
+    document.getElementById('form-filtros-relatorio').submit();
+  }
+
+  function limparAtalhoPeriodoRel() {
+    document.getElementById('rel-input-periodo').value = 'personalizado';
+  }
+</script>
+
+<%- include('../layouts/footer') %>

@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 11mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #e2e8f0;
+      color: #0f172a;
+      line-height: 1.45;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Barra flutuante de ações (oculta na impressão/PDF) */
+    .pdf-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+    }
+
+    .pdf-toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .pdf-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.5rem 0.95rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .pdf-btn-red { background: #dc2626; color: #fff; }
+    .pdf-btn-green { background: #059669; color: #fff; }
+    .pdf-btn-light { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+
+    /* Folha A4 na tela */
+    .pdf-sheet {
+      max-width: 210mm;
+      min-height: 297mm;
+      margin: 1.25rem auto 2.5rem;
+      background: #ffffff;
+      padding: 14mm 13mm;
+      box-shadow: 0 12px 35px rgba(15, 23, 42, 0.16);
+      border-radius: 6px;
+    }
+
+    /* Cabeçalho Oficial */
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      padding-bottom: 12px;
+      border-bottom: 2.5px solid #0f172a;
+      margin-bottom: 14px;
+    }
+
+    .doc-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .doc-brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+    }
+
+    .doc-brand-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+
+    .doc-brand-sub {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #4f46e5;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .doc-meta {
+      text-align: right;
+      font-size: 0.72rem;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .doc-meta strong {
+      color: #0f172a;
+    }
+
+    .doc-title-block {
+      margin-bottom: 14px;
+    }
+
+    .doc-title-block h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 3px;
+    }
+
+    .doc-filters-bar {
+      font-size: 0.74rem;
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 6px 10px;
+    }
+
+    /* KPIs no PDF */
+    .pdf-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .pdf-kpi {
+      border: 1px solid #cbd5e1;
+      border-top: 3px solid #4f46e5;
+      border-radius: 6px;
+      padding: 7px 9px;
+      background: #ffffff;
+    }
+
+    .pdf-kpi-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .pdf-kpi-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+
+    .pdf-kpi-sub {
+      font-size: 0.63rem;
+      color: #64748b;
+    }
+
+    /* Seções & Tabelas */
+    .pdf-section-title {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 14px 0 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #cbd5e1;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    table.pdf-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.72rem;
+      margin-bottom: 14px;
+    }
+
+    table.pdf-table thead {
+      display: table-header-group;
+    }
+
+    table.pdf-table th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 800;
+      text-align: left;
+      padding: 6px 7px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.67rem;
+      text-transform: uppercase;
+    }
+
+    table.pdf-table td {
+      padding: 5px 7px;
+      border: 1px solid #e2e8f0;
+      color: #1e293b;
+      vertical-align: top;
+    }
+
+    table.pdf-table tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    table.pdf-table tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+    }
+
+    .txt-center { text-align: center !important; }
+    .txt-right { text-align: right !important; }
+    .txt-danger { color: #b91c1c; font-weight: 700; }
+    .txt-success { color: #047857; font-weight: 700; }
+    .txt-warn { color: #b45309; font-weight: 700; }
+
+    /* Assinaturas */
+    .doc-signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 36px;
+      margin-top: 28px;
+      padding-top: 12px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .sig-box {
+      text-align: center;
+      padding-top: 32px;
+      border-top: 1px solid #334155;
+      font-size: 0.72rem;
+      color: #334155;
+    }
+
+    .doc-footer-note {
+      margin-top: 18px;
+      padding-top: 8px;
+      border-top: 1px dashed #cbd5e1;
+      font-size: 0.65rem;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+      .pdf-toolbar {
+        display: none !important;
+      }
+      .pdf-sheet {
+        max-width: none;
+        min-height: auto;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de Ações (Não aparece no PDF) -->
+  <div class="pdf-toolbar">
+    <div style="font-size: 0.86rem; font-weight: 700;">
+      <i class="fa-solid fa-file-pdf" style="color: #f87171; margin-right: 6px;"></i>
+      Prévia de Relatório A4 — <%= metaRelatorio.titulo %>
+    </div>
+    <div class="pdf-toolbar-actions">
+      <button type="button" class="pdf-btn pdf-btn-red" onclick="window.print()">
+        <i class="fa-solid fa-download"></i> Salvar / Imprimir PDF
+      </button>
+      <a href="/relatorios/exportar/excel?<%= queryStringFiltros %>" class="pdf-btn pdf-btn-green">
+        <i class="fa-solid fa-file-excel"></i> Baixar Excel (.xlsx)
+      </a>
+      <a href="/relatorios?<%= queryStringFiltros %>" class="pdf-btn pdf-btn-light">
+        <i class="fa-solid fa-arrow-left"></i> Voltar
+      </a>
+    </div>
+  </div>
+
+  <!-- Folha do Relatório -->
+  <div class="pdf-sheet">
+
+    <!-- Cabeçalho Corporativo -->
+    <div class="doc-header">
+      <div class="doc-brand">
+        <div class="doc-brand-icon">
+          <i class="fa-solid fa-cube"></i>
+        </div>
+        <div>
+          <div class="doc-brand-title">JPS Almoxarifado</div>
+          <div class="doc-brand-sub">Sistema de Controle de Inventário & Cautelas</div>
+        </div>
+      </div>
+      <div class="doc-meta">
+        <div><strong>Emissão:</strong> <%= geradoEm %></div>
+        <div><strong>Emitido por:</strong> <%= emitidoPor %></div>
+        <div><strong>Período:</strong> <%= periodoDescricao %></div>
+      </div>
+    </div>
+
+    <div class="doc-title-block">
+      <h1><%= metaRelatorio.titulo %></h1>
+      <div class="doc-filters-bar">
+        <strong>Filtros aplicados:</strong> <%= filtrosAtivosTexto %>
+      </div>
+    </div>
+
+    <!-- Faixa de KPIs -->
+    <div class="pdf-kpi-row">
+      <div class="pdf-kpi">
+        <div class="pdf-kpi-label">Inventário</div>
+        <div class="pdf-kpi-val"><%= kpisInventario.totalProdutos %> itens</div>
+        <div class="pdf-kpi-sub"><%= kpisInventario.totalUnidades %> unidades</div>
+      </div>
+      <div class="pdf-kpi" style="border-top-color: #10b981;">
+        <div class="pdf-kpi-label">Entradas</div>
+        <div class="pdf-kpi-val txt-success">+<%= totaisMov.entradasQtd %></div>
+        <div class="pdf-kpi-sub"><%= totaisMov.entradasCount %> lançamento(s)</div>
+      </div>
+      <div class="pdf-kpi" style="border-top-color: #ef4444;">
+        <div class="pdf-kpi-label">Saídas / Trocas</div>
+        <div class="pdf-kpi-val txt-danger">-<%= totaisMov.saidasQtd + totaisMov.trocasQtd %></div>
+        <div class="pdf-kpi-sub"><%= totaisMov.saidasCount + totaisMov.trocasCount %> lançamento(s)</div>
+      </div>
+      <div class="pdf-kpi" style="border-top-color: #f59e0b;">
+        <div class="pdf-kpi-label">Cautelas Abertas</div>
+        <div class="pdf-kpi-val txt-warn"><%= totalEmprestimosPendentesGlobalQtd %> un.</div>
+        <div class="pdf-kpi-sub"><%= totalEmprestimosPendentesGlobalCount %> pendente(s)</div>
+      </div>
+      <div class="pdf-kpi" style="border-top-color: #8b5cf6;">
+        <div class="pdf-kpi-label">Alerta Estoque</div>
+        <div class="pdf-kpi-val"><%= kpisInventario.zerado + kpisInventario.baixo %></div>
+        <div class="pdf-kpi-sub"><%= kpisInventario.zerado %> zer. / <%= kpisInventario.baixo %> baix.</div>
+      </div>
+    </div>
+
+    <% if (tipoRelatorio === 'geral') { %>
+
+      <div class="pdf-section-title">1. Itens Mais Movimentados no Período (Top <%= topProdutosConsumo.length %>)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>SKU</th>
+            <th>Produto</th>
+            <th>Categoria</th>
+            <th class="txt-center">Saídas/Trocas</th>
+            <th class="txt-center">Empréstimos</th>
+            <th class="txt-right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (topProdutosConsumo.length > 0) { %>
+            <% topProdutosConsumo.forEach((p, i) => { %>
+              <tr>
+                <td><%= i + 1 %></td>
+                <td class="mono"><%= p.sku %></td>
+                <td><strong><%= p.nome %></strong></td>
+                <td><%= p.categoria %></td>
+                <td class="txt-center txt-danger"><%= p.totalConsumo %></td>
+                <td class="txt-center txt-warn"><%= p.emprestimos %></td>
+                <td class="txt-right"><strong><%= p.totalConsumo + p.emprestimos %> <%= p.unidade %></strong></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="7" class="txt-center">Nenhuma saída ou empréstimo no período.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+      <div class="pdf-section-title">2. Retiradas por Colaborador (<%= resumoColaboradores.length %>)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Colaborador</th>
+            <th>Matrícula</th>
+            <th>Setor</th>
+            <th class="txt-center">Saídas</th>
+            <th class="txt-center">Trocas</th>
+            <th class="txt-center">Empréstimos</th>
+            <th class="txt-center">Cautelas Abertas</th>
+            <th class="txt-right">Total Retirado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (resumoColaboradores.length > 0) { %>
+            <% resumoColaboradores.forEach(c => { %>
+              <tr>
+                <td><strong><%= c.nome %></strong></td>
+                <td class="mono"><%= c.matricula %></td>
+                <td><%= c.departamento %></td>
+                <td class="txt-center"><%= c.saidasQtd %></td>
+                <td class="txt-center"><%= c.trocasQtd %></td>
+                <td class="txt-center"><%= c.emprestimosQtd %></td>
+                <td class="txt-center <%= c.cautelasAbertas > 0 ? 'txt-warn' : '' %>"><%= c.cautelasAbertas %></td>
+                <td class="txt-right"><strong><%= c.totalRetirado %></strong></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="8" class="txt-center">Sem movimentações de colaboradores no período.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+      <div class="pdf-section-title">3. Estoque Consolidado por Categoria</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th class="txt-center">Produtos</th>
+            <th class="txt-center">Unidades em Estoque</th>
+            <th class="txt-center">Saídas no Período</th>
+            <th class="txt-center">Estoque Baixo</th>
+            <th class="txt-center">Zerados</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% resumoCategorias.forEach(c => { %>
+            <tr>
+              <td><strong><%= c.categoria %></strong></td>
+              <td class="txt-center"><%= c.totalItens %></td>
+              <td class="txt-center"><strong><%= c.totalUnidades %></strong></td>
+              <td class="txt-center txt-danger"><%= c.saidasPeriodo %></td>
+              <td class="txt-center"><%= c.baixo %></td>
+              <td class="txt-center <%= c.zerados > 0 ? 'txt-danger' : '' %>"><%= c.zerados %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+    <% } else if (tipoRelatorio === 'movimentacoes') { %>
+
+      <div class="pdf-section-title">Extrato de Movimentações (<%= movimentacoes.length %> registros)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Cód / Data</th>
+            <th>Tipo</th>
+            <th>SKU</th>
+            <th>Produto</th>
+            <th class="txt-center">Qtd</th>
+            <th>Colaborador</th>
+            <th>Atendente</th>
+            <th>Doc / Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (movimentacoes.length > 0) { %>
+            <% movimentacoes.forEach(m => { %>
+              <tr>
+                <td class="mono">MOV-<%= String(m.id).padStart(4, '0') %><br><%= m.data_br %></td>
+                <td><strong><%= m.tipo_label %></strong></td>
+                <td class="mono"><%= m.produto_sku %></td>
+                <td><%= m.produto_nome %></td>
+                <td class="txt-center <%= (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO') ? 'txt-success' : 'txt-danger' %>">
+                  <%= (m.tipo === 'ENTRADA' || m.tipo === 'DEVOLUCAO') ? '+' : '-' %><%= m.quantidade %> <%= m.produto_unidade %>
+                </td>
+                <td><%= m.colaborador_nome_exibicao %></td>
+                <td><%= m.responsavel || '-' %></td>
+                <td><%= m.documento_ref ? `[${m.documento_ref}] ` : '' %><%= m.motivo || '-' %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="8" class="txt-center">Nenhuma movimentação encontrada para os filtros selecionados.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+    <% } else if (tipoRelatorio === 'colaboradores') { %>
+
+      <div class="pdf-section-title">Consolidado por Colaborador (<%= resumoColaboradores.length %>)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Colaborador</th>
+            <th>Matrícula</th>
+            <th>Cargo / Setor</th>
+            <th class="txt-center">Saídas</th>
+            <th class="txt-center">Trocas</th>
+            <th class="txt-center">Emprést.</th>
+            <th class="txt-center">Devol.</th>
+            <th class="txt-center">Em Posse</th>
+            <th class="txt-right">Total Retirado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (resumoColaboradores.length > 0) { %>
+            <% resumoColaboradores.forEach(c => { %>
+              <tr>
+                <td><strong><%= c.nome %></strong></td>
+                <td class="mono"><%= c.matricula %></td>
+                <td><%= c.cargo %> • <%= c.departamento %></td>
+                <td class="txt-center txt-danger"><%= c.saidasQtd %></td>
+                <td class="txt-center"><%= c.trocasQtd %></td>
+                <td class="txt-center txt-warn"><%= c.emprestimosQtd %></td>
+                <td class="txt-center txt-success"><%= c.devolucoesQtd %></td>
+                <td class="txt-center <%= c.cautelasAbertas > 0 ? 'txt-warn' : '' %>"><%= c.cautelasAbertas %></td>
+                <td class="txt-right"><strong><%= c.totalRetirado %></strong></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="9" class="txt-center">Nenhum registro encontrado.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+    <% } else if (tipoRelatorio === 'emprestimos') { %>
+
+      <div class="pdf-section-title">Cautelas e Empréstimos (<%= emprestimos.length %> registros)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Código / Retirada</th>
+            <th>SKU / TAG</th>
+            <th>Ferramenta</th>
+            <th class="txt-center">Qtd</th>
+            <th>Colaborador / Setor</th>
+            <th class="txt-center">Dias</th>
+            <th>Status</th>
+            <th>Atendente</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (emprestimos.length > 0) { %>
+            <% emprestimos.forEach(e => {
+              const isDev = e.status_emprestimo === 'DEVOLVIDO' || !!e.data_devolucao;
+            %>
+              <tr>
+                <td class="mono">MOV-<%= String(e.id).padStart(4, '0') %><br><%= e.data_br %></td>
+                <td class="mono"><%= e.produto_sku %><%= e.produto_tag ? `\nTAG: ${e.produto_tag}` : '' %></td>
+                <td><strong><%= e.produto_nome %></strong></td>
+                <td class="txt-center"><strong><%= e.quantidade %> <%= e.produto_unidade %></strong></td>
+                <td><%= e.colaborador_nome_exibicao %><br><span style="color:#64748b;"><%= e.colaborador_departamento %></span></td>
+                <td class="txt-center <%= (!isDev && e.dias_decorridos >= 7) ? 'txt-danger' : '' %>"><%= isDev ? '-' : `${e.dias_decorridos}d` %></td>
+                <td class="<%= isDev ? 'txt-success' : 'txt-warn' %>"><%= isDev ? 'DEVOLVIDO' : 'PENDENTE' %></td>
+                <td><%= e.responsavel || '-' %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="8" class="txt-center">Nenhuma cautela encontrada para os filtros selecionados.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+    <% } else if (tipoRelatorio === 'inventario') { %>
+
+      <div class="pdf-section-title">Posição de Inventário (<%= produtos.length %> itens • <%= kpisInventario.totalUnidades %> unidades)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Produto</th>
+            <th>Categoria</th>
+            <th>Condição</th>
+            <th class="txt-center">Saldo</th>
+            <th class="txt-center">Mín.</th>
+            <th class="txt-center">Saídas Per.</th>
+            <th>Localização / TAG / C.A.</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (produtos.length > 0) { %>
+            <% produtos.forEach(p => { %>
+              <tr>
+                <td class="mono"><%= p.sku %></td>
+                <td><strong><%= p.nome %></strong><%= p.marca ? ` (${p.marca})` : '' %></td>
+                <td><%= p.categoria || 'Outros' %></td>
+                <td><%= p.condicao || 'NOVO' %></td>
+                <td class="txt-center"><strong><%= p.quantidade %> <%= p.unidade_medida %></strong></td>
+                <td class="txt-center"><%= p.estoque_minimo %></td>
+                <td class="txt-center"><%= p.saidas_periodo %></td>
+                <td><%= [p.localizacao, p.tag ? 'TAG:' + p.tag : '', p.ca ? 'CA:' + p.ca : ''].filter(Boolean).join(' • ') || '-' %></td>
+                <td class="<%= p.status_estoque === 'CRITICO' ? 'txt-danger' : (p.status_estoque === 'BAIXO' ? 'txt-warn' : 'txt-success') %>">
+                  <%= p.status_estoque === 'CRITICO' ? 'ZERADO' : (p.status_estoque === 'BAIXO' ? 'BAIXO' : 'NORMAL') %>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="9" class="txt-center">Nenhum item encontrado.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+    <% } else if (tipoRelatorio === 'reposicao') { %>
+
+      <div class="pdf-section-title">Alerta de Reposição / Necessidade de Compra (<%= itensReposicao.length %> itens)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Prioridade</th>
+            <th>SKU</th>
+            <th>Produto / Categoria</th>
+            <th class="txt-center">Saldo Atual</th>
+            <th class="txt-center">Mínimo</th>
+            <th class="txt-center">Consumo 30d</th>
+            <th class="txt-right">Sugestão Compra</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (itensReposicao.length > 0) { %>
+            <% itensReposicao.forEach(p => { %>
+              <tr>
+                <td class="<%= p.quantidade === 0 ? 'txt-danger' : 'txt-warn' %>"><%= p.quantidade === 0 ? 'URGENTE (ZERADO)' : 'ATENÇÃO (BAIXO)' %></td>
+                <td class="mono"><%= p.sku %></td>
+                <td><strong><%= p.nome %></strong> • <%= p.categoria || 'Outros' %><%= p.ca ? ` (CA ${p.ca})` : '' %></td>
+                <td class="txt-center txt-danger"><%= p.quantidade %> <%= p.unidade_medida %></td>
+                <td class="txt-center"><%= p.estoque_minimo %></td>
+                <td class="txt-center"><%= p.consumo_30d %></td>
+                <td class="txt-right"><strong>+<%= p.sugestao_compra %> <%= p.unidade_medida %></strong></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="7" class="txt-center txt-success">Nenhum item zerado ou abaixo do mínimo.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+    <% } %>
+
+    <!-- Assinaturas Oficiais -->
+    <div class="doc-signatures">
+      <div class="sig-box">
+        <strong><%= emitidoPor %></strong><br>
+        Responsável pela Emissão
+      </div>
+      <div class="sig-box">
+        <strong>Gestão / Conferência do Almoxarifado</strong><br>
+        Visto e Aprovação
+      </div>
+    </div>
+
+    <div class="doc-footer-note">
+      <span>JPS Almoxarifado — Documento gerado eletronicamente</span>
+      <span>Emitido em <%= geradoEm %></span>
+    </div>
+  </div>
+
+  <% if (typeof autoPrint !== 'undefined' && autoPrint) { %>
+  <script>
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        window.print();
+      }, 350);
+    });
+  </script>
+  <% } %>
+</body>
+</html>

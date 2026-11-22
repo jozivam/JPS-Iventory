@@ -15,6 +15,7 @@ const BuscaController = require('../controllers/BuscaController');
 const BalcaoController = require('../controllers/BalcaoController');
 const ColaboradorController = require('../controllers/ColaboradorController');
 const FichaController = require('../controllers/FichaController');
+const RelatorioController = require('../controllers/RelatorioController');
 const OfflineSyncController = require('../controllers/OfflineSyncController');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
@@ -77,6 +78,11 @@ router.post('/movimentacoes/:id/excluir', requireRole('ADMIN'), EstoqueControlle
 // --- CONTROLE DE FICHAS DE COLABORADORES ---
 router.get('/fichas', FichaController.index);
 router.get('/fichas/:colaborador_id', (req, res) => res.redirect('/fichas?colaborador_id=' + req.params.colaborador_id));
+
+// --- CENTRAL DE RELATÓRIOS (GERENCIAL, OPERACIONAL, PDF & EXCEL) ---
+router.get('/relatorios', RelatorioController.index);
+router.get('/relatorios/pdf', RelatorioController.pdf);
+router.get('/relatorios/exportar/excel', RelatorioController.exportarExcel);
 
 // --- COLABORADORES E USUÁRIOS DO SISTEMA ---
 router.get('/colaboradores', ColaboradorController.index);
