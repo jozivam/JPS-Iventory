@@ -387,9 +387,10 @@
             <th>SKU</th>
             <th>Produto</th>
             <th>Categoria</th>
-            <th class="txt-center">Saídas/Trocas</th>
-            <th class="txt-center">Empréstimos</th>
-            <th class="txt-right">Total</th>
+            <th class="txt-center">Saídas</th>
+            <th class="txt-center">Média/Dia</th>
+            <th class="txt-center">Proj. 30d</th>
+            <th class="txt-right">Total Retirado</th>
           </tr>
         </thead>
         <tbody>
@@ -401,12 +402,13 @@
                 <td><strong><%= p.nome %></strong></td>
                 <td><%= p.categoria %></td>
                 <td class="txt-center txt-danger"><%= p.totalConsumo %></td>
-                <td class="txt-center txt-warn"><%= p.emprestimos %></td>
+                <td class="txt-center"><%= p.mediaDiaria > 0 ? p.mediaDiaria.toFixed(1).replace('.', ',') + '/d' : '-' %></td>
+                <td class="txt-center"><strong><%= p.projecao30d > 0 ? p.projecao30d : '-' %></strong></td>
                 <td class="txt-right"><strong><%= p.totalConsumo + p.emprestimos %> <%= p.unidade %></strong></td>
               </tr>
             <% }) %>
           <% } else { %>
-            <tr><td colspan="7" class="txt-center">Nenhuma saída ou empréstimo no período.</td></tr>
+            <tr><td colspan="8" class="txt-center">Nenhuma saída ou empréstimo no período.</td></tr>
           <% } %>
         </tbody>
       </table>
@@ -594,10 +596,10 @@
             <th>SKU</th>
             <th>Produto</th>
             <th>Categoria</th>
-            <th>Condição</th>
             <th class="txt-center">Saldo</th>
-            <th class="txt-center">Mín.</th>
-            <th class="txt-center">Saídas Per.</th>
+            <th class="txt-center">Média/Dia</th>
+            <th class="txt-center">Proj. 30d</th>
+            <th class="txt-center">Cobertura</th>
             <th>Localização / TAG / C.A.</th>
             <th>Status</th>
           </tr>
@@ -609,10 +611,10 @@
                 <td class="mono"><%= p.sku %></td>
                 <td><strong><%= p.nome %></strong><%= p.marca ? ` (${p.marca})` : '' %></td>
                 <td><%= p.categoria || 'Outros' %></td>
-                <td><%= p.condicao || 'NOVO' %></td>
                 <td class="txt-center"><strong><%= p.quantidade %> <%= p.unidade_medida %></strong></td>
-                <td class="txt-center"><%= p.estoque_minimo %></td>
-                <td class="txt-center"><%= p.saidas_periodo %></td>
+                <td class="txt-center"><%= p.media_diaria > 0 ? p.media_diaria.toFixed(1).replace('.', ',') + '/d' : '-' %></td>
+                <td class="txt-center"><%= p.projecao_30d > 0 ? p.projecao_30d : '-' %></td>
+                <td class="txt-center <%= (p.dias_cobertura !== null && p.dias_cobertura <= 10) ? 'txt-danger' : '' %>"><%= p.dias_cobertura !== null ? `~${p.dias_cobertura}d` : '-' %></td>
                 <td><%= [p.localizacao, p.tag ? 'TAG:' + p.tag : '', p.ca ? 'CA:' + p.ca : ''].filter(Boolean).join(' • ') || '-' %></td>
                 <td class="<%= p.status_estoque === 'CRITICO' ? 'txt-danger' : (p.status_estoque === 'BAIXO' ? 'txt-warn' : 'txt-success') %>">
                   <%= p.status_estoque === 'CRITICO' ? 'ZERADO' : (p.status_estoque === 'BAIXO' ? 'BAIXO' : 'NORMAL') %>
@@ -625,126 +627,19 @@
         </tbody>
       </table>
 
-    <% } else if (tipoRelatorio === 'contagem') { %>
-
-      <div class="pdf-section-title">Folha de Contagem Diária / Conferência Física (<%= itensContagemDiaria.length %> item(ns) • Ref: <%= periodoDescricao %>)</div>
-      <table class="pdf-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Localização</th>
-            <th>SKU / TAG</th>
-            <th>Produto / Material</th>
-            <th class="txt-center">Saídas Dia</th>
-            <th class="txt-center">Saldo Sistema</th>
-            <th class="txt-center" style="width: 78px;">Cont. Física</th>
-            <th class="txt-center" style="width: 68px;">Diverg.</th>
-            <th style="width: 110px;">Observação</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (itensContagemDiaria.length > 0) { %>
-            <% itensContagemDiaria.forEach((item, idx) => { %>
-              <tr>
-                <td class="txt-center"><%= idx + 1 %></td>
-                <td><strong><%= item.localizacao %></strong></td>
-                <td class="mono"><%= item.sku %><%= item.tag ? `\nTAG:${item.tag}` : '' %></td>
-                <td><strong><%= item.nome %></strong><%= item.marca ? ` (${item.marca})` : '' %><br><span style="color:#64748b;"><%= item.categoria %></span></td>
-                <td class="txt-center txt-danger">-<%= item.total_saidas_dia %><%= (item.entradas_dia + item.devolucoes_dia) > 0 ? ` / +${item.entradas_dia + item.devolucoes_dia}` : '' %></td>
-                <td class="txt-center"><strong><%= item.saldo_atual %> <%= item.unidade_medida %></strong></td>
-                <td style="height: 26px;"></td>
-                <td></td>
-                <td></td>
-              </tr>
-            <% }) %>
-          <% } else { %>
-            <tr><td colspan="9" class="txt-center">Nenhum item teve movimentação no período selecionado.</td></tr>
-          <% } %>
-        </tbody>
-      </table>
-
-    <% } else if (tipoRelatorio === 'duplicidades') { %>
-
-      <div class="pdf-section-title">1. Resumo de Duplicidades & Excedentes (<%= kpisDuplicidades.totalGrupos %> grupos • Potencial Desmobilização: <%= kpisDuplicidades.potencialDesmobilizar %> un.)</div>
-      <table class="pdf-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Equipamento / Item Base</th>
-            <th>Categoria</th>
-            <th>Ocorrência</th>
-            <th class="txt-center">Cadastros</th>
-            <th class="txt-center">Em Estoque</th>
-            <th class="txt-center">Em Campo</th>
-            <th class="txt-right">Excedente</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (gruposDuplicidades.length > 0) { %>
-            <% gruposDuplicidades.forEach((g, idx) => { %>
-              <tr>
-                <td class="txt-center"><%= idx + 1 %></td>
-                <td><strong><%= g.nome_base %></strong></td>
-                <td><%= g.categoria %></td>
-                <td><%= g.tipoDuplicidade %></td>
-                <td class="txt-center"><%= g.totalRegistros %></td>
-                <td class="txt-center"><strong><%= g.totalUnidadesEstoque %> <%= g.unidade_medida %></strong></td>
-                <td class="txt-center"><%= g.totalEmprestado %></td>
-                <td class="txt-right <%= g.potencialDesmobilizar > 0 ? 'txt-danger' : '' %>"><strong><%= g.potencialDesmobilizar > 0 ? `${g.potencialDesmobilizar} ${g.unidade_medida}` : '-' %></strong></td>
-              </tr>
-            <% }) %>
-          <% } else { %>
-            <tr><td colspan="8" class="txt-center">Nenhum item duplicado ou excedente encontrado.</td></tr>
-          <% } %>
-        </tbody>
-      </table>
-
-      <div class="pdf-section-title">2. Detalhamento por TAG / SKU / Patrimônio para Desmobilização (<%= itensDuplicidadesDetalhe.length %> itens)</div>
-      <table class="pdf-table">
-        <thead>
-          <tr>
-            <th>Grupo Base</th>
-            <th>SKU</th>
-            <th>TAG / Patrimônio</th>
-            <th>Nome Cadastrado</th>
-            <th>Condição</th>
-            <th>Localização</th>
-            <th class="txt-center">Saldo</th>
-            <th class="txt-center" style="width: 68px;">Desmob.?</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (itensDuplicidadesDetalhe.length > 0) { %>
-            <% itensDuplicidadesDetalhe.forEach(r => { %>
-              <tr>
-                <td><strong><%= r.grupo_nome_base %></strong></td>
-                <td class="mono"><%= r.sku %></td>
-                <td class="mono"><%= [r.tag ? 'TAG:' + r.tag : '', r.patrimonio ? 'PAT:' + r.patrimonio : ''].filter(Boolean).join(' ') || '-' %></td>
-                <td><%= r.nome %></td>
-                <td><%= r.condicao || 'NOVO' %></td>
-                <td><%= r.localizacao || '-' %></td>
-                <td class="txt-center"><strong><%= r.quantidade %> <%= r.unidade_medida %></strong></td>
-                <td class="txt-center">[ &nbsp; ] Sim</td>
-              </tr>
-            <% }) %>
-          <% } else { %>
-            <tr><td colspan="8" class="txt-center">Sem registros detalhados.</td></tr>
-          <% } %>
-        </tbody>
-      </table>
-
     <% } else if (tipoRelatorio === 'reposicao') { %>
 
-      <div class="pdf-section-title">Alerta de Reposição / Necessidade de Compra (<%= itensReposicao.length %> itens)</div>
+      <div class="pdf-section-title">Alerta de Reposição / Projeção de Compra (<%= itensReposicao.length %> itens)</div>
       <table class="pdf-table">
         <thead>
           <tr>
             <th>Prioridade</th>
             <th>SKU</th>
             <th>Produto / Categoria</th>
-            <th class="txt-center">Saldo Atual</th>
-            <th class="txt-center">Mínimo</th>
-            <th class="txt-center">Consumo 30d</th>
+            <th class="txt-center">Saldo</th>
+            <th class="txt-center">Média/Dia</th>
+            <th class="txt-center">Proj. 30d</th>
+            <th class="txt-center">Cobertura</th>
             <th class="txt-right">Sugestão Compra</th>
           </tr>
         </thead>
@@ -752,17 +647,18 @@
           <% if (itensReposicao.length > 0) { %>
             <% itensReposicao.forEach(p => { %>
               <tr>
-                <td class="<%= p.quantidade === 0 ? 'txt-danger' : 'txt-warn' %>"><%= p.quantidade === 0 ? 'URGENTE (ZERADO)' : 'ATENÇÃO (BAIXO)' %></td>
+                <td class="<%= p.quantidade === 0 ? 'txt-danger' : 'txt-warn' %>"><%= p.quantidade === 0 ? 'URGENTE (ZERADO)' : (p.status_estoque === 'BAIXO' ? 'ATENÇÃO (BAIXO)' : 'ANTECIPAR (≤10d)') %></td>
                 <td class="mono"><%= p.sku %></td>
                 <td><strong><%= p.nome %></strong> • <%= p.categoria || 'Outros' %><%= p.ca ? ` (CA ${p.ca})` : '' %></td>
                 <td class="txt-center txt-danger"><%= p.quantidade %> <%= p.unidade_medida %></td>
-                <td class="txt-center"><%= p.estoque_minimo %></td>
-                <td class="txt-center"><%= p.consumo_30d %></td>
+                <td class="txt-center"><%= p.media_diaria > 0 ? p.media_diaria.toFixed(1).replace('.', ',') + '/d' : '-' %></td>
+                <td class="txt-center"><%= p.projecao_30d > 0 ? p.projecao_30d : p.consumo_30d %></td>
+                <td class="txt-center <%= (p.dias_cobertura !== null && p.dias_cobertura <= 7) ? 'txt-danger' : '' %>"><%= p.quantidade === 0 ? '0d' : (p.dias_cobertura !== null ? `~${p.dias_cobertura}d` : '-') %></td>
                 <td class="txt-right"><strong>+<%= p.sugestao_compra %> <%= p.unidade_medida %></strong></td>
               </tr>
             <% }) %>
           <% } else { %>
-            <tr><td colspan="7" class="txt-center txt-success">Nenhum item zerado ou abaixo do mínimo.</td></tr>
+            <tr><td colspan="8" class="txt-center txt-success">Nenhum item zerado, baixo ou com cobertura crítica.</td></tr>
           <% } %>
         </tbody>
       </table>

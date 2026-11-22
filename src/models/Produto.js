@@ -359,7 +359,7 @@ class Produto {
       'Elétrica e TI',
       'Hidráulica',
       'Pintura e Acabamento',
-      'Suprimentos Gerais'
+      'Suprimentos'
     ];
 
     if (useSupabase && supabase) {

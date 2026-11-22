@@ -16,6 +16,7 @@ const BalcaoController = require('../controllers/BalcaoController');
 const ColaboradorController = require('../controllers/ColaboradorController');
 const FichaController = require('../controllers/FichaController');
 const RelatorioController = require('../controllers/RelatorioController');
+const SuprimentoController = require('../controllers/SuprimentoController');
 const OfflineSyncController = require('../controllers/OfflineSyncController');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
@@ -78,6 +79,11 @@ router.post('/movimentacoes/:id/excluir', requireRole('ADMIN'), EstoqueControlle
 // --- CONTROLE DE FICHAS DE COLABORADORES ---
 router.get('/fichas', FichaController.index);
 router.get('/fichas/:colaborador_id', (req, res) => res.redirect('/fichas?colaborador_id=' + req.params.colaborador_id));
+
+// --- CONTROLE DE SUPRIMENTOS DO CANTEIRO ---
+router.get('/suprimentos', SuprimentoController.index);
+router.post('/suprimentos', requireRole('ADMIN', 'ALMOXARIFE'), SuprimentoController.store);
+router.post('/suprimentos/movimentar', requireRole('ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'), SuprimentoController.movimentar);
 
 // --- CENTRAL DE RELATÓRIOS (GERENCIAL, OPERACIONAL, PDF & EXCEL) ---
 router.get('/relatorios', RelatorioController.index);

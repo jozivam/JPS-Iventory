@@ -119,7 +119,12 @@
             </label>
             <select id="produto-unidade-select" name="unidade_medida" class="form-select">
               <option value="UN" <%= produto.unidade_medida === 'UN' ? 'selected' : '' %>>UN - Unidade</option>
+              <option value="GL" <%= produto.unidade_medida === 'GL' ? 'selected' : '' %>>GL - Galão</option>
               <option value="CX" <%= produto.unidade_medida === 'CX' ? 'selected' : '' %>>CX - Caixa</option>
+              <option value="PCT" <%= produto.unidade_medida === 'PCT' ? 'selected' : '' %>>PCT - Pacote</option>
+              <option value="FD" <%= produto.unidade_medida === 'FD' ? 'selected' : '' %>>FD - Fardo</option>
+              <option value="FR" <%= produto.unidade_medida === 'FR' ? 'selected' : '' %>>FR - Frasco</option>
+              <option value="RL" <%= produto.unidade_medida === 'RL' ? 'selected' : '' %>>RL - Rolo</option>
               <option value="PAR" <%= produto.unidade_medida === 'PAR' ? 'selected' : '' %>>PAR - Par</option>
               <option value="KG" <%= produto.unidade_medida === 'KG' ? 'selected' : '' %>>KG - Quilograma</option>
               <option value="L" <%= produto.unidade_medida === 'L' ? 'selected' : '' %>>L - Litro</option>

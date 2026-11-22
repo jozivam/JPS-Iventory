@@ -127,8 +127,6 @@
       colaboradores: { titulo: 'Por Colaborador', desc: 'Consumo, trocas e cautelas por setor' },
       emprestimos: { titulo: 'Cautelas / Empréstimos', desc: 'Ferramentas em posse e dias decorridos' },
       inventario: { titulo: 'Itens em Estoque', desc: 'Posição física, saldos, TAGs e giro' },
-      contagem: { titulo: 'Contagem Diária', desc: 'Conferência dos itens que saíram ontem' },
-      duplicidades: { titulo: 'Ferramentas & Duplicidades', desc: 'Itens duplicados p/ desmobilização' },
       reposicao: { titulo: 'Alerta de Reposição', desc: 'Itens zerados/baixos e sugestão de compra' }
     };
   %>
@@ -136,16 +134,9 @@
     const info = labelsCurto[t.id] || { titulo: t.titulo, desc: t.subtitulo };
     const linkParams = new URLSearchParams();
     linkParams.set('tipo_relatorio', t.id);
-    if (t.id === 'contagem') {
-      linkParams.set('periodo', 'ontem');
-    } else if (t.id === 'duplicidades') {
-      linkParams.set('somente_com_estoque', '1');
-      if (filtros.categoria) linkParams.set('categoria', filtros.categoria);
-    } else {
-      if (filtros.periodo) linkParams.set('periodo', filtros.periodo);
-      if (filtros.data_inicio) linkParams.set('data_inicio', filtros.data_inicio);
-      if (filtros.data_fim) linkParams.set('data_fim', filtros.data_fim);
-    }
+    if (filtros.periodo) linkParams.set('periodo', filtros.periodo);
+    if (filtros.data_inicio) linkParams.set('data_inicio', filtros.data_inicio);
+    if (filtros.data_fim) linkParams.set('data_fim', filtros.data_fim);
   %>
     <a href="/relatorios?<%= linkParams.toString() %>" class="rel-type-card <%= tipoRelatorio === t.id ? 'ativo' : '' %>">
       <div class="rel-type-icon">
@@ -276,35 +267,7 @@
         </div>
       <% } %>
 
-      <% if (tipoRelatorio === 'contagem') { %>
-        <div>
-          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Escopo da Contagem</label>
-          <select name="modo_contagem" class="form-control" style="height: 38px;">
-            <option value="saidas" <%= filtros.modo_contagem !== 'todas' ? 'selected' : '' %>>Apenas Saídas / Empréstimos / Trocas</option>
-            <option value="todas" <%= filtros.modo_contagem === 'todas' ? 'selected' : '' %>>Todas as Movimentações (incl. Entradas)</option>
-          </select>
-        </div>
-      <% } %>
-
-      <% if (tipoRelatorio === 'duplicidades') { %>
-        <div>
-          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Critério de Exibição</label>
-          <select name="modo_duplicidade" class="form-control" style="height: 38px;">
-            <option value="duplicados" <%= filtros.modo_duplicidade !== 'todos' ? 'selected' : '' %>>Apenas Duplicados / Excedentes (&gt; 1)</option>
-            <option value="todos" <%= filtros.modo_duplicidade === 'todos' ? 'selected' : '' %>>Todos os Itens da Categoria</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Saldo em Estoque</label>
-          <select name="somente_com_estoque" class="form-control" style="height: 38px;">
-            <option value="1" <%= filtros.somente_com_estoque === '1' ? 'selected' : '' %>>Somente com Estoque (&gt; 0)</option>
-            <option value="0" <%= filtros.somente_com_estoque !== '1' ? 'selected' : '' %>>Incluir Zerados (0 un.)</option>
-          </select>
-        </div>
-      <% } %>
-
-      <% if (['inventario', 'reposicao', 'duplicidades'].includes(tipoRelatorio)) { %>
+      <% if (tipoRelatorio === 'inventario' || tipoRelatorio === 'reposicao') { %>
         <div>
           <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Condição</label>
           <select name="condicao" class="form-control" style="height: 38px;">
@@ -397,8 +360,9 @@
             <tr>
               <th>Produto</th>
               <th style="text-align: center;">Saídas/Trocas</th>
-              <th style="text-align: center;">Empréstimos</th>
-              <th style="text-align: right;">Total</th>
+              <th style="text-align: center;">Média/Dia</th>
+              <th style="text-align: center;">Proj. 30d</th>
+              <th style="text-align: right;">Total Retirado</th>
             </tr>
           </thead>
           <tbody>
@@ -407,15 +371,16 @@
                 <tr>
                   <td>
                     <div style="font-weight: 700; font-size: 0.86rem; color: var(--text-main);"><%= idx + 1 %>. <%= p.nome %></div>
-                    <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);"><%= p.sku %> • <%= p.categoria %></div>
+                    <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);"><%= p.sku %> • <%= p.categoria %> • Saldo: <%= p.saldoAtual %></div>
                   </td>
                   <td style="text-align: center; font-weight: 700; color: #B91C1C;"><%= p.totalConsumo %></td>
-                  <td style="text-align: center; font-weight: 700; color: #B45309;"><%= p.emprestimos %></td>
+                  <td style="text-align: center; font-weight: 700; color: #0F766E;"><%= p.mediaDiaria > 0 ? p.mediaDiaria.toFixed(1).replace('.', ',') + '/d' : '-' %></td>
+                  <td style="text-align: center; font-weight: 700; color: var(--primary);"><%= p.projecao30d > 0 ? p.projecao30d : '-' %></td>
                   <td style="text-align: right; font-weight: 800; color: var(--text-main);"><%= p.totalConsumo + p.emprestimos %> <small style="color: var(--text-dim);"><%= p.unidade %></small></td>
                 </tr>
               <% }) %>
             <% } else { %>
-              <tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhuma saída ou empréstimo registrado no período selecionado.</td></tr>
+              <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhuma saída ou empréstimo registrado no período selecionado.</td></tr>
             <% } %>
           </tbody>
         </table>
@@ -700,9 +665,9 @@
             <th>Produto / Identificação</th>
             <th>Categoria / Condição</th>
             <th style="text-align: center;">Saldo Atual</th>
-            <th style="text-align: center;">Mínimo</th>
-            <th style="text-align: center;">Saídas (Período)</th>
-            <th>Localização</th>
+            <th style="text-align: center;">Média/Dia</th>
+            <th style="text-align: center;">Proj. 30d</th>
+            <th style="text-align: center;">Cobertura</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -714,17 +679,29 @@
                 <td>
                   <div style="font-weight: 700; font-size: 0.86rem;"><%= p.nome %></div>
                   <div style="font-size: 0.72rem; color: var(--text-dim);">
-                    <%= p.marca || '' %><%= p.tag ? ` • TAG: ${p.tag}` : '' %><%= p.patrimonio ? ` • PAT: ${p.patrimonio}` : '' %><%= p.ca ? ` • CA: ${p.ca}` : '' %>
+                    <%= p.marca || '' %><%= p.localizacao ? ` • ${p.localizacao}` : '' %><%= p.tag ? ` • TAG: ${p.tag}` : '' %><%= p.patrimonio ? ` • PAT: ${p.patrimonio}` : '' %><%= p.ca ? ` • CA: ${p.ca}` : '' %>
                   </div>
                 </td>
                 <td>
                   <div style="font-size: 0.82rem; font-weight: 600;"><%= p.categoria || 'Outros' %></div>
                   <div style="font-size: 0.71rem; color: var(--text-muted);"><%= p.condicao || 'NOVO' %></div>
                 </td>
-                <td style="text-align: center; font-weight: 800; font-size: 0.92rem;"><%= p.quantidade %> <small style="color: var(--text-dim);"><%= p.unidade_medida %></small></td>
-                <td style="text-align: center; color: var(--text-muted);"><%= p.estoque_minimo %></td>
-                <td style="text-align: center; font-weight: 700; color: <%= p.saidas_periodo > 0 ? '#B91C1C' : 'var(--text-dim)' %>;"><%= p.saidas_periodo %></td>
-                <td style="font-size: 0.8rem; color: var(--text-body);"><%= p.localizacao || '-' %></td>
+                <td style="text-align: center; font-weight: 800; font-size: 0.92rem;">
+                  <%= p.quantidade %> <small style="color: var(--text-dim);"><%= p.unidade_medida %></small>
+                  <div style="font-size: 0.69rem; color: var(--text-dim); font-weight: 500;">Mín: <%= p.estoque_minimo %></div>
+                </td>
+                <td style="text-align: center; font-weight: 700; color: <%= p.media_diaria > 0 ? '#B91C1C' : 'var(--text-dim)' %>;">
+                  <%= p.media_diaria > 0 ? p.media_diaria.toFixed(1).replace('.', ',') + '/d' : '-' %>
+                  <% if (p.saidas_periodo > 0) { %>
+                    <div style="font-size: 0.69rem; color: var(--text-dim); font-weight: 500;">(<%= p.saidas_periodo %> no per.)</div>
+                  <% } %>
+                </td>
+                <td style="text-align: center; font-weight: 700; color: <%= p.projecao_30d > 0 ? 'var(--primary)' : 'var(--text-dim)' %>;">
+                  <%= p.projecao_30d > 0 ? `${p.projecao_30d} ${p.unidade_medida}` : '-' %>
+                </td>
+                <td style="text-align: center; font-weight: 700; color: <%= (p.dias_cobertura !== null && p.dias_cobertura <= 10) ? 'var(--danger)' : 'var(--text-body)' %>;">
+                  <%= p.dias_cobertura !== null ? `~${p.dias_cobertura}d` : '-' %>
+                </td>
                 <td>
                   <% if (p.status_estoque === 'NORMAL') { %>
                     <span class="status-pill in-stock" style="font-size: 0.72rem;">Normal</span>
@@ -738,221 +715,6 @@
             <% }) %>
           <% } else { %>
             <tr><td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">Nenhum produto encontrado para os filtros selecionados.</td></tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-<% } else if (tipoRelatorio === 'contagem') { %>
-
-  <div class="table-card" style="padding: 0; overflow: hidden;">
-    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
-      <div>
-        <h3 style="font-size: 1rem; font-weight: 800; margin: 0; color: var(--text-main);">
-          <i class="fa-solid fa-list-check" style="color: var(--primary); margin-right: 6px;"></i>
-          Lista de Contagem Diária (<%= itensContagemDiaria.length %> item(ns) para conferir)
-        </h3>
-        <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
-          Ordenado por <strong>Localização</strong> para agilizar a conferência nas prateleiras. Ao exportar em <strong>PDF</strong> ou <strong>Excel</strong>, o documento já inclui colunas em branco de <em>Contagem Física</em> e <em>Divergência</em>.
-        </div>
-      </div>
-      <span class="status-pill" style="background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; font-size: 0.74rem;">
-        <i class="fa-regular fa-calendar"></i> Referência: <%= periodoDescricao %>
-      </span>
-    </div>
-
-    <div class="table-responsive">
-      <table class="clean-table">
-        <thead>
-          <tr>
-            <th>Localização</th>
-            <th>SKU / TAG</th>
-            <th>Produto / Material</th>
-            <th style="text-align: center;">Saídas no Dia</th>
-            <th style="text-align: center;">Emprést. / Trocas</th>
-            <th style="text-align: center;">Saldo Atual (Sistema)</th>
-            <th style="text-align: center;">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (itensContagemDiaria.length > 0) { %>
-            <% itensContagemDiaria.forEach(item => { %>
-              <tr>
-                <td>
-                  <span style="font-weight: 700; color: var(--primary); font-size: 0.82rem;">
-                    <i class="fa-solid fa-location-dot" style="font-size: 0.72rem; margin-right: 3px;"></i>
-                    <%= item.localizacao %>
-                  </span>
-                </td>
-                <td>
-                  <div style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;"><%= item.sku %></div>
-                  <% if (item.tag || item.patrimonio) { %>
-                    <div style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);"><%= [item.tag ? 'TAG:' + item.tag : '', item.patrimonio ? 'PAT:' + item.patrimonio : ''].filter(Boolean).join(' • ') %></div>
-                  <% } %>
-                </td>
-                <td>
-                  <div style="font-weight: 700; font-size: 0.86rem; color: var(--text-main);"><%= item.nome %></div>
-                  <div style="font-size: 0.72rem; color: var(--text-muted);"><%= item.categoria %><%= item.marca ? ` • ${item.marca}` : '' %></div>
-                </td>
-                <td style="text-align: center; font-weight: 800; color: #B91C1C;">
-                  <%= item.saidas_dia > 0 ? '-' + item.saidas_dia : '0' %>
-                </td>
-                <td style="text-align: center; font-weight: 700; color: #B45309;">
-                  <%= (item.emprestimos_dia + item.trocas_dia) > 0 ? (item.emprestimos_dia + item.trocas_dia) : '0' %>
-                  <% if (item.entradas_dia + item.devolucoes_dia > 0) { %>
-                    <div style="font-size: 0.69rem; color: #047857;">+<%= item.entradas_dia + item.devolucoes_dia %> entr./dev.</div>
-                  <% } %>
-                </td>
-                <td style="text-align: center;">
-                  <span style="font-size: 1rem; font-weight: 800; color: var(--text-main);"><%= item.saldo_atual %></span>
-                  <small style="color: var(--text-dim);"><%= item.unidade_medida %></small>
-                </td>
-                <td style="text-align: center;">
-                  <% if (item.status_estoque === 'CRITICO') { %>
-                    <span class="status-pill out-of-stock" style="font-size: 0.72rem;">Zerado</span>
-                  <% } else if (item.status_estoque === 'BAIXO') { %>
-                    <span class="status-pill low-stock" style="font-size: 0.72rem;">Baixo</span>
-                  <% } else { %>
-                    <span class="status-pill in-stock" style="font-size: 0.72rem;">Normal</span>
-                  <% } %>
-                </td>
-              </tr>
-            <% }) %>
-          <% } else { %>
-            <tr>
-              <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
-                <i class="fa-solid fa-clipboard-check" style="font-size: 1.8rem; color: #10B981; display: block; margin-bottom: 0.45rem;"></i>
-                Nenhum item teve saída registrada no período <strong><%= periodoDescricao %></strong>.
-                <div style="font-size: 0.78rem; margin-top: 0.35rem;">Você pode selecionar outro dia ou clicar em <strong>Hoje</strong> / <strong>Últimos 7 dias</strong> acima.</div>
-              </td>
-            </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-<% } else if (tipoRelatorio === 'duplicidades') { %>
-
-  <!-- Atalho rápido para filtrar Ferramentas + Indicadores de Desmobilização -->
-  <div class="table-card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem; background: #FFFBEB; border: 1px solid #FCD34D; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-    <div>
-      <div style="font-weight: 800; font-size: 0.92rem; color: #92400E;">
-        <i class="fa-solid fa-clone" style="margin-right: 5px;"></i> Análise de Duplicidades & Desmobilização
-      </div>
-      <div style="font-size: 0.79rem; color: #78350F; margin-top: 2px;">
-        Encontrados <strong><%= kpisDuplicidades.totalGrupos %></strong> grupo(s) (<%= kpisDuplicidades.totalCadastrosEnvolvidos %> cadastros / <%= kpisDuplicidades.totalUnidadesEstoque %> un. em estoque) •
-        <strong>Potencial para desmobilizar (mantendo 1 un. de cada): <%= kpisDuplicidades.potencialDesmobilizar %> unidade(s)</strong>.
-      </div>
-    </div>
-    <div style="display: flex; gap: 0.45rem; flex-wrap: wrap;">
-      <% if (opcoesFiltro.categorias.includes('Ferramentas')) { %>
-        <a href="/relatorios?tipo_relatorio=duplicidades&categoria=Ferramentas&somente_com_estoque=1&modo_duplicidade=duplicados" class="btn btn-sm <%= filtros.categoria === 'Ferramentas' && filtros.modo_duplicidade !== 'todos' ? 'btn-primary' : 'btn-outline' %>" style="background: <%= filtros.categoria === 'Ferramentas' && filtros.modo_duplicidade !== 'todos' ? '' : '#ffffff' %>;">
-          <i class="fa-solid fa-wrench"></i> Só Ferramentas Duplicadas
-        </a>
-        <a href="/relatorios?tipo_relatorio=duplicidades&categoria=Ferramentas&somente_com_estoque=1&modo_duplicidade=todos" class="btn btn-sm <%= filtros.categoria === 'Ferramentas' && filtros.modo_duplicidade === 'todos' ? 'btn-primary' : 'btn-outline' %>" style="background: <%= filtros.categoria === 'Ferramentas' && filtros.modo_duplicidade === 'todos' ? '' : '#ffffff' %>;">
-          <i class="fa-solid fa-toolbox"></i> Todas as Ferramentas em Estoque
-        </a>
-      <% } %>
-    </div>
-  </div>
-
-  <!-- Tabela 1: Resumo Agrupado por Equipamento Base -->
-  <div class="table-card" style="padding: 0; overflow: hidden; margin-bottom: 1.25rem;">
-    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light);">
-      <h3 style="font-size: 0.98rem; font-weight: 800; margin: 0;">1. Resumo Agrupado por Equipamento / Item Base (<%= gruposDuplicidades.length %>)</h3>
-    </div>
-    <div class="table-responsive">
-      <table class="clean-table">
-        <thead>
-          <tr>
-            <th>Equipamento / Item Base</th>
-            <th>Categoria</th>
-            <th>Tipo de Ocorrência</th>
-            <th style="text-align: center;">Cadastros (TAGs/SKUs)</th>
-            <th style="text-align: center;">Em Estoque</th>
-            <th style="text-align: center;">Emprestado</th>
-            <th style="text-align: right;">Potencial Desmob.</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (gruposDuplicidades.length > 0) { %>
-            <% gruposDuplicidades.forEach(g => { %>
-              <tr>
-                <td>
-                  <div style="font-weight: 700; font-size: 0.86rem; color: var(--text-main);"><%= g.nome_base %></div>
-                  <div style="font-size: 0.71rem; color: var(--text-dim); font-family: var(--font-mono);">
-                    <%= g.registros.map(r => r.tag ? `${r.sku} (TAG:${r.tag})` : r.sku).join(' • ') %>
-                  </div>
-                </td>
-                <td style="font-size: 0.82rem; font-weight: 600;"><%= g.categoria %></td>
-                <td>
-                  <% if (g.temCadastroDuplicado) { %>
-                    <span class="status-pill out-of-stock" style="font-size: 0.71rem;"><%= g.tipoDuplicidade %></span>
-                  <% } else if (g.temSaldoExcedente) { %>
-                    <span class="status-pill low-stock" style="font-size: 0.71rem;"><%= g.tipoDuplicidade %></span>
-                  <% } else { %>
-                    <span class="status-pill in-stock" style="font-size: 0.71rem;">Unidade Única</span>
-                  <% } %>
-                </td>
-                <td style="text-align: center; font-weight: 700;"><%= g.totalRegistros %></td>
-                <td style="text-align: center; font-weight: 800; color: var(--primary);"><%= g.totalUnidadesEstoque %> <small style="color: var(--text-dim);"><%= g.unidade_medida %></small></td>
-                <td style="text-align: center; font-weight: 700; color: <%= g.totalEmprestado > 0 ? '#B45309' : 'var(--text-dim)' %>;"><%= g.totalEmprestado %></td>
-                <td style="text-align: right; font-weight: 800; color: <%= g.potencialDesmobilizar > 0 ? '#B91C1C' : 'var(--text-dim)' %>;">
-                  <%= g.potencialDesmobilizar > 0 ? `${g.potencialDesmobilizar} ${g.unidade_medida}` : '-' %>
-                </td>
-              </tr>
-            <% }) %>
-          <% } else { %>
-            <tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">Nenhum item duplicado ou excedente encontrado para os filtros atuais.</td></tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Tabela 2: Detalhamento Individual por TAG / SKU / Patrimônio -->
-  <div class="table-card" style="padding: 0; overflow: hidden;">
-    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light);">
-      <h3 style="font-size: 0.98rem; font-weight: 800; margin: 0;">2. Detalhamento Individual por TAG / SKU / Patrimônio (<%= itensDuplicidadesDetalhe.length %> registros)</h3>
-    </div>
-    <div class="table-responsive">
-      <table class="clean-table">
-        <thead>
-          <tr>
-            <th>Grupo Base</th>
-            <th>SKU / TAG / Patrimônio</th>
-            <th>Nome Cadastrado</th>
-            <th>Condição</th>
-            <th>Localização</th>
-            <th style="text-align: center;">Em Estoque</th>
-            <th style="text-align: center;">Em Campo</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (itensDuplicidadesDetalhe.length > 0) { %>
-            <% itensDuplicidadesDetalhe.forEach(r => { %>
-              <tr>
-                <td style="font-size: 0.78rem; font-weight: 700; color: var(--primary);"><%= r.grupo_nome_base %></td>
-                <td style="font-family: var(--font-mono); font-size: 0.76rem;">
-                  <div style="font-weight: 700; color: var(--text-main);"><%= r.sku %></div>
-                  <% if (r.tag || r.patrimonio) { %>
-                    <div style="color: var(--text-dim);"><%= [r.tag ? 'TAG:' + r.tag : '', r.patrimonio ? 'PAT:' + r.patrimonio : ''].filter(Boolean).join(' • ') %></div>
-                  <% } %>
-                </td>
-                <td>
-                  <div style="font-weight: 700; font-size: 0.84rem;"><%= r.nome %></div>
-                  <div style="font-size: 0.71rem; color: var(--text-muted);"><%= r.categoria %><%= r.marca ? ` • ${r.marca}` : '' %></div>
-                </td>
-                <td style="font-size: 0.78rem; font-weight: 600;"><%= r.condicao || 'NOVO' %></td>
-                <td style="font-size: 0.8rem; color: var(--text-body);"><%= r.localizacao || '-' %></td>
-                <td style="text-align: center; font-weight: 800;"><%= r.quantidade %> <small style="color: var(--text-dim);"><%= r.unidade_medida %></small></td>
-                <td style="text-align: center; font-weight: 700; color: <%= r.emprestado_atual > 0 ? '#B45309' : 'var(--text-dim)' %>;"><%= r.emprestado_atual %></td>
-              </tr>
-            <% }) %>
-          <% } else { %>
-            <tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">Sem registros detalhados para exibir.</td></tr>
           <% } %>
         </tbody>
       </table>
@@ -973,8 +735,9 @@
             <th>SKU</th>
             <th>Produto / Categoria</th>
             <th style="text-align: center;">Saldo Atual</th>
-            <th style="text-align: center;">Mínimo</th>
-            <th style="text-align: center;">Consumo 30d</th>
+            <th style="text-align: center;">Média/Dia</th>
+            <th style="text-align: center;">Proj. 30d</th>
+            <th style="text-align: center;">Cobertura</th>
             <th style="text-align: right;">Sugestão Reposição</th>
           </tr>
         </thead>
@@ -985,8 +748,10 @@
                 <td>
                   <% if (p.quantidade === 0) { %>
                     <span class="status-pill out-of-stock" style="font-size: 0.72rem;">URGENTE • Zerado</span>
-                  <% } else { %>
+                  <% } else if (p.status_estoque === 'BAIXO') { %>
                     <span class="status-pill low-stock" style="font-size: 0.72rem;">ATENÇÃO • Baixo</span>
+                  <% } else { %>
+                    <span class="status-pill" style="background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; font-size: 0.72rem;">ANTECIPAR • ≤10d</span>
                   <% } %>
                 </td>
                 <td style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;"><%= p.sku %></td>
@@ -994,17 +759,23 @@
                   <div style="font-weight: 700; font-size: 0.86rem;"><%= p.nome %></div>
                   <div style="font-size: 0.72rem; color: var(--text-dim);"><%= p.categoria || 'Outros' %><%= p.marca ? ` • ${p.marca}` : '' %><%= p.ca ? ` • CA: ${p.ca}` : '' %></div>
                 </td>
-                <td style="text-align: center; font-weight: 800; color: <%= p.quantidade === 0 ? 'var(--danger)' : '#B45309' %>;"><%= p.quantidade %> <%= p.unidade_medida %></td>
-                <td style="text-align: center; color: var(--text-muted);"><%= p.estoque_minimo %></td>
-                <td style="text-align: center; font-weight: 600;"><%= p.consumo_30d %></td>
+                <td style="text-align: center; font-weight: 800; color: <%= p.quantidade === 0 ? 'var(--danger)' : '#B45309' %>;">
+                  <%= p.quantidade %> <%= p.unidade_medida %>
+                  <div style="font-size: 0.69rem; color: var(--text-dim); font-weight: 500;">Mín: <%= p.estoque_minimo %></div>
+                </td>
+                <td style="text-align: center; font-weight: 700; color: #B91C1C;"><%= p.media_diaria > 0 ? p.media_diaria.toFixed(1).replace('.', ',') + '/d' : '-' %></td>
+                <td style="text-align: center; font-weight: 700; color: var(--primary);"><%= p.projecao_30d > 0 ? p.projecao_30d : p.consumo_30d %></td>
+                <td style="text-align: center; font-weight: 800; color: <%= (p.dias_cobertura !== null && p.dias_cobertura <= 7) ? 'var(--danger)' : '#B45309' %>;">
+                  <%= p.quantidade === 0 ? '0d' : (p.dias_cobertura !== null ? `~${p.dias_cobertura}d` : '-') %>
+                </td>
                 <td style="text-align: right; font-weight: 800; color: var(--primary);">+<%= p.sugestao_compra %> <%= p.unidade_medida %></td>
               </tr>
             <% }) %>
           <% } else { %>
             <tr>
-              <td colspan="7" style="text-align: center; padding: 2.5rem; color: #047857; font-weight: 600;">
+              <td colspan="8" style="text-align: center; padding: 2.5rem; color: #047857; font-weight: 600;">
                 <i class="fa-solid fa-circle-check" style="font-size: 1.5rem; display: block; margin-bottom: 0.4rem;"></i>
-                Nenhum item zerado ou abaixo do estoque mínimo com os filtros atuais!
+                Nenhum item zerado, baixo ou com cobertura crítica nos filtros atuais!
               </td>
             </tr>
           <% } %>
