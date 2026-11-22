@@ -41,6 +41,18 @@ const TIPOS_RELATORIO = {
     subtitulo: 'Auditoria física de saldos, mínimos, localização, patrimônio, C.A. e volume movimentado no período.',
     icone: 'fa-boxes-stacked'
   },
+  contagem: {
+    id: 'contagem',
+    titulo: 'Contagem Diária (Conferência de Estoque)',
+    subtitulo: 'Lista focada apenas nos itens que tiveram saída/movimentação no dia anterior (ou período), ordenada por localização.',
+    icone: 'fa-list-check'
+  },
+  duplicidades: {
+    id: 'duplicidades',
+    titulo: 'Ferramentas & Duplicidades (Desmobilização)',
+    subtitulo: 'Identifica ferramentas e itens duplicados (mesmo equipamento em vários TAGs/SKUs ou saldo excedente > 1) para desmobilização.',
+    icone: 'fa-clone'
+  },
   reposicao: {
     id: 'reposicao',
     titulo: 'Alerta de Reposição / Necessidade de Compra',
@@ -124,6 +136,24 @@ function calcularDiasDecorridos(dateStr) {
 }
 
 /**
+ * Normaliza o nome base de um produto/ferramenta removendo códigos de TAG/Patrimônio
+ * para detectar cadastros duplicados (ex: "Lixadeira 7\" PTM-1550" e "Lixadeira 7\" PTM-1551")
+ */
+function normalizarNomeBase(nome) {
+  if (!nome) return '';
+  return String(nome)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\b[A-Z]{2,5}[-/]\d{2,6}\b/g, ' ')
+    .replace(/\b[A-Z]{2,5}\d{3,6}\b/g, ' ')
+    .replace(/\b(N[Oº°]?|NUM|TAG|PAT|PATRIMONIO|SERIE|SN)\s*[-:#.]?\s*\d+\b/g, ' ')
+    .replace(/[^A-Z0-9"'\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Carrega TODAS as movimentações sem truncar no limite padrão de 200 ou 1000 do Supabase
  */
 async function buscarTodasMovimentacoesCompletas() {
@@ -192,7 +222,7 @@ async function buscarTodasMovimentacoesCompletas() {
 /**
  * Resolve intervalo de datas baseado nos atalhos de período ou datas manuais
  */
-function resolverPeriodo(query) {
+function resolverPeriodo(query, tipoRelatorio = 'geral') {
   const hoje = new Date();
   const hojeYMD = formatDateLocalYMD(hoje);
 
@@ -200,9 +230,9 @@ function resolverPeriodo(query) {
   let dataInicio = (query.data_inicio || '').trim();
   let dataFim = (query.data_fim || '').trim();
 
-  // Padrão inicial ao abrir /relatorios sem parâmetros: Últimos 7 dias
+  // Padrão inteligente: Contagem Diária abre por padrão em "Ontem" (dia anterior); demais em 7 dias
   if (!periodo && !dataInicio && !dataFim) {
-    periodo = '7dias';
+    periodo = tipoRelatorio === 'contagem' ? 'ontem' : '7dias';
   }
 
   const subtrairDias = (dias) => {
@@ -213,6 +243,10 @@ function resolverPeriodo(query) {
   if (periodo === 'hoje') {
     dataInicio = hojeYMD;
     dataFim = hojeYMD;
+  } else if (periodo === 'ontem') {
+    const ontemYMD = subtrairDias(1);
+    dataInicio = ontemYMD;
+    dataFim = ontemYMD;
   } else if (periodo === '7dias') {
     dataInicio = subtrairDias(6);
     dataFim = hojeYMD;
@@ -251,7 +285,7 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
   const tipoRelatorio = TIPOS_RELATORIO[query.tipo_relatorio] ? query.tipo_relatorio : 'geral';
   const metaRelatorio = TIPOS_RELATORIO[tipoRelatorio];
 
-  const { periodo, dataInicio, dataFim, periodoDescricao, hojeYMD } = resolverPeriodo(query);
+  const { periodo, dataInicio, dataFim, periodoDescricao, hojeYMD } = resolverPeriodo(query, tipoRelatorio);
 
   const filtros = {
     tipo_relatorio: tipoRelatorio,
@@ -266,6 +300,9 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
     status_estoque: (query.status_estoque || '').trim(),
     condicao: (query.condicao || '').trim(),
     status_emprestimo: (query.status_emprestimo || (tipoRelatorio === 'emprestimos' ? 'PENDENTE' : '')).trim(),
+    somente_com_estoque: (query.somente_com_estoque || (tipoRelatorio === 'duplicidades' ? '1' : '')).trim(),
+    modo_contagem: (query.modo_contagem || 'saidas').trim(),
+    modo_duplicidade: (query.modo_duplicidade || 'duplicados').trim(),
     busca: (query.busca || '').trim()
   };
 
@@ -405,11 +442,12 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
     }
   }
 
-  // Filtra produtos para os relatórios de Inventário e Reposição
+  // Filtra produtos para os relatórios de Inventário, Duplicidades e Reposição
   const produtosFiltrados = todosProdutos
     .filter(p => {
       if (filtros.categoria && (p.categoria || 'Outros') !== filtros.categoria) return false;
       if (filtros.status_estoque && p.status_estoque !== filtros.status_estoque) return false;
+      if (filtros.somente_com_estoque === '1' && Number(p.quantidade || 0) <= 0) return false;
       if (filtros.condicao && (p.condicao || 'NOVO').toUpperCase() !== filtros.condicao.toUpperCase()) return false;
       if (filtros.produto_id && String(p.id) !== String(filtros.produto_id)) return false;
       if (filtros.busca) {
@@ -479,8 +517,9 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
     return true;
   });
 
-  // Todos os empréstimos pendentes globais (para o indicador de pendências reais de cada colaborador)
+  // Todos os empréstimos pendentes globais (para o indicador de pendências reais de cada colaborador e produto)
   const pendenciasPorColabKey = new Map();
+  const pendenciasPorProdutoId = new Map();
   let totalEmprestimosPendentesGlobalQtd = 0;
   let totalEmprestimosPendentesGlobalCount = 0;
   for (const m of movsEnriquecidas) {
@@ -490,8 +529,144 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
       totalEmprestimosPendentesGlobalCount++;
       const key = m.colaborador_resolvido_id ? `id:${m.colaborador_resolvido_id}` : `nome:${m.colaborador_nome_exibicao.toLowerCase()}`;
       pendenciasPorColabKey.set(key, (pendenciasPorColabKey.get(key) || 0) + q);
+      const pid = String(m.produto_id);
+      pendenciasPorProdutoId.set(pid, (pendenciasPorProdutoId.get(pid) || 0) + q);
     }
   }
+
+  // =========================================================================
+  // RELATÓRIO DE CONTAGEM DIÁRIA (ITENS QUE SAÍRAM/MOVIMENTARAM NO DIA/PERÍODO)
+  // =========================================================================
+  const contagemMap = new Map();
+  for (const m of movsFiltradas) {
+    const isSaidaOuRetirada = m.tipo === 'SAIDA' || m.tipo === 'EMPRESTIMO' || m.tipo === 'TROCA';
+    if (filtros.modo_contagem === 'saidas' && !isSaidaOuRetirada) continue;
+
+    const pid = String(m.produto_id);
+    const prodAtual = prodById.get(pid);
+    if (!contagemMap.has(pid)) {
+      contagemMap.set(pid, {
+        produto_id: m.produto_id,
+        sku: prodAtual ? prodAtual.sku : m.produto_sku,
+        nome: prodAtual ? prodAtual.nome : m.produto_nome,
+        categoria: prodAtual ? (prodAtual.categoria || 'Outros') : m.produto_categoria,
+        marca: prodAtual ? (prodAtual.marca || '') : m.produto_marca,
+        unidade_medida: prodAtual ? (prodAtual.unidade_medida || 'UN') : m.produto_unidade,
+        localizacao: prodAtual ? (prodAtual.localizacao || 'Sem localização') : (m.produto_localizacao || 'Sem localização'),
+        tag: prodAtual ? (prodAtual.tag || '') : m.produto_tag,
+        patrimonio: prodAtual ? (prodAtual.patrimonio || '') : m.produto_patrimonio,
+        saldo_atual: prodAtual ? Number(prodAtual.quantidade || 0) : 0,
+        estoque_minimo: prodAtual ? Number(prodAtual.estoque_minimo || 0) : 0,
+        status_estoque: prodAtual ? prodAtual.status_estoque : 'NORMAL',
+        saidas_dia: 0,
+        emprestimos_dia: 0,
+        trocas_dia: 0,
+        entradas_dia: 0,
+        devolucoes_dia: 0,
+        total_saidas_dia: 0,
+        total_lancamentos_dia: 0,
+        ultimo_colaborador: m.colaborador_nome_exibicao || ''
+      });
+    }
+    const item = contagemMap.get(pid);
+    const q = Number(m.quantidade || 0);
+    item.total_lancamentos_dia++;
+    if (m.tipo === 'SAIDA') { item.saidas_dia += q; item.total_saidas_dia += q; }
+    else if (m.tipo === 'EMPRESTIMO') { item.emprestimos_dia += q; item.total_saidas_dia += q; }
+    else if (m.tipo === 'TROCA') { item.trocas_dia += q; item.total_saidas_dia += q; }
+    else if (m.tipo === 'ENTRADA') item.entradas_dia += q;
+    else if (m.tipo === 'DEVOLUCAO') item.devolucoes_dia += q;
+  }
+
+  // Ordena por Localização (para facilitar a conferência física prateleira por prateleira) e depois Nome
+  const itensContagemDiaria = [...contagemMap.values()].sort((a, b) => {
+    const locA = (a.localizacao || 'ZZZ').toLowerCase();
+    const locB = (b.localizacao || 'ZZZ').toLowerCase();
+    if (locA !== locB) return locA.localeCompare(locB, 'pt-BR');
+    return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+  });
+
+  // =========================================================================
+  // RELATÓRIO DE FERRAMENTAS & DUPLICIDADES PARA DESMOBILIZAÇÃO
+  // =========================================================================
+  const gruposDupMap = new Map();
+  for (const p of produtosFiltrados) {
+    const base = normalizarNomeBase(p.nome) || (p.sku || `ITEM-${p.id}`);
+    if (!gruposDupMap.has(base)) {
+      gruposDupMap.set(base, {
+        nome_base: base,
+        categoria: p.categoria || 'Outros',
+        unidade_medida: p.unidade_medida || 'UN',
+        registros: [],
+        totalRegistros: 0,
+        totalUnidadesEstoque: 0,
+        totalEmprestado: 0
+      });
+    }
+    const g = gruposDupMap.get(base);
+    const empAtivo = pendenciasPorProdutoId.get(String(p.id)) || 0;
+    g.registros.push({
+      ...p,
+      nome_base: base,
+      emprestado_atual: empAtivo
+    });
+    g.totalRegistros++;
+    g.totalUnidadesEstoque += Number(p.quantidade || 0);
+    g.totalEmprestado += empAtivo;
+  }
+
+  const todosGruposDuplicidades = [...gruposDupMap.values()].map(g => {
+    const temCadastroDuplicado = g.totalRegistros > 1;
+    const temSaldoExcedente = g.totalUnidadesEstoque > 1;
+    const isDuplicadoOuExcedente = temCadastroDuplicado || temSaldoExcedente;
+    const potencialDesmobilizar = Math.max(0, g.totalUnidadesEstoque - 1);
+    const tipoDuplicidade = temCadastroDuplicado && temSaldoExcedente
+      ? 'Múltiplos TAGs/Cadastros + Saldo > 1'
+      : temCadastroDuplicado
+        ? 'Cadastros Duplicados (TAGs/SKUs)'
+        : temSaldoExcedente
+          ? 'Saldo Excedente (> 1 un.)'
+          : 'Unidade Única';
+
+    return {
+      ...g,
+      temCadastroDuplicado,
+      temSaldoExcedente,
+      isDuplicadoOuExcedente,
+      potencialDesmobilizar,
+      tipoDuplicidade
+    };
+  });
+
+  const gruposDuplicidades = todosGruposDuplicidades
+    .filter(g => filtros.modo_duplicidade === 'todos' ? true : g.isDuplicadoOuExcedente)
+    .sort((a, b) => {
+      if (a.temCadastroDuplicado !== b.temCadastroDuplicado) return a.temCadastroDuplicado ? -1 : 1;
+      if (b.potencialDesmobilizar !== a.potencialDesmobilizar) return b.potencialDesmobilizar - a.potencialDesmobilizar;
+      return a.nome_base.localeCompare(b.nome_base, 'pt-BR');
+    });
+
+  const itensDuplicidadesDetalhe = [];
+  for (const g of gruposDuplicidades) {
+    for (const r of g.registros) {
+      itensDuplicidadesDetalhe.push({
+        ...r,
+        grupo_nome_base: g.nome_base,
+        grupo_total_registros: g.totalRegistros,
+        grupo_total_unidades: g.totalUnidadesEstoque,
+        grupo_potencial_desmobilizar: g.potencialDesmobilizar,
+        grupo_tipo_duplicidade: g.tipoDuplicidade
+      });
+    }
+  }
+
+  const kpisDuplicidades = {
+    totalGrupos: gruposDuplicidades.length,
+    totalCadastrosEnvolvidos: itensDuplicidadesDetalhe.length,
+    totalUnidadesEstoque: gruposDuplicidades.reduce((acc, g) => acc + g.totalUnidadesEstoque, 0),
+    potencialDesmobilizar: gruposDuplicidades.reduce((acc, g) => acc + g.potencialDesmobilizar, 0),
+    gruposMultiCadastro: gruposDuplicidades.filter(g => g.temCadastroDuplicado).length
+  };
 
   // Resumo por Colaborador no período filtrado
   const resumoColabMap = new Map();
@@ -560,7 +735,7 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
 
   // Resumo textual dos filtros ativos (para cabeçalho do PDF e da aba Resumo no Excel)
   const filtrosAtivosTexto = [];
-  if (tipoRelatorio !== 'inventario' && tipoRelatorio !== 'reposicao') {
+  if (!['inventario', 'reposicao', 'duplicidades'].includes(tipoRelatorio)) {
     filtrosAtivosTexto.push(`Período: ${periodoDescricao}`);
   }
   if (filtros.categoria) filtrosAtivosTexto.push(`Categoria: ${filtros.categoria}`);
@@ -573,7 +748,14 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
     filtrosAtivosTexto.push(`Produto: ${prodById.get(filtros.produto_id).nome}`);
   }
   if (filtros.status_estoque) filtrosAtivosTexto.push(`Status Estoque: ${filtros.status_estoque}`);
+  if (filtros.somente_com_estoque === '1') filtrosAtivosTexto.push('Apenas com estoque (> 0)');
   if (filtros.condicao) filtrosAtivosTexto.push(`Condição: ${filtros.condicao}`);
+  if (tipoRelatorio === 'contagem') {
+    filtrosAtivosTexto.push(filtros.modo_contagem === 'todas' ? 'Escopo: Todas movimentações' : 'Escopo: Apenas Saídas / Empréstimos / Trocas');
+  }
+  if (tipoRelatorio === 'duplicidades') {
+    filtrosAtivosTexto.push(filtros.modo_duplicidade === 'todos' ? 'Exibição: Todos os itens' : 'Exibição: Apenas Duplicados / Excedentes (> 1)');
+  }
   if (tipoRelatorio === 'emprestimos' && filtros.status_emprestimo) {
     filtrosAtivosTexto.push(`Status Cautela: ${filtros.status_emprestimo}`);
   }
@@ -612,6 +794,10 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
     movimentacoes: movsFiltradas,
     produtos: produtosFiltrados,
     itensReposicao,
+    itensContagemDiaria,
+    gruposDuplicidades,
+    itensDuplicidadesDetalhe,
+    kpisDuplicidades,
     emprestimos: emprestimosLista,
     resumoColaboradores,
     topProdutosConsumo,
@@ -816,6 +1002,56 @@ class RelatorioController {
           'Estoque Baixo': c.baixo,
           'Saídas no Período': c.saidasPeriodo
         })), [26, 15, 20, 15, 15, 18]);
+        addSheet('Resumo', capaRows, [38, 48]);
+      } else if (dados.tipoRelatorio === 'contagem') {
+        addSheet('Contagem Diária', dados.itensContagemDiaria.map((item, idx) => ({
+          '#': idx + 1,
+          'Localização': item.localizacao || 'Sem localização',
+          'SKU': item.sku || '',
+          'TAG / Patrimônio': [item.tag, item.patrimonio].filter(Boolean).join(' / '),
+          'Produto / Material': item.nome || '',
+          'Marca': item.marca || '',
+          'Categoria': item.categoria || '',
+          'Saídas no Dia': item.saidas_dia,
+          'Empréstimos no Dia': item.emprestimos_dia,
+          'Trocas no Dia': item.trocas_dia,
+          'Entradas/Devol. no Dia': item.entradas_dia + item.devolucoes_dia,
+          'Saldo Atual (Sistema)': item.saldo_atual,
+          'Unidade': item.unidade_medida || 'UN',
+          'Contagem Física': '',
+          'Divergência': '',
+          'Observação da Conferência': ''
+        })), [5, 20, 15, 18, 38, 16, 18, 13, 16, 13, 18, 18, 9, 16, 14, 28]);
+        addSheet('Resumo', capaRows, [38, 48]);
+      } else if (dados.tipoRelatorio === 'duplicidades') {
+        addSheet('Resumo Duplicidades', dados.gruposDuplicidades.map((g, idx) => ({
+          '#': idx + 1,
+          'Item / Equipamento Base': g.nome_base,
+          'Categoria': g.categoria,
+          'Tipo de Ocorrência': g.tipoDuplicidade,
+          'Cadastros (SKUs/TAGs)': g.totalRegistros,
+          'Total em Estoque': g.totalUnidadesEstoque,
+          'Emprestado (Campo)': g.totalEmprestado,
+          'Potencial Desmobilizar': g.potencialDesmobilizar,
+          'Unidade': g.unidade_medida,
+          'SKUs / TAGs Envolvidos': g.registros.map(r => r.tag ? `${r.sku} (TAG:${r.tag})` : r.sku).join(', ')
+        })), [5, 36, 18, 30, 18, 16, 18, 20, 9, 42]);
+        addSheet('Detalhe TAG e SKU', dados.itensDuplicidadesDetalhe.map(r => ({
+          'Grupo / Equipamento': r.grupo_nome_base,
+          'Ocorrência': r.grupo_tipo_duplicidade,
+          'SKU': r.sku || '',
+          'Nome Cadastrado': r.nome || '',
+          'Categoria': r.categoria || '',
+          'Marca': r.marca || '',
+          'TAG': r.tag || '',
+          'Patrimônio': r.patrimonio || '',
+          'Nº Série': r.numero_serie || '',
+          'Condição': r.condicao || 'NOVO',
+          'Saldo em Estoque': Number(r.quantidade || 0),
+          'Emprestado (Campo)': Number(r.emprestado_atual || 0),
+          'Localização': r.localizacao || '',
+          'Desmobilizar? (S/N)': ''
+        })), [30, 26, 15, 36, 18, 16, 14, 15, 16, 12, 15, 16, 18, 18]);
         addSheet('Resumo', capaRows, [38, 48]);
       } else if (dados.tipoRelatorio === 'reposicao') {
         addSheet('Alerta de Reposição', dados.itensReposicao.map(p => ({

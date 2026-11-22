@@ -625,6 +625,114 @@
         </tbody>
       </table>
 
+    <% } else if (tipoRelatorio === 'contagem') { %>
+
+      <div class="pdf-section-title">Folha de Contagem Diária / Conferência Física (<%= itensContagemDiaria.length %> item(ns) • Ref: <%= periodoDescricao %>)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Localização</th>
+            <th>SKU / TAG</th>
+            <th>Produto / Material</th>
+            <th class="txt-center">Saídas Dia</th>
+            <th class="txt-center">Saldo Sistema</th>
+            <th class="txt-center" style="width: 78px;">Cont. Física</th>
+            <th class="txt-center" style="width: 68px;">Diverg.</th>
+            <th style="width: 110px;">Observação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (itensContagemDiaria.length > 0) { %>
+            <% itensContagemDiaria.forEach((item, idx) => { %>
+              <tr>
+                <td class="txt-center"><%= idx + 1 %></td>
+                <td><strong><%= item.localizacao %></strong></td>
+                <td class="mono"><%= item.sku %><%= item.tag ? `\nTAG:${item.tag}` : '' %></td>
+                <td><strong><%= item.nome %></strong><%= item.marca ? ` (${item.marca})` : '' %><br><span style="color:#64748b;"><%= item.categoria %></span></td>
+                <td class="txt-center txt-danger">-<%= item.total_saidas_dia %><%= (item.entradas_dia + item.devolucoes_dia) > 0 ? ` / +${item.entradas_dia + item.devolucoes_dia}` : '' %></td>
+                <td class="txt-center"><strong><%= item.saldo_atual %> <%= item.unidade_medida %></strong></td>
+                <td style="height: 26px;"></td>
+                <td></td>
+                <td></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="9" class="txt-center">Nenhum item teve movimentação no período selecionado.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+    <% } else if (tipoRelatorio === 'duplicidades') { %>
+
+      <div class="pdf-section-title">1. Resumo de Duplicidades & Excedentes (<%= kpisDuplicidades.totalGrupos %> grupos • Potencial Desmobilização: <%= kpisDuplicidades.potencialDesmobilizar %> un.)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Equipamento / Item Base</th>
+            <th>Categoria</th>
+            <th>Ocorrência</th>
+            <th class="txt-center">Cadastros</th>
+            <th class="txt-center">Em Estoque</th>
+            <th class="txt-center">Em Campo</th>
+            <th class="txt-right">Excedente</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (gruposDuplicidades.length > 0) { %>
+            <% gruposDuplicidades.forEach((g, idx) => { %>
+              <tr>
+                <td class="txt-center"><%= idx + 1 %></td>
+                <td><strong><%= g.nome_base %></strong></td>
+                <td><%= g.categoria %></td>
+                <td><%= g.tipoDuplicidade %></td>
+                <td class="txt-center"><%= g.totalRegistros %></td>
+                <td class="txt-center"><strong><%= g.totalUnidadesEstoque %> <%= g.unidade_medida %></strong></td>
+                <td class="txt-center"><%= g.totalEmprestado %></td>
+                <td class="txt-right <%= g.potencialDesmobilizar > 0 ? 'txt-danger' : '' %>"><strong><%= g.potencialDesmobilizar > 0 ? `${g.potencialDesmobilizar} ${g.unidade_medida}` : '-' %></strong></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="8" class="txt-center">Nenhum item duplicado ou excedente encontrado.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+      <div class="pdf-section-title">2. Detalhamento por TAG / SKU / Patrimônio para Desmobilização (<%= itensDuplicidadesDetalhe.length %> itens)</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Grupo Base</th>
+            <th>SKU</th>
+            <th>TAG / Patrimônio</th>
+            <th>Nome Cadastrado</th>
+            <th>Condição</th>
+            <th>Localização</th>
+            <th class="txt-center">Saldo</th>
+            <th class="txt-center" style="width: 68px;">Desmob.?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (itensDuplicidadesDetalhe.length > 0) { %>
+            <% itensDuplicidadesDetalhe.forEach(r => { %>
+              <tr>
+                <td><strong><%= r.grupo_nome_base %></strong></td>
+                <td class="mono"><%= r.sku %></td>
+                <td class="mono"><%= [r.tag ? 'TAG:' + r.tag : '', r.patrimonio ? 'PAT:' + r.patrimonio : ''].filter(Boolean).join(' ') || '-' %></td>
+                <td><%= r.nome %></td>
+                <td><%= r.condicao || 'NOVO' %></td>
+                <td><%= r.localizacao || '-' %></td>
+                <td class="txt-center"><strong><%= r.quantidade %> <%= r.unidade_medida %></strong></td>
+                <td class="txt-center">[ &nbsp; ] Sim</td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="8" class="txt-center">Sem registros detalhados.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
     <% } else if (tipoRelatorio === 'reposicao') { %>
 
       <div class="pdf-section-title">Alerta de Reposição / Necessidade de Compra (<%= itensReposicao.length %> itens)</div>
