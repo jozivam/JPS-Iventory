@@ -118,7 +118,7 @@ class EstoqueController {
         tipo,
         quantidade: qtd,
         motivo,
-        responsavel,
+        responsavel: (responsavel && responsavel.trim()) ? responsavel.trim() : (req.user?.nome || 'Almoxarife'),
         documento_ref
       });
 

@@ -14,7 +14,7 @@
     </button>
   </div>
 
-  <!-- Menu de Navegação - Apenas os 2 módulos essenciais -->
+  <!-- Menu de Navegação -->
   <nav class="sidebar-nav">
     <div class="nav-section-title">MENU PRINCIPAL</div>
 
@@ -44,15 +44,52 @@
     </a>
   </nav>
 
-  <!-- Perfil do Usuário na Base -->
-  <div class="sidebar-user">
-    <div class="user-avatar">
-      <i class="fa-solid fa-user-tie"></i>
+  <!-- Perfil do Usuário Autenticado na Base -->
+  <%
+    const userObj = (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? usuarioLogado : null;
+    const nomeUsuario = userObj ? userObj.nome : 'Visitante';
+    const iniciaisUsuario = userObj && userObj.nome
+      ? userObj.nome.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()
+      : 'US';
+    const nivelLabel = userObj
+      ? (userObj.nivel_acesso === 'ADMIN' ? 'Administrador' : (userObj.nivel_acesso === 'ALMOXARIFE' ? 'Almoxarife' : 'Visualizador'))
+      : 'Não autenticado';
+    const subtituloUsuario = (userObj && userObj.cargo) ? `${userObj.cargo} • ${nivelLabel}` : nivelLabel;
+  %>
+  <div class="sidebar-user" style="flex-direction: column; align-items: stretch; gap: 0.65rem; padding: 0.9rem 1rem;">
+    <div style="display: flex; align-items: center; gap: 0.7rem; min-width: 0;">
+      <div class="user-avatar" style="background: var(--primary-light); color: var(--primary-hover); border: 1px solid var(--primary-border); flex-shrink: 0;">
+        <%= iniciaisUsuario %>
+      </div>
+      <div class="user-info">
+        <div class="user-name" title="<%= nomeUsuario %>"><%= nomeUsuario %></div>
+        <div class="user-role" title="<%= subtituloUsuario %>"><%= subtituloUsuario %></div>
+      </div>
+      <i class="fa-solid fa-circle" title="Sessão ativa" style="font-size: 0.5rem; color: var(--success); margin-left: auto; flex-shrink: 0;"></i>
     </div>
-    <div class="user-info">
-      <div class="user-name">Jozivam Silva</div>
-      <div class="user-role">Gestor de Almoxarifado</div>
-    </div>
-    <i class="fa-solid fa-circle" style="font-size: 0.5rem; color: var(--success); margin-left: auto;"></i>
+
+    <% if (userObj) { %>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
+        <button
+          type="button"
+          class="btn btn-outline btn-sm"
+          onclick="window.abrirModal && window.abrirModal('modal-alterar-senha')"
+          title="Alterar minha senha de acesso"
+          style="padding: 0.35rem 0.5rem; font-size: 0.74rem; justify-content: center;"
+        >
+          <i class="fa-solid fa-key"></i> Senha
+        </button>
+        <form action="/logout" method="POST" style="margin: 0;">
+          <button
+            type="submit"
+            class="btn btn-outline btn-sm"
+            title="Sair do sistema"
+            style="width: 100%; padding: 0.35rem 0.5rem; font-size: 0.74rem; justify-content: center; color: var(--danger-text); border-color: var(--danger-border);"
+          >
+            <i class="fa-solid fa-right-from-bracket"></i> Sair
+          </button>
+        </form>
+      </div>
+    <% } %>
   </div>
 </aside>

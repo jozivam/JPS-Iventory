@@ -115,7 +115,7 @@
             name="responsavel" 
             class="form-control" 
             placeholder="Nome de quem retirou ou recebeu" 
-            value="Jozivam Silva"
+            value="<%= (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? usuarioLogado.nome : '' %>"
             required
           >
         </div>

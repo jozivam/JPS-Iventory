@@ -8,10 +8,16 @@ class ColaboradorController {
     try {
       const { busca, tipo_perfil, nivel_acesso, status, sucesso, erro } = req.query;
 
-      const [colaboradores, estatisticas] = await Promise.all([
+      const [colaboradoresRaw, estatisticas] = await Promise.all([
         Colaborador.findAll({ busca, tipo_perfil, nivel_acesso, status }),
         Colaborador.getEstatisticas()
       ]);
+
+      // Remove senha_hash antes de enviar para a view/HTML
+      const colaboradores = (colaboradoresRaw || []).map(({ senha_hash, ...dados }) => ({
+        ...dados,
+        tem_senha: !!senha_hash
+      }));
 
       res.render('colaboradores/index', {
         title: 'Colaboradores e Usuários do Sistema',
@@ -47,6 +53,11 @@ class ColaboradorController {
         nome, matricula, cargo, departamento, email, telefone, 
         tipo_perfil, nivel_acesso, status, login, senha, observacoes 
       } = req.body;
+
+      // Apenas ADMIN pode cadastrar usuários com acesso ao sistema
+      if (tipo_perfil === 'SISTEMA' && req.user?.nivel_acesso !== 'ADMIN') {
+        throw new Error('Apenas Administradores podem cadastrar ou autorizar Usuários do Sistema.');
+      }
 
       const colab = await Colaborador.create({
         nome,
@@ -116,6 +127,29 @@ class ColaboradorController {
         tipo_perfil, nivel_acesso, status, login, senha, observacoes 
       } = req.body;
 
+      const colabAlvo = await Colaborador.findById(id);
+      if (!colabAlvo) {
+        throw new Error('Colaborador não encontrado.');
+      }
+
+      // Apenas ADMIN pode alterar contas do tipo SISTEMA ou promover alguém para SISTEMA
+      if ((colabAlvo.tipo_perfil === 'SISTEMA' || tipo_perfil === 'SISTEMA') && req.user?.nivel_acesso !== 'ADMIN') {
+        throw new Error('Apenas Administradores podem editar Usuários do Sistema ou conceder acesso à plataforma.');
+      }
+
+      // Impede remover/inativar o último Administrador ativo ou bloquear a si mesmo
+      const eraAdminAtivo = colabAlvo.tipo_perfil === 'SISTEMA' && colabAlvo.nivel_acesso === 'ADMIN' && colabAlvo.status === 'ATIVO';
+      const continuaraAdminAtivo = tipo_perfil === 'SISTEMA' && nivel_acesso === 'ADMIN' && status !== 'INATIVO';
+      if (eraAdminAtivo && !continuaraAdminAtivo) {
+        if (req.user && String(req.user.id) === String(colabAlvo.id)) {
+          throw new Error('Você não pode inativar ou remover seu próprio acesso de Administrador.');
+        }
+        const totalAdmins = await Colaborador.countAdminsAtivos();
+        if (totalAdmins <= 1) {
+          throw new Error('Não é possível remover ou inativar o último Administrador ativo do sistema.');
+        }
+      }
+
       await Colaborador.update(id, {
         nome,
         matricula,
@@ -146,10 +180,28 @@ class ColaboradorController {
       const { id } = req.params;
       const { tipo_perfil, nivel_acesso, login, senha } = req.body;
 
+      const colabAlvo = await Colaborador.findById(id);
+      if (!colabAlvo) {
+        throw new Error('Colaborador não encontrado.');
+      }
+
+      const eraAdminAtivo = colabAlvo.tipo_perfil === 'SISTEMA' && colabAlvo.nivel_acesso === 'ADMIN' && colabAlvo.status === 'ATIVO';
+      const continuaraAdmin = tipo_perfil === 'SISTEMA' && nivel_acesso === 'ADMIN';
+      if (eraAdminAtivo && !continuaraAdmin) {
+        if (req.user && String(req.user.id) === String(colabAlvo.id)) {
+          throw new Error('Você não pode rebaixar seu próprio perfil de Administrador.');
+        }
+        const totalAdmins = await Colaborador.countAdminsAtivos();
+        if (totalAdmins <= 1) {
+          throw new Error('Não é possível remover o perfil de Administrador do último administrador ativo.');
+        }
+      }
+
       const atualizado = await Colaborador.updateNivelAcesso(id, { tipo_perfil, nivel_acesso, login, senha });
+      const { senha_hash, ...atualizadoSeguro } = atualizado || {};
 
       if (req.xhr || req.headers.accept?.includes('application/json')) {
-        return res.json({ sucesso: true, colaborador: atualizado });
+        return res.json({ sucesso: true, colaborador: atualizadoSeguro });
       }
 
       const perfilDesc = atualizado.tipo_perfil === 'SISTEMA' 
@@ -172,6 +224,18 @@ class ColaboradorController {
   static async delete(req, res) {
     try {
       const { id } = req.params;
+      if (req.user && String(req.user.id) === String(id)) {
+        throw new Error('Você não pode excluir o seu próprio cadastro enquanto está logado.');
+      }
+
+      const colabAlvo = await Colaborador.findById(id);
+      if (colabAlvo && colabAlvo.tipo_perfil === 'SISTEMA' && colabAlvo.nivel_acesso === 'ADMIN' && colabAlvo.status === 'ATIVO') {
+        const totalAdmins = await Colaborador.countAdminsAtivos();
+        if (totalAdmins <= 1) {
+          throw new Error('Não é possível excluir o último Administrador ativo do sistema.');
+        }
+      }
+
       const colabExcluido = await Colaborador.delete(id);
 
       res.redirect('/colaboradores?sucesso=' + encodeURIComponent(`Colaborador "${colabExcluido.nome}" excluído com sucesso!`));

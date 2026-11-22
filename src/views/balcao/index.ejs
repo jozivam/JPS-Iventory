@@ -366,7 +366,7 @@
             name="responsavel" 
             class="form-control" 
             list="lista-atendentes-sistema"
-            value="Jozivam Silva"
+            value="<%= (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? usuarioLogado.nome : '' %>"
             placeholder="Nome do almoxarife"
             autocomplete="off"
           >
@@ -458,7 +458,7 @@
 
             <!-- Botão de Devolução Rápida -->
             <form action="/balcao/devolver/<%= emp.id %>" method="POST" onsubmit="return confirm('Confirmar a devolução de <%= emp.quantidade %>x <%= emp.produto_nome %> entregue por <%= emp.colaborador || emp.responsavel %>? O saldo será restaurado no inventário.')">
-              <input type="hidden" name="responsavel" value="Jozivam Silva">
+              <input type="hidden" name="responsavel" value="<%= (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? usuarioLogado.nome : '' %>">
               <button type="submit" class="btn btn-sm" style="width: 100%; background: #059669; color: #ffffff; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.4rem; border: none; padding: 0.45rem;">
                 <i class="fa-solid fa-rotate-left"></i> Dar Baixa (Devolver ao Estoque)
               </button>

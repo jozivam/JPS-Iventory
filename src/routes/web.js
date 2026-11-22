@@ -8,6 +8,7 @@ const upload = multer({
   limits: { fileSize: 15 * 1024 * 1024 }
 });
 
+const AuthController = require('../controllers/AuthController');
 const ProdutoController = require('../controllers/ProdutoController');
 const EstoqueController = require('../controllers/EstoqueController');
 const BuscaController = require('../controllers/BuscaController');
@@ -15,6 +16,24 @@ const BalcaoController = require('../controllers/BalcaoController');
 const ColaboradorController = require('../controllers/ColaboradorController');
 const FichaController = require('../controllers/FichaController');
 const OfflineSyncController = require('../controllers/OfflineSyncController');
+const { requireAuth, requireRole } = require('../middleware/auth');
+
+// =========================================================================
+// ROTAS PÚBLICAS (Autenticação e Ping de Conectividade)
+// =========================================================================
+router.get('/login', AuthController.showLogin);
+router.post('/login', AuthController.login);
+router.get('/logout', AuthController.logout);
+router.post('/logout', AuthController.logout);
+router.get('/api/offline/ping', OfflineSyncController.ping);
+
+// =========================================================================
+// BARREIRA DE AUTENTICAÇÃO: TODAS AS ROTAS ABAIXO EXIGEM USUÁRIO AUTORIZADO
+// =========================================================================
+router.use(requireAuth);
+
+// --- MINHA CONTA (Alteração da própria senha) ---
+router.post('/minha-conta/senha', AuthController.alterarSenha);
 
 // --- PÁGINA INICIAL (Direciona diretamente para o Inventário) ---
 router.get('/', (req, res) => {
@@ -26,22 +45,22 @@ router.get('/busca', BuscaController.index);
 
 // --- INVENTÁRIO (PRODUTOS) ---
 router.get('/produtos', ProdutoController.index);
-router.get('/produtos/novo', ProdutoController.create);
-router.post('/produtos', ProdutoController.store);
+router.get('/produtos/novo', requireRole('ADMIN', 'ALMOXARIFE'), ProdutoController.create);
+router.post('/produtos', requireRole('ADMIN', 'ALMOXARIFE'), ProdutoController.store);
 router.get('/produtos/sugestoes', ProdutoController.sugestoesNome);
 router.get('/produtos/modelo/excel', ProdutoController.baixarModelo);
 router.get('/produtos/exportar/excel', ProdutoController.exportarExcel);
-router.post('/produtos/importar/excel', upload.single('planilha'), ProdutoController.importarExcel);
+router.post('/produtos/importar/excel', requireRole('ADMIN', 'ALMOXARIFE'), upload.single('planilha'), ProdutoController.importarExcel);
 router.get('/produtos/:id/detalhes', ProdutoController.detalhes);
 router.get('/produtos/:id/movimentacoes', ProdutoController.movimentacoes);
-router.get('/produtos/:id/editar', ProdutoController.edit);
-router.post('/produtos/:id/editar', ProdutoController.update);
-router.post('/produtos/:id/excluir', ProdutoController.delete);
+router.get('/produtos/:id/editar', requireRole('ADMIN', 'ALMOXARIFE'), ProdutoController.edit);
+router.post('/produtos/:id/editar', requireRole('ADMIN', 'ALMOXARIFE'), ProdutoController.update);
+router.post('/produtos/:id/excluir', requireRole('ADMIN'), ProdutoController.delete);
 
 // --- BALCÃO (ATENDIMENTO, LANÇAMENTOS E EMPRÉSTIMOS) ---
 router.get('/balcao', BalcaoController.index);
-router.post('/balcao/registrar', BalcaoController.registrar);
-router.post('/balcao/devolver/:id', BalcaoController.devolver);
+router.post('/balcao/registrar', requireRole('ADMIN', 'ALMOXARIFE'), BalcaoController.registrar);
+router.post('/balcao/devolver/:id', requireRole('ADMIN', 'ALMOXARIFE'), BalcaoController.devolver);
 
 // --- MOVIMENTAÇÕES (HISTÓRICO E GESTÃO) ---
 router.get('/movimentacoes', EstoqueController.index);
@@ -51,9 +70,9 @@ router.get('/movimentacoes/nova', (req, res) => {
   const q = new URLSearchParams(req.query).toString();
   res.redirect('/balcao' + (q ? '?' + q : ''));
 });
-router.post('/movimentacoes', EstoqueController.registrar);
-router.post('/movimentacoes/:id/editar', EstoqueController.update);
-router.post('/movimentacoes/:id/excluir', EstoqueController.delete);
+router.post('/movimentacoes', requireRole('ADMIN', 'ALMOXARIFE'), EstoqueController.registrar);
+router.post('/movimentacoes/:id/editar', requireRole('ADMIN', 'ALMOXARIFE'), EstoqueController.update);
+router.post('/movimentacoes/:id/excluir', requireRole('ADMIN'), EstoqueController.delete);
 
 // --- CONTROLE DE FICHAS DE COLABORADORES ---
 router.get('/fichas', FichaController.index);
@@ -61,20 +80,19 @@ router.get('/fichas/:colaborador_id', (req, res) => res.redirect('/fichas?colabo
 
 // --- COLABORADORES E USUÁRIOS DO SISTEMA ---
 router.get('/colaboradores', ColaboradorController.index);
-router.post('/colaboradores', ColaboradorController.store);
+router.post('/colaboradores', requireRole('ADMIN', 'ALMOXARIFE'), ColaboradorController.store);
 router.get('/colaboradores/:id/ficha', (req, res) => res.redirect('/fichas?colaborador_id=' + req.params.id));
 router.get('/colaboradores/:id/detalhes', ColaboradorController.detalhes);
-router.post('/colaboradores/:id/editar', ColaboradorController.update);
-router.post('/colaboradores/:id/nivel-acesso', ColaboradorController.updateNivelAcesso);
-router.post('/colaboradores/:id/excluir', ColaboradorController.delete);
+router.post('/colaboradores/:id/editar', requireRole('ADMIN', 'ALMOXARIFE'), ColaboradorController.update);
+router.post('/colaboradores/:id/nivel-acesso', requireRole('ADMIN'), ColaboradorController.updateNivelAcesso);
+router.post('/colaboradores/:id/excluir', requireRole('ADMIN'), ColaboradorController.delete);
 router.get('/api/colaboradores', ColaboradorController.apiListar);
 
 // --- SINCRONIZAÇÃO OFFLINE-FIRST (CANTEIRO DE OBRA / APK) ---
-router.get('/api/offline/ping', OfflineSyncController.ping);
-router.post('/api/offline/sync', OfflineSyncController.sync);
+router.post('/api/offline/sync', requireRole('ADMIN', 'ALMOXARIFE'), OfflineSyncController.sync);
 
-// --- ROTA DE DIAGNÓSTICO (Health Check) ---
-router.get('/api/diagnostico', async (req, res) => {
+// --- ROTA DE DIAGNÓSTICO (Health Check - Restrito a Administradores) ---
+router.get('/api/diagnostico', requireRole('ADMIN'), async (req, res) => {
   const { supabase } = require('../../config/supabase');
   let prodsCount = 0;
   let movsCount = 0;

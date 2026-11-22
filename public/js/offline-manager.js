@@ -433,6 +433,13 @@
 
         const data = await resp.json().catch(() => ({}));
 
+        if (resp.status === 401) {
+          // Sessão expirada: mantém o item seguro na fila e redireciona para o login
+          isSyncing = false;
+          window.location.href = '/login?erro=' + encodeURIComponent('Sua sessão expirou. Faça login novamente para sincronizar os lançamentos pendentes.');
+          return;
+        }
+
         if (resp.ok && data.ok) {
           await removerOperacaoFila(op.id);
           enviados++;
@@ -640,6 +647,11 @@
         clearTimeout(timer);
 
         const data = await resp.json().catch(() => ({}));
+
+        if (resp.status === 401) {
+          window.location.href = '/login?erro=' + encodeURIComponent('Sua sessão expirou. Faça login novamente para continuar.');
+          return;
+        }
 
         if (resp.ok && data.ok) {
           // Atualiza o cache do SW em segundo plano e recarrega com aviso de sucesso

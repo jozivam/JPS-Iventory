@@ -91,6 +91,138 @@ class Colaborador {
   }
 
   /**
+   * Busca um colaborador por login, e-mail ou matrícula (case-insensitive)
+   */
+  static async findByCredencial(identificador) {
+    if (!identificador || !String(identificador).trim()) return null;
+    const termo = String(identificador).trim().replace(/^@/, '');
+    const termoLower = termo.toLowerCase();
+    const termoUpper = termo.toUpperCase();
+
+    if (useSupabase && supabase) {
+      // Tenta busca exata por login (lowercase)
+      let { data } = await supabase
+        .from('colaboradores')
+        .select('*')
+        .ilike('login', termoLower)
+        .limit(1);
+
+      if (data && data.length > 0) return data[0];
+
+      // Tenta busca por e-mail
+      ({ data } = await supabase
+        .from('colaboradores')
+        .select('*')
+        .ilike('email', termoLower)
+        .limit(1));
+
+      if (data && data.length > 0) return data[0];
+
+      // Tenta busca por matrícula
+      ({ data } = await supabase
+        .from('colaboradores')
+        .select('*')
+        .ilike('matricula', termoUpper)
+        .limit(1));
+
+      return data && data.length > 0 ? data[0] : null;
+    }
+
+    if (!db) return null;
+    return db.prepare(`
+      SELECT * FROM colaboradores
+      WHERE LOWER(login) = LOWER(?)
+         OR LOWER(email) = LOWER(?)
+         OR LOWER(matricula) = LOWER(?)
+      LIMIT 1
+    `).get(termo, termo, termo);
+  }
+
+  /**
+   * Autentica um usuário autorizado do sistema (perfil SISTEMA + status ATIVO + senha válida)
+   */
+  static async autenticar(identificador, senha) {
+    const colab = await this.findByCredencial(identificador);
+
+    if (!colab) {
+      return { ok: false, erro: 'Usuário ou senha inválidos.' };
+    }
+
+    if (colab.tipo_perfil !== 'SISTEMA') {
+      return {
+        ok: false,
+        erro: 'Acesso não autorizado. Este cadastro é de Técnico de Campo e não possui permissão para entrar no sistema.'
+      };
+    }
+
+    if (colab.status !== 'ATIVO') {
+      return {
+        ok: false,
+        erro: 'Seu acesso está inativo ou bloqueado. Contate o Administrador do Almoxarifado.'
+      };
+    }
+
+    if (!colab.senha_hash || !bcrypt.compareSync(String(senha || ''), colab.senha_hash)) {
+      return { ok: false, erro: 'Usuário ou senha inválidos.' };
+    }
+
+    const { senha_hash, ...usuarioSeguro } = colab;
+    return { ok: true, usuario: usuarioSeguro };
+  }
+
+  /**
+   * Permite que o usuário logado altere sua própria senha
+   */
+  static async alterarPropriaSenha(id, senhaAtual, novaSenha) {
+    const colab = await this.findById(id);
+    if (!colab) {
+      throw new Error('Usuário não encontrado.');
+    }
+
+    if (!colab.senha_hash || !bcrypt.compareSync(String(senhaAtual || ''), colab.senha_hash)) {
+      throw new Error('A senha atual informada está incorreta.');
+    }
+
+    const novaSenhaLimpa = String(novaSenha || '').trim();
+    if (novaSenhaLimpa.length < 4) {
+      throw new Error('A nova senha deve conter pelo menos 4 caracteres.');
+    }
+
+    const novoHash = bcrypt.hashSync(novaSenhaLimpa, 10);
+
+    if (useSupabase && supabase) {
+      const { error } = await supabase
+        .from('colaboradores')
+        .update({ senha_hash: novoHash })
+        .eq('id', id);
+      if (error) throw new Error('Erro ao atualizar senha no Supabase: ' + error.message);
+      return true;
+    }
+
+    if (!db) throw new Error('Banco de dados não disponível');
+
+    db.prepare(`
+      UPDATE colaboradores
+      SET senha_hash = ?, atualizado_em = datetime('now', 'localtime')
+      WHERE id = ?
+    `).run(novoHash, id);
+
+    return true;
+  }
+
+  /**
+   * Conta quantos administradores ativos existem no sistema (evita bloqueio acidental)
+   */
+  static async countAdminsAtivos() {
+    const todos = await this.findAll({
+      tipo_perfil: 'SISTEMA',
+      nivel_acesso: 'ADMIN',
+      status: 'ATIVO'
+    });
+    return todos.length;
+  }
+
+  /**
    * Estatísticas da equipe (Total, Usuários do Sistema, Técnicos Solicitantes, Ativos)
    */
   static async getEstatisticas() {

@@ -146,7 +146,7 @@ class ProdutoController {
           tipo: 'ENTRADA',
           quantidade: qtdInicial,
           motivo: 'Carga inicial no cadastro do produto',
-          responsavel: 'Jozivam Silva',
+          responsavel: req.user?.nome || 'Almoxarife',
           documento_ref: 'CADASTRO-INICIAL'
         });
       }

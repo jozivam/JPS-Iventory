@@ -91,13 +91,17 @@ class BalcaoController {
 
       const colabFinal = (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão';
 
+      const responsavelFinal = (responsavel && responsavel.trim())
+        ? responsavel.trim()
+        : (req.user?.nome || 'Almoxarife');
+
       const resultado = await Movimentacao.registrar({
         produto_id: parseInt(produto_id, 10),
         tipo,
         quantidade: qtd,
         colaborador: colabFinal,
         colaborador_id: colaborador_id ? parseInt(colaborador_id, 10) : null,
-        responsavel: responsavel ? responsavel.trim() : 'Almoxarife',
+        responsavel: responsavelFinal,
         motivo: motivo ? motivo.trim() : null,
         documento_ref: documento_ref ? documento_ref.trim() : null
       });
@@ -133,7 +137,7 @@ class BalcaoController {
       const { responsavel, motivo, documento_ref } = req.body;
 
       const resultado = await Movimentacao.devolverEmprestimo(id, {
-        responsavel: responsavel ? responsavel.trim() : 'Atendente do Balcão',
+        responsavel: (responsavel && responsavel.trim()) ? responsavel.trim() : (req.user?.nome || 'Atendente do Balcão'),
         motivo: motivo ? motivo.trim() : 'Devolução de ferramenta no balcão',
         documento_ref: documento_ref ? documento_ref.trim() : null
       });

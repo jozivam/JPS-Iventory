@@ -52,6 +52,11 @@
         </div>
 
         <div class="topbar-actions">
+          <% if (typeof usuarioLogado !== 'undefined' && usuarioLogado && usuarioLogado.nivel_acesso === 'VISUALIZADOR') { %>
+            <span class="status-pill" title="Perfil somente consulta" style="background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; font-size: 0.73rem; padding: 0.25rem 0.65rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-solid fa-eye"></i> Somente Leitura
+            </span>
+          <% } %>
           <a href="/movimentacoes" class="btn-topbar-icon" title="Movimentações">
             <i class="fa-regular fa-envelope"></i>
           </a>
@@ -59,6 +64,13 @@
             <i class="fa-regular fa-bell"></i>
             <span class="topbar-badge-dot"></span>
           </a>
+          <% if (typeof usuarioLogado !== 'undefined' && usuarioLogado) { %>
+            <form action="/logout" method="POST" style="margin: 0; display: inline-flex;">
+              <button type="submit" class="btn-topbar-icon" title="Sair da conta (<%= usuarioLogado.nome %>)" aria-label="Sair" style="color: var(--danger-text);">
+                <i class="fa-solid fa-right-from-bracket"></i>
+              </button>
+            </form>
+          <% } %>
         </div>
       </header>
       

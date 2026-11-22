@@ -6,8 +6,10 @@ require('dotenv').config();
 require('./config/database');
 
 const webRoutes = require('./src/routes/web');
+const { carregarUsuario } = require('./src/middleware/auth');
 
 const app = express();
+app.set('trust proxy', 1);
 // Configuração da porta do servidor
 const PORT = process.env.PORT || 3001;
 
@@ -79,6 +81,9 @@ app.use((req, res, next) => {
   res.locals.currentPath = req.path;
   next();
 });
+
+// Carrega usuário autenticado em req.user e res.locals.usuarioLogado
+app.use(carregarUsuario);
 
 // Rotas da aplicação
 app.use('/', webRoutes);

@@ -30,6 +30,55 @@
     </div>
   </div>
 
+  <!-- Modal Global: Alterar Minha Senha -->
+  <% if (typeof usuarioLogado !== 'undefined' && usuarioLogado) { %>
+  <div class="modal-overlay" id="modal-alterar-senha">
+    <div class="modal-container" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 style="font-size: 1.05rem; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+          <i class="fa-solid fa-key" style="color: var(--primary);"></i> Alterar Minha Senha
+        </h3>
+        <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-alterar-senha')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form action="/minha-conta/senha" method="POST">
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <div style="font-size: 0.82rem; color: var(--text-muted); background: var(--bg-surface); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-light);">
+            Conta conectada: <strong style="color: var(--text-main);"><%= usuarioLogado.nome %></strong>
+            <% if (usuarioLogado.login) { %>
+              (<code style="color: var(--primary-hover);">@<%= usuarioLogado.login %></code>)
+            <% } %>
+          </div>
+
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="input-senha-atual">Senha Atual <span style="color: var(--danger);">*</span></label>
+            <input type="password" id="input-senha-atual" name="senha_atual" class="form-control" autocomplete="current-password" required>
+          </div>
+
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="input-nova-senha">Nova Senha <span style="color: var(--danger);">*</span></label>
+            <input type="password" id="input-nova-senha" name="nova_senha" class="form-control" minlength="4" placeholder="Mínimo de 4 caracteres" autocomplete="new-password" required>
+          </div>
+
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="input-confirmar-senha">Confirmar Nova Senha <span style="color: var(--danger);">*</span></label>
+            <input type="password" id="input-confirmar-senha" name="confirmar_senha" class="form-control" minlength="4" autocomplete="new-password" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="window.fecharModal('modal-alterar-senha')">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Nova Senha
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <% } %>
+
   <!-- Barra de Navegação Inferior Móvel (Fixa para Celulares) -->
   <nav class="mobile-bottom-nav">
     <a href="/produtos" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'produtos') ? 'active' : '' %>">

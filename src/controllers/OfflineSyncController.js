@@ -10,6 +10,7 @@ class OfflineSyncController {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.json({
       ok: true,
+      authenticated: !!req.user,
       serverTime: new Date().toISOString()
     });
   }
@@ -82,7 +83,7 @@ class OfflineSyncController {
           quantidade: qtd,
           colaborador: colabFinal,
           colaborador_id: colaborador_id ? parseInt(colaborador_id, 10) : null,
-          responsavel: responsavel ? String(responsavel).trim() : 'Almoxarife',
+          responsavel: (responsavel && String(responsavel).trim()) ? String(responsavel).trim() : (req.user?.nome || 'Almoxarife'),
           motivo: motivoFinal,
           documento_ref: documento_ref ? String(documento_ref).trim() : null
         });
@@ -99,7 +100,7 @@ class OfflineSyncController {
       if (matchDevolver) {
         const movId = matchDevolver[1];
         const resultado = await Movimentacao.devolverEmprestimo(movId, {
-          responsavel: fields.responsavel ? String(fields.responsavel).trim() : 'Atendente do Balcão',
+          responsavel: (fields.responsavel && String(fields.responsavel).trim()) ? String(fields.responsavel).trim() : (req.user?.nome || 'Atendente do Balcão'),
           motivo: fields.motivo ? String(fields.motivo).trim() : 'Devolução sincronizada do modo offline',
           documento_ref: fields.documento_ref ? String(fields.documento_ref).trim() : null
         });
@@ -173,7 +174,7 @@ class OfflineSyncController {
             tipo: 'ENTRADA',
             quantidade: qtdInicial,
             motivo: 'Carga inicial no cadastro offline do produto',
-            responsavel: 'Jozivam Silva',
+            responsavel: req.user?.nome || 'Almoxarife',
             documento_ref: 'CADASTRO-OFFLINE'
           });
         }
@@ -203,6 +204,13 @@ class OfflineSyncController {
 
       // 5. Cadastro de Colaborador (/colaboradores)
       if (action === '/colaboradores') {
+        if (fields.tipo_perfil === 'SISTEMA' && req.user?.nivel_acesso !== 'ADMIN') {
+          return res.status(403).json({
+            ok: false,
+            conflito: true,
+            erro: 'Apenas Administradores podem cadastrar Usuários do Sistema.'
+          });
+        }
         const colab = await Colaborador.create(fields);
         return res.json({
           ok: true,

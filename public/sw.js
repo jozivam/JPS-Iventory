@@ -3,8 +3,8 @@
  * Cacheia assets, fontes, ícones e telas principais para funcionamento rápido e offline.
  */
 
-const STATIC_CACHE = 'jps-almox-static-v2';
-const PAGES_CACHE = 'jps-almox-pages-v2';
+const STATIC_CACHE = 'jps-almox-static-v3';
+const PAGES_CACHE = 'jps-almox-pages-v3';
 
 const CORE_ASSETS = [
   '/css/style.css',
@@ -36,7 +36,8 @@ self.addEventListener('install', (event) => {
         CORE_PAGES.map(async (url) => {
           try {
             const resp = await fetch(url, { credentials: 'same-origin' });
-            if (resp && resp.ok) {
+            const respPath = resp && resp.url ? new URL(resp.url).pathname : '';
+            if (resp && resp.ok && !resp.redirected && respPath !== '/login') {
               await pagesCache.put(url, resp.clone());
             }
           } catch (_) {
@@ -101,6 +102,7 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.pathname.startsWith('/api/offline/')) return;
+  if (url.pathname === '/login' || url.pathname === '/logout') return;
   if (url.pathname.includes('/exportar/excel') || url.pathname.includes('/modelo/excel')) return;
 
   // 1. Assets Estáticos + Fontes + Ícones -> Cache-First com atualização em segundo plano
@@ -131,7 +133,8 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(PAGES_CACHE);
         try {
           const networkResp = await fetchWithTimeout(request, 4500);
-          if (networkResp && networkResp.ok) {
+          const respPath = networkResp && networkResp.url ? new URL(networkResp.url).pathname : '';
+          if (networkResp && networkResp.ok && !networkResp.redirected && respPath !== '/login') {
             cache.put(request, networkResp.clone());
             // Também mantém a rota base atualizada (sem query string de sucesso/erro)
             if (url.search && CORE_PAGES.includes(url.pathname)) {
@@ -175,8 +178,13 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Mensagem do app para forçar atualização do cache das páginas principais em segundo plano
+// Mensagem do app para forçar atualização ou limpeza do cache das páginas principais
 self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CLEAR_AUTH_CACHE') {
+    event.waitUntil(caches.delete(PAGES_CACHE));
+    return;
+  }
+
   if (event.data && event.data.type === 'WARM_CACHE') {
     event.waitUntil(
       (async () => {
@@ -185,7 +193,10 @@ self.addEventListener('message', (event) => {
           CORE_PAGES.map(async (url) => {
             try {
               const resp = await fetch(url, { credentials: 'same-origin' });
-              if (resp && resp.ok) await pagesCache.put(url, resp.clone());
+              const respPath = resp && resp.url ? new URL(resp.url).pathname : '';
+              if (resp && resp.ok && !resp.redirected && respPath !== '/login') {
+                await pagesCache.put(url, resp.clone());
+              }
             } catch (_) {}
           })
         );
