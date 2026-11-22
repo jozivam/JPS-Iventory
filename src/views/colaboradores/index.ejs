@@ -501,10 +501,25 @@
               </div>
 
               <div>
-                <label class="form-label" for="modal-acesso-senha" style="font-size: 0.78rem; font-weight: 700; margin-bottom: 0.25rem;">
-                  Nova Senha (Opcional):
-                </label>
-                <input type="password" name="senha" id="modal-acesso-senha" class="form-control" style="height: 36px; font-size: 0.85rem;" placeholder="Em branco p/ manter">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; margin-bottom: 0.25rem;">
+                  <label class="form-label" for="modal-acesso-senha" style="font-size: 0.78rem; font-weight: 700; margin: 0;">
+                    Alterar Senha:
+                  </label>
+                  <span id="modal-acesso-badge-senha" style="display: none; font-size: 0.68rem; font-weight: 700; color: #047857; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 1px 6px; border-radius: 9999px;">
+                    <i class="fa-solid fa-lock"></i> Senha ativa
+                  </span>
+                </div>
+                <div style="position: relative; display: flex;">
+                  <input type="password" name="senha" id="modal-acesso-senha" class="form-control" style="height: 36px; font-size: 0.85rem; padding-right: 2rem;" placeholder="Nova senha (ou vazio p/ manter)" autocomplete="new-password">
+                  <button
+                    type="button"
+                    onclick="toggleMostrarSenha('modal-acesso-senha', this)"
+                    style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: var(--text-muted); cursor: pointer; padding: 4px;"
+                    title="Mostrar/Ocultar Senha"
+                  >
+                    <i class="fa-solid fa-eye"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -752,8 +767,13 @@
 
           <!-- Credenciais de Acesso (Login e Senha) -->
           <div style="background: #ffffff; border: 1px solid #C7D2FE; border-radius: 6px; padding: 0.85rem;">
-            <div style="font-size: 0.82rem; font-weight: 700; color: #4338CA; margin-bottom: 0.65rem; display: flex; align-items: center; gap: 0.35rem;">
-              <i class="fa-solid fa-lock"></i> Credenciais de Acesso à Plataforma
+            <div style="font-size: 0.82rem; font-weight: 700; color: #4338CA; margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;">
+              <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-lock"></i> Credenciais de Acesso à Plataforma
+              </span>
+              <span id="form-badge-status-senha" style="display: none; font-size: 0.72rem; font-weight: 700; color: #047857; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 2px 8px; border-radius: 9999px;">
+                <i class="fa-solid fa-shield-check"></i> Senha salva e criptografada
+              </span>
             </div>
             
             <div class="form-row-responsive" style="margin-bottom: 0;">
@@ -779,7 +799,7 @@
 
               <!-- Senha -->
               <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" for="form-colab-senha" style="font-weight: 700; font-size: 0.8rem;">
+                <label class="form-label" for="form-colab-senha" id="form-label-senha" style="font-weight: 700; font-size: 0.8rem;">
                   Senha de Acesso
                 </label>
                 <div style="position: relative; display: flex;">
@@ -794,6 +814,7 @@
                   >
                   <button 
                     type="button" 
+                    id="btn-olho-form-senha"
                     onclick="toggleMostrarSenha('form-colab-senha', this)" 
                     style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: var(--text-muted); cursor: pointer; padding: 4px;"
                     title="Mostrar/Ocultar Senha"
@@ -802,6 +823,14 @@
                   </button>
                 </div>
                 <span class="form-help" id="form-help-senha" style="font-size: 0.72rem;">Padrão: <code>123456</code> (ou vazio para manter).</span>
+                <div style="display: flex; gap: 0.4rem; margin-top: 0.4rem; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="gerarSenhaRapida('form-colab-senha', 'btn-olho-form-senha')" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Gerar Nova Senha
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-copiar-credenciais" onclick="copiarCredenciaisForm()" style="font-size: 0.72rem; padding: 0.2rem 0.55rem; color: #4338CA; border-color: #C7D2FE;">
+                    <i class="fa-regular fa-copy"></i> Copiar Acesso
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -921,7 +950,16 @@
       alternarCamposNivelAcesso('SISTEMA');
       if (selectNivel) selectNivel.value = c.nivel_acesso || 'ALMOXARIFE';
       if (document.getElementById('modal-acesso-login')) document.getElementById('modal-acesso-login').value = c.login || '';
-      if (document.getElementById('modal-acesso-senha')) document.getElementById('modal-acesso-senha').value = '';
+      const inputAcessoSenha = document.getElementById('modal-acesso-senha');
+      if (inputAcessoSenha) {
+        inputAcessoSenha.value = '';
+        inputAcessoSenha.type = 'password';
+        inputAcessoSenha.placeholder = c.tem_senha ? 'Digite nova senha para alterar' : 'Definir senha (padrão 123456)';
+      }
+      const badgeAcessoSenha = document.getElementById('modal-acesso-badge-senha');
+      if (badgeAcessoSenha) {
+        badgeAcessoSenha.style.display = c.tem_senha ? 'inline-flex' : 'none';
+      }
     } else {
       radioTecnico.checked = true;
       badgePerfil.className = 'status-pill';
@@ -1032,7 +1070,14 @@
     document.getElementById('form-colab-status').value = 'ATIVO';
     document.getElementById('form-colab-obs').value = '';
     if (document.getElementById('form-colab-login')) document.getElementById('form-colab-login').value = '';
-    if (document.getElementById('form-colab-senha')) document.getElementById('form-colab-senha').value = '';
+    const inputSenhaNovo = document.getElementById('form-colab-senha');
+    if (inputSenhaNovo) {
+      inputSenhaNovo.value = '';
+      inputSenhaNovo.type = 'password';
+      inputSenhaNovo.placeholder = 'Definir senha inicial...';
+    }
+    if (document.getElementById('form-label-senha')) document.getElementById('form-label-senha').textContent = 'Senha de Acesso';
+    if (document.getElementById('form-badge-status-senha')) document.getElementById('form-badge-status-senha').style.display = 'none';
     if (document.getElementById('form-help-senha')) document.getElementById('form-help-senha').innerHTML = 'Padrão inicial: <code>123456</code> (ou defina uma personalizada).';
     document.getElementById('btn-submit-form-colab').innerHTML = '<i class="fa-solid fa-check"></i> Cadastrar Colaborador';
 
@@ -1062,8 +1107,23 @@
     document.getElementById('form-colab-status').value = c.status || 'ATIVO';
     document.getElementById('form-colab-obs').value = c.observacoes || '';
     if (document.getElementById('form-colab-login')) document.getElementById('form-colab-login').value = c.login || '';
-    if (document.getElementById('form-colab-senha')) document.getElementById('form-colab-senha').value = '';
-    if (document.getElementById('form-help-senha')) document.getElementById('form-help-senha').innerHTML = 'Deixe em branco para manter a senha atual.';
+    const inputSenhaEdit = document.getElementById('form-colab-senha');
+    if (inputSenhaEdit) {
+      inputSenhaEdit.value = '';
+      inputSenhaEdit.type = 'password';
+      inputSenhaEdit.placeholder = c.tem_senha ? 'Digite nova senha para alterar...' : 'Definir senha inicial...';
+    }
+    if (document.getElementById('form-label-senha')) {
+      document.getElementById('form-label-senha').textContent = c.tem_senha ? 'Nova Senha (para alterar)' : 'Senha de Acesso';
+    }
+    if (document.getElementById('form-badge-status-senha')) {
+      document.getElementById('form-badge-status-senha').style.display = c.tem_senha ? 'inline-flex' : 'none';
+    }
+    if (document.getElementById('form-help-senha')) {
+      document.getElementById('form-help-senha').innerHTML = c.tem_senha
+        ? 'Por segurança, senhas criptografadas não podem ser exibidas. Digite acima apenas se quiser <strong>trocar a senha</strong>.'
+        : 'Padrão inicial: <code>123456</code> (ou defina uma personalizada).';
+    }
     document.getElementById('btn-submit-form-colab').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Atualizar Dados';
 
     if (c.tipo_perfil === 'SISTEMA') {
@@ -1107,6 +1167,48 @@
       if (icone) {
         icone.className = 'fa-solid fa-eye';
       }
+    }
+  }
+
+  function gerarSenhaRapida(inputId, olhoBtnId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let nova = '';
+    for (let i = 0; i < 6; i++) {
+      nova += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    input.value = nova;
+    input.type = 'text';
+    const btnOlho = document.getElementById(olhoBtnId);
+    if (btnOlho) {
+      const icone = btnOlho.querySelector('i');
+      if (icone) icone.className = 'fa-solid fa-eye-slash';
+    }
+    input.focus();
+  }
+
+  function copiarCredenciaisForm() {
+    const login = (document.getElementById('form-colab-login')?.value || '').trim();
+    const senha = (document.getElementById('form-colab-senha')?.value || '').trim();
+    if (!login) {
+      alert('Preencha o campo Login / Usuário primeiro.');
+      return;
+    }
+    const texto = senha
+      ? `Acesso JPS Almoxarifado\nUsuário: ${login}\nSenha: ${senha}`
+      : `Acesso JPS Almoxarifado\nUsuário: ${login}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(() => {
+        const btn = document.getElementById('btn-copiar-credenciais');
+        if (btn) {
+          const original = btn.innerHTML;
+          btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado!';
+          setTimeout(() => { btn.innerHTML = original; }, 2000);
+        }
+      });
+    } else {
+      prompt('Copie os dados de acesso:', texto);
     }
   }
 
