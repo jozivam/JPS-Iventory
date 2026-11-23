@@ -489,7 +489,7 @@ class Movimentacao {
   /**
    * Edita uma movimentação existente e recalcula o inventário
    */
-  static async update(id, { produto_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador }) {
+  static async update(id, { produto_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, colaborador_id }) {
     const novaQtd = parseInt(quantidade, 10);
     if (!novaQtd || novaQtd <= 0) {
       throw new Error('A quantidade deve ser um número maior que zero.');
@@ -500,8 +500,19 @@ class Movimentacao {
     }
 
     const novoFator = getFatorTipo(tipo);
+    const colabNomeFinal = (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão';
+    let colabIdFinal = colaborador_id ? parseInt(colaborador_id, 10) : null;
+    if (isNaN(colabIdFinal)) colabIdFinal = null;
 
     if (useSupabase && supabase) {
+      // Se não recebeu colaborador_id explícito, tenta resolver pelo nome exato para manter a Ficha do Colaborador sincronizada
+      if (!colabIdFinal && colabNomeFinal.toLowerCase() !== 'balcão') {
+        try {
+          const { data: c } = await supabase.from('colaboradores').select('id').ilike('nome', colabNomeFinal).limit(1).maybeSingle();
+          if (c) colabIdFinal = c.id;
+        } catch (_) {}
+      }
+
       const { data: movAntiga, error: errMov } = await supabase.from('movimentacoes').select('*').eq('id', id).single();
       if (errMov || !movAntiga) throw new Error('Movimentação não encontrada.');
 
@@ -546,7 +557,8 @@ class Movimentacao {
         quantidade: novaQtd,
         motivo: motivo ? motivo.trim() : '',
         responsavel: responsavel ? responsavel.trim() : 'Não informado',
-        colaborador: (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão',
+        colaborador: colabNomeFinal,
+        colaborador_id: colabIdFinal,
         documento_ref: documento_ref ? documento_ref.trim() : null
       }).eq('id', id);
 
@@ -596,6 +608,11 @@ class Movimentacao {
           .run(saldoNovoFinal, prodNovo.id);
       }
 
+      if (!colabIdFinal && colabNomeFinal.toLowerCase() !== 'balcão') {
+        const c = db.prepare('SELECT id FROM colaboradores WHERE LOWER(nome) = LOWER(?)').get(colabNomeFinal);
+        if (c) colabIdFinal = c.id;
+      }
+
       db.prepare(`
         UPDATE movimentacoes SET
           produto_id = @produto_id,
@@ -604,6 +621,7 @@ class Movimentacao {
           motivo = @motivo,
           responsavel = @responsavel,
           colaborador = @colaborador,
+          colaborador_id = @colaborador_id,
           documento_ref = @documento_ref
         WHERE id = @id
       `).run({
@@ -613,7 +631,8 @@ class Movimentacao {
         quantidade: novaQtd,
         motivo: motivo ? motivo.trim() : '',
         responsavel: responsavel ? responsavel.trim() : 'Não informado',
-        colaborador: (colaborador && colaborador.trim()) ? colaborador.trim() : 'Balcão',
+        colaborador: colabNomeFinal,
+        colaborador_id: colabIdFinal,
         documento_ref: documento_ref ? documento_ref.trim() : null
       });
 

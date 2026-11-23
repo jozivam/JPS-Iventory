@@ -1,5 +1,6 @@
 const Movimentacao = require('../models/Movimentacao');
 const Produto = require('../models/Produto');
+const Colaborador = require('../models/Colaborador');
 const xlsx = require('xlsx');
 
 class EstoqueController {
@@ -44,14 +45,20 @@ class EstoqueController {
         periodo: periodo || ''
       };
 
-      const movimentacoes = await Movimentacao.findAll(filtros);
-      const produtos = await Produto.findAll();
+      const [movimentacoes, produtos, colaboradoresRaw] = await Promise.all([
+        Movimentacao.findAll(filtros),
+        Produto.findAll(),
+        Colaborador.findAll()
+      ]);
+
+      const colaboradores = (colaboradoresRaw || []).map(({ senha_hash, ...c }) => c);
 
       res.render('movimentacoes/index', {
         title: 'Histórico de Movimentações',
         currentPage: 'movimentacoes',
         movimentacoes,
         produtos,
+        colaboradores,
         filtros,
         sucesso: sucesso || null,
         erro: erro || null
@@ -148,7 +155,7 @@ class EstoqueController {
   static async update(req, res) {
     try {
       const { id } = req.params;
-      const { produto_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador } = req.body;
+      const { produto_id, tipo, quantidade, motivo, responsavel, documento_ref, colaborador, colaborador_id } = req.body;
 
       await Movimentacao.update(id, {
         produto_id,
@@ -157,7 +164,8 @@ class EstoqueController {
         motivo,
         responsavel,
         documento_ref,
-        colaborador
+        colaborador,
+        colaborador_id
       });
 
       res.redirect('/movimentacoes?sucesso=' + encodeURIComponent(`Movimentação MOV-${String(id).padStart(4, '0')} atualizada com sucesso! O inventário foi recalculado automaticamente.`));

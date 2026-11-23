@@ -510,13 +510,49 @@
             <!-- Responsável -->
             <div class="form-group">
               <label class="form-label" for="modal-edit-mov-resp">Responsável (Almoxarife)</label>
-              <input type="text" id="modal-edit-mov-resp" name="responsavel" class="form-control" required>
+              <input type="text" id="modal-edit-mov-resp" name="responsavel" class="form-control" list="lista-edit-mov-atendentes" autocomplete="off" required>
+              <datalist id="lista-edit-mov-atendentes">
+                <% if (typeof colaboradores !== 'undefined' && colaboradores) { %>
+                  <% colaboradores.filter(c => c.tipo_perfil === 'SISTEMA' && c.status === 'ATIVO').forEach(c => { %>
+                    <option value="<%= c.nome %>"><%= c.cargo || c.nivel_acesso %></option>
+                  <% }) %>
+                <% } %>
+              </datalist>
             </div>
 
-            <!-- Colaborador / Retirante -->
-            <div class="form-group full-width">
-              <label class="form-label" for="modal-edit-mov-colab">Colaborador / Solicitante</label>
-              <input type="text" id="modal-edit-mov-colab" name="colaborador" class="form-control" placeholder="Nome do colaborador que retirou ou utilizou">
+            <!-- Colaborador / Retirante com Pesquisa Inteligente -->
+            <div class="form-group full-width" style="position: relative;" id="modal-edit-colab-wrapper">
+              <label class="form-label" for="modal-edit-mov-colab">
+                Colaborador / Solicitante
+                <small style="color: var(--text-muted); font-weight: normal;">(Digite para pesquisar e vincular à ficha)</small>
+              </label>
+              <div style="position: relative; display: flex; align-items: center;">
+                <i class="fa-solid fa-user" style="position: absolute; left: 0.85rem; color: var(--text-dim); font-size: 0.85rem; pointer-events: none; z-index: 2;"></i>
+                <input
+                  type="text"
+                  id="modal-edit-mov-colab"
+                  name="colaborador"
+                  class="form-control"
+                  style="padding-left: 2.3rem; padding-right: 2.2rem;"
+                  placeholder="Digite o nome, matrícula, cargo ou setor do colaborador..."
+                  autocomplete="off"
+                >
+                <button
+                  type="button"
+                  id="btn-limpar-modal-edit-colab"
+                  title="Limpar colaborador"
+                  onclick="limparModalEditColab()"
+                  style="position: absolute; right: 0.45rem; background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: none; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 50%; z-index: 2;"
+                >
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <input type="hidden" id="modal-edit-mov-colab-id" name="colaborador_id" value="">
+
+              <!-- Dropdown Flutuante de Colaboradores -->
+              <div id="modal-edit-colab-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 12px 28px rgba(0,0,0,0.16); max-height: 240px; overflow-y: auto; z-index: 2000; padding: 0.3rem 0;">
+                <!-- Sugestões injetadas via JS -->
+              </div>
             </div>
 
             <!-- Motivo -->
@@ -704,7 +740,14 @@
     document.getElementById('modal-edit-produto-id').value = m.produto_id;
     document.getElementById('modal-edit-mov-qtd').value = m.quantidade;
     document.getElementById('modal-edit-mov-resp').value = m.responsavel || '';
-    document.getElementById('modal-edit-mov-colab').value = m.colaborador || '';
+    const inputColabEdit = document.getElementById('modal-edit-mov-colab');
+    const inputColabIdEdit = document.getElementById('modal-edit-mov-colab-id');
+    const btnLimparColabEdit = document.getElementById('btn-limpar-modal-edit-colab');
+    if (inputColabEdit) inputColabEdit.value = m.colaborador || '';
+    if (inputColabIdEdit) inputColabIdEdit.value = m.colaborador_id || '';
+    if (btnLimparColabEdit) btnLimparColabEdit.style.display = (m.colaborador && m.colaborador.trim()) ? 'flex' : 'none';
+    const ddColabEdit = document.getElementById('modal-edit-colab-dropdown');
+    if (ddColabEdit) ddColabEdit.style.display = 'none';
     document.getElementById('modal-edit-mov-motivo').value = m.motivo || '';
     document.getElementById('modal-edit-mov-doc').value = m.documento_ref || '';
 
@@ -916,6 +959,179 @@
           } else if (!inputBusca.value.trim()) {
             selecionarProduto(null);
           }
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (wrapper && !wrapper.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+  })();
+
+  // =========================================================================
+  // COMBOBOX DE PESQUISA DE COLABORADORES NO MODAL DE EDIÇÃO DA MOVIMENTAÇÃO
+  // =========================================================================
+  (function () {
+    const COLABS_EDIT_MOV = <%- JSON.stringify((typeof colaboradores !== 'undefined' && colaboradores ? colaboradores : []).map(c => ({
+      id: c.id,
+      nome: c.nome || '',
+      matricula: c.matricula || '',
+      cargo: c.cargo || '',
+      departamento: c.departamento || '',
+      status: c.status || 'ATIVO',
+      tipo_perfil: c.tipo_perfil || 'TECNICO'
+    }))) %>;
+
+    const inputColab = document.getElementById('modal-edit-mov-colab');
+    const inputColabId = document.getElementById('modal-edit-mov-colab-id');
+    const dropdown = document.getElementById('modal-edit-colab-dropdown');
+    const btnLimpar = document.getElementById('btn-limpar-modal-edit-colab');
+    const wrapper = document.getElementById('modal-edit-colab-wrapper');
+
+    if (!inputColab || !dropdown) return;
+
+    let filtrados = [];
+    let focadoIdx = -1;
+
+    function norm(str) {
+      return String(str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function selecionarColab(c) {
+      if (!c) {
+        inputColab.value = '';
+        if (inputColabId) inputColabId.value = '';
+        if (btnLimpar) btnLimpar.style.display = 'none';
+      } else {
+        inputColab.value = c.nome;
+        if (inputColabId) inputColabId.value = c.id;
+        if (btnLimpar) btnLimpar.style.display = 'flex';
+      }
+      dropdown.style.display = 'none';
+    }
+
+    window.limparModalEditColab = function () {
+      selecionarColab(null);
+      inputColab.focus();
+      renderizarDropdown('');
+    };
+
+    function renderizarDropdown(termo) {
+      const q = norm(termo).trim();
+      const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
+
+      filtrados = COLABS_EDIT_MOV.filter(c => {
+        if (tokens.length === 0) return c.status === 'ATIVO';
+        const alvo = norm(`${c.nome} ${c.matricula} ${c.cargo} ${c.departamento}`);
+        return tokens.every(tk => alvo.includes(tk));
+      }).slice(0, 40);
+
+      focadoIdx = -1;
+
+      if (filtrados.length === 0) {
+        dropdown.innerHTML = `
+          <div style="padding: 0.85rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+            Nenhum colaborador encontrado para "<strong>${escapeHtml(termo)}</strong>"
+          </div>
+        `;
+        dropdown.style.display = 'block';
+        return;
+      }
+
+      dropdown.innerHTML = filtrados.map((c, idx) => {
+        const iniciais = (c.nome || 'C').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+        const isSistema = c.tipo_perfil === 'SISTEMA';
+        const isInativo = c.status !== 'ATIVO';
+        return `
+          <div class="modal-edit-colab-opt" data-idx="${idx}" style="padding: 0.5rem 0.8rem; cursor: pointer; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; opacity: ${isInativo ? '0.65' : '1'};">
+            <div style="display: flex; align-items: center; gap: 0.55rem; min-width: 0;">
+              <div style="width: 30px; height: 30px; border-radius: 50%; background: ${isSistema ? '#EDE9FE' : '#FEF3C7'}; color: ${isSistema ? '#6D28D9' : '#B45309'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.72rem; flex-shrink: 0;">
+                ${escapeHtml(iniciais)}
+              </div>
+              <div style="min-width: 0;">
+                <div style="font-weight: 700; color: var(--text-main); font-size: 0.84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  ${escapeHtml(c.nome)}
+                </div>
+                <div style="font-size: 0.71rem; color: var(--text-muted);">
+                  <span style="font-family: var(--font-mono); font-weight: 600;">${escapeHtml(c.matricula || 'S/ MAT')}</span>
+                  ${c.cargo ? ` • ${escapeHtml(c.cargo)}` : ''}
+                  ${c.departamento ? ` (${escapeHtml(c.departamento)})` : ''}
+                </div>
+              </div>
+            </div>
+            ${isInativo ? '<span style="font-size: 0.68rem; color: #64748B; background: #F1F5F9; padding: 1px 6px; border-radius: 4px; font-weight: 700;">Inativo</span>' : ''}
+          </div>
+        `;
+      }).join('');
+
+      dropdown.style.display = 'block';
+
+      dropdown.querySelectorAll('.modal-edit-colab-opt').forEach(el => {
+        el.addEventListener('mouseenter', () => { el.style.background = '#f1f5f9'; });
+        el.addEventListener('mouseleave', () => { el.style.background = '#ffffff'; });
+        el.addEventListener('mousedown', (ev) => {
+          ev.preventDefault();
+          const idx = parseInt(el.getAttribute('data-idx'), 10);
+          if (filtrados[idx]) selecionarColab(filtrados[idx]);
+        });
+      });
+    }
+
+    function atualizarFoco() {
+      const items = dropdown.querySelectorAll('.modal-edit-colab-opt');
+      items.forEach((el, idx) => {
+        if (idx === focadoIdx) {
+          el.style.background = '#eef2ff';
+          el.scrollIntoView({ block: 'nearest' });
+        } else {
+          el.style.background = '#ffffff';
+        }
+      });
+    }
+
+    inputColab.addEventListener('focus', () => {
+      renderizarDropdown(inputColab.value);
+    });
+
+    inputColab.addEventListener('input', () => {
+      const val = inputColab.value;
+      if (btnLimpar) btnLimpar.style.display = val ? 'flex' : 'none';
+      if (inputColabId) inputColabId.value = '';
+      renderizarDropdown(val);
+    });
+
+    inputColab.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (dropdown.style.display === 'none') renderizarDropdown(inputColab.value);
+        if (filtrados.length === 0) return;
+        focadoIdx = (focadoIdx + 1) % filtrados.length;
+        atualizarFoco();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (filtrados.length === 0) return;
+        focadoIdx = (focadoIdx - 1 + filtrados.length) % filtrados.length;
+        atualizarFoco();
+      } else if (e.key === 'Enter') {
+        if (dropdown.style.display !== 'none' && filtrados.length > 0) {
+          e.preventDefault();
+          const escolhido = focadoIdx >= 0 ? filtrados[focadoIdx] : filtrados[0];
+          if (escolhido) selecionarColab(escolhido);
         }
       } else if (e.key === 'Escape') {
         dropdown.style.display = 'none';
