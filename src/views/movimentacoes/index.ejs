@@ -69,16 +69,44 @@
 
     <!-- Linha 2: Filtros Detalhados -->
     <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-      <!-- Filtro Produto -->
-      <div style="min-width: 240px; flex: 1;">
-        <select name="produto_id" class="filter-select-pill" style="width: 100%;" onchange="this.form.submit()">
-          <option value="">Todos os Materiais</option>
-          <% produtos.forEach(p => { %>
-            <option value="<%= p.id %>" <%= filtros.produto_id == p.id ? 'selected' : '' %>>
-              [<%= p.sku %>] <%= p.nome %> <%= p.marca ? `(${p.marca})` : '' %>
-            </option>
-          <% }) %>
-        </select>
+      <!-- Filtro Produto com Pesquisa Rápida (Combobox Inteligente) -->
+      <%
+        const produtoSelecionadoMov = (filtros.produto_id && produtos)
+          ? produtos.find(p => String(p.id) === String(filtros.produto_id))
+          : null;
+        const textoProdutoSelecionadoMov = produtoSelecionadoMov
+          ? `[${produtoSelecionadoMov.sku}] ${produtoSelecionadoMov.nome}${produtoSelecionadoMov.marca ? ' (' + produtoSelecionadoMov.marca + ')' : ''}`
+          : '';
+      %>
+      <div style="min-width: 260px; flex: 1; position: relative;" id="mov-produto-wrapper">
+        <div style="position: relative; display: flex; align-items: center;">
+          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; color: var(--text-dim); font-size: 0.82rem; pointer-events: none; z-index: 2;"></i>
+          <input
+            type="text"
+            id="mov-produto-busca"
+            class="filter-select-pill"
+            style="width: 100%; padding-left: 2.25rem; padding-right: 2.2rem; font-weight: 500;"
+            placeholder="Digite o nome, SKU, marca ou TAG do produto..."
+            value="<%= textoProdutoSelecionadoMov %>"
+            autocomplete="off"
+          >
+          <button
+            type="button"
+            id="btn-limpar-mov-produto"
+            title="Limpar produto e mostrar todos"
+            onclick="limparProdutoFiltroMov()"
+            style="position: absolute; right: 0.45rem; background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: <%= produtoSelecionadoMov ? 'flex' : 'none' %>; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 50%; z-index: 2;"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <input type="hidden" name="produto_id" id="mov-produto-id-hidden" value="<%= filtros.produto_id || '' %>">
+
+        <!-- Dropdown Flutuante de Produtos -->
+        <div id="mov-produto-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 12px 28px rgba(0,0,0,0.14); max-height: 310px; overflow-y: auto; z-index: 1050; padding: 0.3rem 0;">
+          <!-- Resultados filtrados via JS -->
+        </div>
       </div>
 
       <!-- Filtro Tipo -->
@@ -710,6 +738,196 @@
       document.getElementById('form-modal-excluir-mov').submit();
     }
   }
+
+  // =========================================================================
+  // COMBOBOX DE PESQUISA RÁPIDA DE PRODUTO NO FILTRO DE MOVIMENTAÇÕES
+  // =========================================================================
+  (function () {
+    const PRODUTOS_MOV = <%- JSON.stringify((produtos || []).map(p => ({
+      id: p.id,
+      sku: p.sku || '',
+      nome: p.nome || '',
+      marca: p.marca || '',
+      categoria: p.categoria || '',
+      tag: p.tag || '',
+      patrimonio: p.patrimonio || '',
+      ca: p.ca || '',
+      quantidade: p.quantidade || 0,
+      unidade_medida: p.unidade_medida || 'UN'
+    }))) %>;
+
+    const inputBusca = document.getElementById('mov-produto-busca');
+    const inputHidden = document.getElementById('mov-produto-id-hidden');
+    const dropdown = document.getElementById('mov-produto-dropdown');
+    const btnLimpar = document.getElementById('btn-limpar-mov-produto');
+    const formFiltros = document.getElementById('form-filtros-mov');
+    const wrapper = document.getElementById('mov-produto-wrapper');
+
+    if (!inputBusca || !inputHidden || !dropdown) return;
+
+    let filtrados = [];
+    let focadoIdx = -1;
+
+    function norm(str) {
+      return String(str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function selecionarProduto(prod) {
+      if (!prod) {
+        inputHidden.value = '';
+        inputBusca.value = '';
+        if (btnLimpar) btnLimpar.style.display = 'none';
+      } else {
+        inputHidden.value = prod.id;
+        inputBusca.value = `[${prod.sku}] ${prod.nome}${prod.marca ? ' (' + prod.marca + ')' : ''}`;
+        if (btnLimpar) btnLimpar.style.display = 'flex';
+      }
+      dropdown.style.display = 'none';
+      if (formFiltros) formFiltros.submit();
+    }
+
+    window.limparProdutoFiltroMov = function () {
+      selecionarProduto(null);
+    };
+
+    function renderizarDropdown(termo) {
+      const q = norm(termo).trim();
+      const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
+
+      filtrados = PRODUTOS_MOV.filter(p => {
+        if (tokens.length === 0) return true;
+        const alvo = norm(`${p.sku} ${p.nome} ${p.marca} ${p.categoria} ${p.tag} ${p.patrimonio} ${p.ca}`);
+        return tokens.every(tk => alvo.includes(tk));
+      }).slice(0, 50);
+
+      focadoIdx = -1;
+
+      let html = `
+        <div class="mov-prod-opt" data-idx="-1" style="padding: 0.5rem 0.85rem; cursor: pointer; font-size: 0.82rem; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 0.45rem;">
+          <i class="fa-solid fa-layer-group"></i> Todos os Materiais
+        </div>
+      `;
+
+      if (filtrados.length === 0) {
+        html += `
+          <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+            Nenhum produto encontrado para "<strong>${escapeHtml(termo)}</strong>"
+          </div>
+        `;
+      } else {
+        html += filtrados.map((p, idx) => `
+          <div class="mov-prod-opt" data-idx="${idx}" style="padding: 0.55rem 0.85rem; cursor: pointer; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; transition: background 0.1s ease;">
+            <div style="min-width: 0;">
+              <div style="font-weight: 700; color: var(--text-main); font-size: 0.84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${escapeHtml(p.nome)}
+                ${p.marca ? `<span style="font-size: 0.72rem; font-weight: 500; color: var(--primary); margin-left: 4px;">(${escapeHtml(p.marca)})</span>` : ''}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 1px; display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                <span style="font-family: var(--font-mono); font-weight: 700; color: var(--text-body);">${escapeHtml(p.sku)}</span>
+                ${p.categoria ? `<span>• ${escapeHtml(p.categoria)}</span>` : ''}
+                ${p.tag ? `<span style="font-family: var(--font-mono); color: var(--primary);">• TAG: ${escapeHtml(p.tag)}</span>` : ''}
+              </div>
+            </div>
+            <span style="font-size: 0.74rem; font-weight: 700; color: ${Number(p.quantidade) <= 0 ? 'var(--danger)' : 'var(--teal)'}; white-space: nowrap;">
+              ${p.quantidade} ${escapeHtml(p.unidade_medida)}
+            </span>
+          </div>
+        `).join('');
+      }
+
+      dropdown.innerHTML = html;
+      dropdown.style.display = 'block';
+
+      dropdown.querySelectorAll('.mov-prod-opt').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          el.style.background = '#f1f5f9';
+        });
+        el.addEventListener('mouseleave', () => {
+          el.style.background = '#ffffff';
+        });
+        el.addEventListener('mousedown', (ev) => {
+          ev.preventDefault();
+          const idx = parseInt(el.getAttribute('data-idx'), 10);
+          if (idx === -1) selecionarProduto(null);
+          else if (filtrados[idx]) selecionarProduto(filtrados[idx]);
+        });
+      });
+    }
+
+    function atualizarFoco() {
+      const items = dropdown.querySelectorAll('.mov-prod-opt[data-idx]:not([data-idx="-1"])');
+      items.forEach((el, idx) => {
+        if (idx === focadoIdx) {
+          el.style.background = '#eef2ff';
+          el.scrollIntoView({ block: 'nearest' });
+        } else {
+          el.style.background = '#ffffff';
+        }
+      });
+    }
+
+    inputBusca.addEventListener('focus', () => {
+      // Se já tinha um produto selecionado, seleciona o texto todo para facilitar digitar outro
+      if (inputHidden.value) {
+        inputBusca.select();
+      }
+      renderizarDropdown(inputHidden.value ? '' : inputBusca.value);
+    });
+
+    inputBusca.addEventListener('input', () => {
+      const val = inputBusca.value;
+      if (btnLimpar) btnLimpar.style.display = val ? 'flex' : 'none';
+      if (!val.trim()) {
+        inputHidden.value = '';
+      }
+      renderizarDropdown(val);
+    });
+
+    inputBusca.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (dropdown.style.display === 'none') renderizarDropdown(inputBusca.value);
+        if (filtrados.length === 0) return;
+        focadoIdx = (focadoIdx + 1) % filtrados.length;
+        atualizarFoco();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (filtrados.length === 0) return;
+        focadoIdx = (focadoIdx - 1 + filtrados.length) % filtrados.length;
+        atualizarFoco();
+      } else if (e.key === 'Enter') {
+        if (dropdown.style.display !== 'none') {
+          e.preventDefault();
+          if (focadoIdx >= 0 && filtrados[focadoIdx]) {
+            selecionarProduto(filtrados[focadoIdx]);
+          } else if (inputBusca.value.trim() && filtrados.length > 0) {
+            selecionarProduto(filtrados[0]);
+          } else if (!inputBusca.value.trim()) {
+            selecionarProduto(null);
+          }
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (wrapper && !wrapper.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+  })();
 </script>
 
 <%- include('../layouts/footer') %>
