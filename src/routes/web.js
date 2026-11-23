@@ -17,6 +17,7 @@ const ColaboradorController = require('../controllers/ColaboradorController');
 const FichaController = require('../controllers/FichaController');
 const RelatorioController = require('../controllers/RelatorioController');
 const SuprimentoController = require('../controllers/SuprimentoController');
+const ConferenciaController = require('../controllers/ConferenciaController');
 const OfflineSyncController = require('../controllers/OfflineSyncController');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
@@ -89,6 +90,11 @@ router.post('/suprimentos/movimentar', requireRole('ADMIN', 'ALMOXARIFE', 'OPERA
 router.get('/relatorios', RelatorioController.index);
 router.get('/relatorios/pdf', RelatorioController.pdf);
 router.get('/relatorios/exportar/excel', RelatorioController.exportarExcel);
+
+// --- CONFERÊNCIA / COMPARAÇÃO INTELIGENTE DE PLANILHA DE INVENTÁRIO ---
+router.get('/conferencia', ConferenciaController.index);
+router.post('/conferencia/comparar', upload.single('planilha'), ConferenciaController.comparar);
+router.post('/conferencia/exportar/excel', ConferenciaController.exportarExcel);
 
 // --- COLABORADORES E USUÁRIOS DO SISTEMA ---
 router.get('/colaboradores', ColaboradorController.index);

@@ -28,8 +28,8 @@ app.get('/sw.js', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware para processar dados de formulários e JSON
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.json({ limit: '15mb' }));
 
 // Utilitários e helpers globais acessíveis em todas as views
 app.use((req, res, next) => {

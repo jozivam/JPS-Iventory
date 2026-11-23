@@ -1,0 +1,539 @@
+<%- include('../layouts/header') %>
+
+<style>
+  .conf-dropzone {
+    border: 2px dashed #c7d2fe;
+    background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+    border-radius: 14px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: var(--transition);
+    cursor: pointer;
+  }
+
+  .conf-dropzone:hover,
+  .conf-dropzone.dragover {
+    border-color: var(--primary);
+    background: #eef2ff;
+  }
+
+  .conf-pill-btn {
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-body);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .conf-pill-btn.ativo {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+  }
+
+  .conf-print-header {
+    display: none;
+  }
+
+  @media print {
+    .app-sidebar, .topbar, .mobile-bottom-nav, .hide-on-print, #jps-offline-banner {
+      display: none !important;
+    }
+    .app-main {
+      margin-left: 0 !important;
+      padding: 0 !important;
+    }
+    .page-content {
+      padding: 0 !important;
+      max-width: none !important;
+    }
+    .conf-print-header {
+      display: flex !important;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .table-card {
+      box-shadow: none !important;
+      border: 1px solid #cbd5e1 !important;
+    }
+    .clean-table th, .clean-table td {
+      font-size: 0.72rem !important;
+      padding: 5px 6px !important;
+    }
+  }
+</style>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+  <div class="alert alert-danger hide-on-print">
+    <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<!-- Cabeçalho da Página -->
+<div class="page-header-flex hide-on-print">
+  <div class="page-title-wrap">
+    <h2>Conferência de Planilha de Inventário</h2>
+    <p>Envie a planilha de remessa/inventário da matriz e cruze automaticamente com os <strong><%= totalProdutosAlmox %></strong> itens do seu almoxarifado (por <strong>PTM, Patrimônio, SKU, C.A.</strong> e <strong>nomes parecidos</strong>).</p>
+  </div>
+
+  <% if (resultado) { %>
+    <div class="page-actions-group" style="flex-wrap: wrap;">
+      <button type="button" class="btn btn-primary" style="background: #DC2626; border-color: #DC2626;" onclick="window.print()">
+        <i class="fa-solid fa-file-pdf"></i> Exportar PDF
+      </button>
+
+      <button type="button" class="btn btn-primary" style="background: #059669; border-color: #059669;" onclick="exportarConferenciaExcel()">
+        <i class="fa-solid fa-file-excel"></i> Exportar Excel (.xlsx)
+      </button>
+
+      <a href="/conferencia" class="btn btn-outline">
+        <i class="fa-solid fa-upload"></i> Nova Planilha
+      </a>
+    </div>
+  <% } %>
+</div>
+
+<% if (!resultado) { %>
+  <!-- ÁREA DE UPLOAD DA PLANILHA -->
+  <div class="table-card" style="padding: 1.75rem; max-width: 820px; margin: 0 auto;">
+    <form action="/conferencia/comparar" method="POST" enctype="multipart/form-data" id="form-upload-conferencia">
+      <label for="input-planilha-conf" class="conf-dropzone" id="conf-dropzone" style="display: block;">
+        <div style="width: 56px; height: 56px; border-radius: 14px; background: var(--primary); color: #ffffff; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 0.9rem; box-shadow: 0 10px 20px -8px rgba(79,70,229,0.55);">
+          <i class="fa-solid fa-file-excel"></i>
+        </div>
+        <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.35rem;">
+          Selecione ou arraste a planilha de inventário (.xlsx, .xls ou .csv)
+        </h3>
+        <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Lê automaticamente <strong>todas as abas</strong> (ex.: ATIVOS, CONSUMÍVEIS, EPIS, FERRAMENTAS, CABOS ELÉTRICOS) e identifica cabeçalhos sozinho.
+        </p>
+
+        <input type="file" id="input-planilha-conf" name="planilha" accept=".xlsx,.xls,.csv" required style="display: none;">
+
+        <div id="nome-arquivo-selecionado" style="display: none; margin: 0 auto 1rem; max-width: 520px; background: #ffffff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.84rem; font-weight: 700; color: #3730a3;">
+        </div>
+
+        <span class="btn btn-outline btn-sm" style="background: #ffffff; pointer-events: none;">
+          <i class="fa-solid fa-folder-open"></i> Escolher Arquivo no Computador / Celular
+        </span>
+      </label>
+
+      <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <button type="submit" class="btn btn-primary" id="btn-comparar-planilha" style="padding: 0.7rem 1.5rem; font-size: 0.92rem; font-weight: 700;">
+          <i class="fa-solid fa-magnifying-glass-chart"></i> Comparar com Meu Almoxarifado
+        </button>
+      </div>
+    </form>
+
+    <!-- Como funciona o Cruzamento Inteligente -->
+    <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light); display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.85rem;">
+      <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 0.85rem;">
+        <div style="font-weight: 800; font-size: 0.84rem; color: var(--primary); margin-bottom: 4px;">
+          <i class="fa-solid fa-barcode"></i> 1. Códigos & PTM / Patrimônio
+        </div>
+        <div style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.45;">
+          Extrai códigos mesmo dentro da descrição (ex.: <code>PTM-1493</code>, <code>PTMM-2166</code>, <code>PMT-2533</code>) e cruza com SKU, TAG, Patrimônio e nome.
+        </div>
+      </div>
+
+      <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 0.85rem;">
+        <div style="font-weight: 800; font-size: 0.84rem; color: #0F766E; margin-bottom: 4px;">
+          <i class="fa-solid fa-helmet-safety"></i> 2. C.A. de EPI & Tamanhos
+        </div>
+        <div style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.45;">
+          Identifica certificados <code>CA:38955</code>, numerações (ex.: N. 43) e bitolas (ex.: 10mm, 7&quot;) para evitar falsas correspondências.
+        </div>
+      </div>
+
+      <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 0.85rem;">
+        <div style="font-weight: 800; font-size: 0.84rem; color: #B45309; margin-bottom: 4px;">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> 3. Nomes Parecidos & Em Campo
+        </div>
+        <div style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.45;">
+          Tolera abreviações e erros de digitação, sugere alternativas para validar e soma <strong>Estoque + Ferramentas Emprestadas</strong> na obra.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const input = document.getElementById('input-planilha-conf');
+      const dropzone = document.getElementById('conf-dropzone');
+      const nomeBox = document.getElementById('nome-arquivo-selecionado');
+      const form = document.getElementById('form-upload-conferencia');
+      const btn = document.getElementById('btn-comparar-planilha');
+
+      function mostrarArquivo(file) {
+        if (!file) return;
+        nomeBox.innerHTML = `<i class="fa-solid fa-file-circle-check" style="color:#059669; margin-right:6px;"></i> ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        nomeBox.style.display = 'block';
+      }
+
+      if (input) {
+        input.addEventListener('change', () => {
+          if (input.files && input.files[0]) mostrarArquivo(input.files[0]);
+        });
+      }
+
+      if (dropzone) {
+        ['dragenter', 'dragover'].forEach(ev => {
+          dropzone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach(ev => {
+          dropzone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+          });
+        });
+        dropzone.addEventListener('drop', (e) => {
+          const files = e.dataTransfer?.files;
+          if (files && files[0] && input) {
+            input.files = files;
+            mostrarArquivo(files[0]);
+          }
+        });
+      }
+
+      if (form && btn) {
+        form.addEventListener('submit', () => {
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analisando planilha e cruzando estoque...';
+        });
+      }
+    })();
+  </script>
+
+<% } else { %>
+
+  <!-- Cabeçalho Oficial para Impressão / PDF -->
+  <div class="conf-print-header">
+    <div>
+      <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0;">JPS Almoxarifado — Conferência de Inventário</h2>
+      <div style="font-size: 0.78rem; color: #475569;">Planilha analisada: <strong><%= resultado.nomeArquivo %></strong></div>
+    </div>
+    <div style="text-align: right; font-size: 0.75rem; color: #475569;">
+      <div><strong>Emissão:</strong> <%= resultado.geradoEm %></div>
+      <div><strong>Emitido por:</strong> <%= resultado.emitidoPor %></div>
+    </div>
+  </div>
+
+  <!-- Banner da Planilha Analisada -->
+  <div class="table-card hide-on-print" style="padding: 0.9rem 1.2rem; margin-bottom: 1.1rem; background: #EEF2FF; border: 1px solid #C7D2FE; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+    <div style="font-size: 0.84rem; color: #312E81;">
+      <i class="fa-solid fa-file-excel" style="color: #059669; margin-right: 6px;"></i>
+      Planilha analisada: <strong><%= resultado.nomeArquivo %></strong>
+      <span style="color: #4338CA; margin-left: 6px;">(<%= resultado.abasLidas.length %> aba(s): <%= resultado.abasLidas.map(a => `${a.nome} [${a.total}]`).join(' • ') %>)</span>
+    </div>
+    <div style="font-size: 0.76rem; color: #4338CA; font-weight: 600;">
+      Dica: para itens <strong>Parecidos</strong>, você pode clicar em <strong>Confirmar</strong> ou trocar a sugestão antes de exportar!
+    </div>
+  </div>
+
+  <!-- Cards KPI Dinâmicos (atualizam se o usuário confirmar sugestões!) -->
+  <div class="balcao-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); margin-bottom: 1.15rem;">
+    <div class="table-card" style="padding: 0.95rem 1.1rem; border-left: 4px solid var(--primary);">
+      <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Total na Planilha</div>
+      <div id="kpi-conf-total" style="font-size: 1.35rem; font-weight: 800; color: var(--text-main);"><%= resultado.resumo.totalPlanilha %></div>
+    </div>
+
+    <div class="table-card" style="padding: 0.95rem 1.1rem; border-left: 4px solid #10B981;">
+      <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Encontrados (OK)</div>
+      <div id="kpi-conf-ok" style="font-size: 1.35rem; font-weight: 800; color: #047857;"><%= resultado.resumo.encontradosOk %></div>
+    </div>
+
+    <div class="table-card" style="padding: 0.95rem 1.1rem; border-left: 4px solid #0EA5E9;">
+      <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Qtd Menor (Parcial)</div>
+      <div id="kpi-conf-div" style="font-size: 1.35rem; font-weight: 800; color: #0369A1;"><%= resultado.resumo.encontradosDivergente %></div>
+    </div>
+
+    <div class="table-card" style="padding: 0.95rem 1.1rem; border-left: 4px solid #8B5CF6;">
+      <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Cadastrados (Zerados)</div>
+      <div id="kpi-conf-zer" style="font-size: 1.35rem; font-weight: 800; color: #6D28D9;"><%= resultado.resumo.encontradosZerado %></div>
+    </div>
+
+    <div class="table-card" style="padding: 0.95rem 1.1rem; border-left: 4px solid #F59E0B;">
+      <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Parecidos (Revisar)</div>
+      <div id="kpi-conf-par" style="font-size: 1.35rem; font-weight: 800; color: #B45309;"><%= resultado.resumo.parecidos %></div>
+    </div>
+
+    <div class="table-card" style="padding: 0.95rem 1.1rem; border-left: 4px solid #EF4444;">
+      <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Não Encontrados</div>
+      <div id="kpi-conf-nao" style="font-size: 1.35rem; font-weight: 800; color: #B91C1C;"><%= resultado.resumo.naoEncontrados %></div>
+    </div>
+  </div>
+
+  <!-- Barra de Filtros Instantâneos (0ms no navegador) -->
+  <div class="table-card hide-on-print" style="padding: 1rem 1.2rem; margin-bottom: 1.15rem; display: flex; flex-direction: column; gap: 0.75rem;">
+    <!-- Filtro por Aba da Planilha -->
+    <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+      <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); margin-right: 0.25rem;">
+        <i class="fa-solid fa-layer-group"></i> Aba:
+      </span>
+      <button type="button" class="conf-pill-btn ativo" data-aba="" onclick="filtrarAbaConf('', this)">Todas (<%= resultado.resumo.totalPlanilha %>)</button>
+      <% resultado.abasLidas.forEach(a => { %>
+        <button type="button" class="conf-pill-btn" data-aba="<%= a.nome %>" onclick="filtrarAbaConf('<%= a.nome.replace(/'/g, "\\'") %>', this)">
+          <%= a.nome %> (<%= a.total %>)
+        </button>
+      <% }) %>
+    </div>
+
+    <!-- Filtro por Situação + Busca -->
+    <div style="display: flex; gap: 0.65rem; flex-wrap: wrap; align-items: center;">
+      <select id="conf-filtro-status" class="form-control" style="max-width: 260px; height: 38px;" onchange="renderizarTabelaConferencia()">
+        <option value="">Todas as Situações</option>
+        <option value="COM_SALDO">Ainda Temos (OK + Parcial)</option>
+        <option value="ENCONTRADO_OK">Somente Encontrados (OK)</option>
+        <option value="ENCONTRADO_DIVERGENTE">Somente Qtd Menor (Parcial)</option>
+        <option value="ENCONTRADO_ZERADO">Cadastrados mas Zerados</option>
+        <option value="PARECIDO">Parecidos (Revisar Manualmente)</option>
+        <option value="NAO_ENCONTRADO">Não Encontrados no Sistema</option>
+      </select>
+
+      <div style="flex: 1; min-width: 220px; position: relative;">
+        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-dim);"></i>
+        <input type="text" id="conf-filtro-busca" class="form-control" style="padding-left: 2.3rem; height: 38px;" placeholder="Pesquisar por PTM, descrição, NF, SKU ou item encontrado..." oninput="renderizarTabelaConferencia()">
+      </div>
+
+      <span id="conf-contador-visiveis" style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted);"></span>
+    </div>
+  </div>
+
+  <!-- Tabela Principal de Cruzamento -->
+  <div class="table-card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+      <table class="clean-table">
+        <thead>
+          <tr>
+            <th>Planilha Enviada (Chefe)</th>
+            <th style="text-align: center;">Qtd Planilha</th>
+            <th>Situação / Match</th>
+            <th>Correspondência no Meu Almoxarifado</th>
+            <th style="text-align: center;">Na Obra (Est + Campo)</th>
+            <th class="hide-on-print" style="text-align: right;">Revisão</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-conferencia">
+          <!-- Renderizado via JS para permitir filtros e confirmações instantâneas -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Formulário oculto para Exportar Excel com os dados (incluindo confirmações manuais) -->
+  <form id="form-exportar-conf-excel" action="/conferencia/exportar/excel" method="POST" style="display: none;">
+    <input type="hidden" name="dados_json" id="input-conf-dados-json">
+  </form>
+
+  <script>
+    const DADOS_CONFERENCIA = <%- JSON.stringify(resultado) %>;
+    let abaAtivaConf = '';
+
+    function esc(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function recalcularKPIsConf() {
+      const lista = DADOS_CONFERENCIA.comparacoes || [];
+      document.getElementById('kpi-conf-total').textContent = lista.length;
+      document.getElementById('kpi-conf-ok').textContent = lista.filter(c => c.status === 'ENCONTRADO_OK').length;
+      document.getElementById('kpi-conf-div').textContent = lista.filter(c => c.status === 'ENCONTRADO_DIVERGENTE').length;
+      document.getElementById('kpi-conf-zer').textContent = lista.filter(c => c.status === 'ENCONTRADO_ZERADO').length;
+      document.getElementById('kpi-conf-par').textContent = lista.filter(c => c.status === 'PARECIDO').length;
+      document.getElementById('kpi-conf-nao').textContent = lista.filter(c => c.status === 'NAO_ENCONTRADO').length;
+    }
+
+    function filtrarAbaConf(aba, btn) {
+      abaAtivaConf = aba;
+      document.querySelectorAll('.conf-pill-btn').forEach(b => b.classList.remove('ativo'));
+      if (btn) btn.classList.add('ativo');
+      renderizarTabelaConferencia();
+    }
+
+    function confirmarMatchManual(linhaIdx, altIndex) {
+      const item = DADOS_CONFERENCIA.comparacoes.find(c => c.linha_idx === linhaIdx);
+      if (!item) return;
+      const alt = (item.alternativas && item.alternativas[altIndex]) || null;
+      const prod = alt ? alt.produto : item.produto_match;
+      if (!prod) return;
+
+      item.produto_match = prod;
+      item.match_score = 100;
+      item.match_criterio = 'Confirmado manualmente';
+      const totalObra = Number(prod.quantidade || 0) + Number(prod.em_campo || 0);
+      if (totalObra <= 0) item.status = 'ENCONTRADO_ZERADO';
+      else if (item.qtd_esperada > 0 && totalObra < item.qtd_esperada) item.status = 'ENCONTRADO_DIVERGENTE';
+      else item.status = 'ENCONTRADO_OK';
+
+      recalcularKPIsConf();
+      renderizarTabelaConferencia();
+    }
+
+    function descartarMatchManual(linhaIdx) {
+      const item = DADOS_CONFERENCIA.comparacoes.find(c => c.linha_idx === linhaIdx);
+      if (!item) return;
+      item.produto_match = null;
+      item.match_score = 0;
+      item.match_criterio = 'Descartado manualmente';
+      item.status = 'NAO_ENCONTRADO';
+      recalcularKPIsConf();
+      renderizarTabelaConferencia();
+    }
+
+    function badgeStatusHtml(c) {
+      if (c.status === 'ENCONTRADO_OK') {
+        return '<span class="status-pill in-stock" style="font-size:0.71rem;"><i class="fa-solid fa-circle-check"></i> Encontrado (OK)</span>';
+      }
+      if (c.status === 'ENCONTRADO_DIVERGENTE') {
+        return '<span class="status-pill" style="background:#E0F2FE;color:#0369A1;border:1px solid #BAE6FD;font-size:0.71rem;"><i class="fa-solid fa-scale-unbalanced"></i> Qtd Menor</span>';
+      }
+      if (c.status === 'ENCONTRADO_ZERADO') {
+        return '<span class="status-pill" style="background:#F5F3FF;color:#6D28D9;border:1px solid #DDD6FE;font-size:0.71rem;"><i class="fa-solid fa-box-open"></i> Zerado (0)</span>';
+      }
+      if (c.status === 'PARECIDO') {
+        return '<span class="status-pill low-stock" style="font-size:0.71rem;"><i class="fa-solid fa-circle-question"></i> Parecido (' + c.match_score + '%)</span>';
+      }
+      return '<span class="status-pill out-of-stock" style="font-size:0.71rem;"><i class="fa-solid fa-circle-xmark"></i> Não Encontrado</span>';
+    }
+
+    function renderizarTabelaConferencia() {
+      const statusFiltro = document.getElementById('conf-filtro-status')?.value || '';
+      const busca = (document.getElementById('conf-filtro-busca')?.value || '').trim().toLowerCase();
+      const tbody = document.getElementById('tbody-conferencia');
+      const contador = document.getElementById('conf-contador-visiveis');
+      if (!tbody) return;
+
+      const filtrados = (DADOS_CONFERENCIA.comparacoes || []).filter(c => {
+        if (abaAtivaConf && c.aba !== abaAtivaConf) return false;
+        if (statusFiltro === 'COM_SALDO') {
+          if (c.status !== 'ENCONTRADO_OK' && c.status !== 'ENCONTRADO_DIVERGENTE') return false;
+        } else if (statusFiltro && c.status !== statusFiltro) {
+          return false;
+        }
+        if (busca) {
+          const p = c.produto_match;
+          const texto = [
+            c.aba, c.descricao, c.codigo_planilha, c.nf_envio,
+            p ? p.nome : '', p ? p.sku : '', p ? p.tag : '', p ? p.patrimonio : '', p ? p.categoria : ''
+          ].join(' ').toLowerCase();
+          if (!texto.includes(busca)) return false;
+        }
+        return true;
+      });
+
+      if (contador) contador.textContent = `Exibindo ${filtrados.length} de ${DADOS_CONFERENCIA.comparacoes.length} item(ns)`;
+
+      if (filtrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Nenhum item encontrado com os filtros aplicados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtrados.map(c => {
+        const p = c.produto_match;
+        const totalObra = p ? (Number(p.quantidade || 0) + Number(p.em_campo || 0)) : 0;
+        const diff = p ? (totalObra - Number(c.qtd_esperada || 0)) : -Number(c.qtd_esperada || 0);
+
+        let matchHtml = '<span style="color:var(--text-dim);font-size:0.8rem;">Não localizado no cadastro</span>';
+        if (p) {
+          matchHtml = `
+            <div style="font-weight:700;font-size:0.84rem;color:var(--text-main);">${esc(p.nome)}</div>
+            <div style="font-size:0.71rem;color:var(--text-muted);margin-top:2px;display:flex;gap:0.4rem;flex-wrap:wrap;">
+              <span style="font-family:var(--font-mono);font-weight:700;color:var(--primary);">${esc(p.sku)}</span>
+              ${p.tag ? `<span style="font-family:var(--font-mono);">• TAG:${esc(p.tag)}</span>` : ''}
+              ${p.patrimonio ? `<span style="font-family:var(--font-mono);">• PAT:${esc(p.patrimonio)}</span>` : ''}
+              <span>• ${esc(p.categoria)}</span>
+              ${p.localizacao ? `<span>• ${esc(p.localizacao)}</span>` : ''}
+            </div>
+            ${p.em_campo > 0 ? `<div style="font-size:0.7rem;color:#B45309;font-weight:600;margin-top:2px;"><i class="fa-solid fa-hand-holding-hand"></i> ${p.em_campo} em campo (${esc(p.em_campo_com)})</div>` : ''}
+          `;
+        }
+
+        let acoesHtml = '';
+        if (c.status === 'PARECIDO' && c.alternativas && c.alternativas.length > 0) {
+          const botoesAlt = c.alternativas.map((alt, idx) => `
+            <button type="button" class="btn btn-outline btn-sm" style="font-size:0.69rem;padding:2px 6px;color:#047857;border-color:#A7F3D0;margin-bottom:3px;text-align:left;" onclick="confirmarMatchManual(${c.linha_idx}, ${idx})" title="Confirmar como este item">
+              <i class="fa-solid fa-check"></i> ${idx === 0 ? 'Confirmar' : esc(alt.produto.sku)} (${alt.score}%)
+            </button>
+          `).join('');
+          acoesHtml = `
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+              ${botoesAlt}
+              <button type="button" class="btn btn-outline btn-sm" style="font-size:0.69rem;padding:2px 6px;color:#B91C1C;border-color:#FECACA;" onclick="descartarMatchManual(${c.linha_idx})">
+                <i class="fa-solid fa-xmark"></i> Não é esse
+              </button>
+            </div>
+          `;
+        } else if (p && c.status !== 'NAO_ENCONTRADO') {
+          acoesHtml = `
+            <button type="button" class="btn btn-outline btn-sm" style="font-size:0.7rem;padding:2px 6px;color:var(--text-muted);" onclick="descartarMatchManual(${c.linha_idx})" title="Desvincular correspondência">
+              <i class="fa-solid fa-link-slash"></i>
+            </button>
+          `;
+        }
+
+        return `
+          <tr>
+            <td style="max-width: 310px;">
+              <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:2px;">
+                <span style="font-size:0.67rem;font-weight:700;background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;">${esc(c.aba)} #${c.linha_excel}</span>
+                ${c.codigo_planilha ? `<span style="font-family:var(--font-mono);font-size:0.7rem;font-weight:700;background:#EEF2FF;color:#4338CA;padding:1px 6px;border-radius:4px;">${esc(c.codigo_planilha)}</span>` : ''}
+                ${c.nf_envio ? `<span style="font-size:0.69rem;color:var(--text-dim);">NF: ${esc(c.nf_envio)}</span>` : ''}
+              </div>
+              <div style="font-weight:700;font-size:0.83rem;color:var(--text-main);line-height:1.35;">${esc(c.descricao)}</div>
+            </td>
+
+            <td style="text-align:center;white-space:nowrap;">
+              <div style="font-weight:800;font-size:0.9rem;">${c.qtd_esperada} <small style="color:var(--text-dim);">${esc(c.unidade)}</small></div>
+              ${c.qtd_devolvida > 0 ? `<div style="font-size:0.68rem;color:#0369A1;">Env:${c.qtd_enviada} Dev:${c.qtd_devolvida}</div>` : ''}
+            </td>
+
+            <td>
+              ${badgeStatusHtml(c)}
+              <div style="font-size:0.69rem;color:var(--text-muted);margin-top:3px;">${esc(c.match_criterio)}</div>
+            </td>
+
+            <td style="max-width: 300px;">
+              ${matchHtml}
+            </td>
+
+            <td style="text-align:center;white-space:nowrap;">
+              ${p ? `
+                <div style="font-weight:800;font-size:0.92rem;color:${totalObra > 0 ? '#047857' : '#6D28D9'};">${totalObra} <small style="color:var(--text-dim);">${esc(p.unidade_medida)}</small></div>
+                <div style="font-size:0.68rem;color:var(--text-muted);">Est:${p.quantidade}${p.em_campo > 0 ? ` + Campo:${p.em_campo}` : ''}</div>
+                ${diff !== 0 ? `<div style="font-size:0.69rem;font-weight:700;color:${diff < 0 ? '#B91C1C' : '#047857'};">Dif: ${diff > 0 ? '+' : ''}${diff}</div>` : ''}
+              ` : '<span style="color:var(--text-dim);">-</span>'}
+            </td>
+
+            <td class="hide-on-print" style="text-align:right;white-space:nowrap;">
+              ${acoesHtml}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function exportarConferenciaExcel() {
+      document.getElementById('input-conf-dados-json').value = JSON.stringify(DADOS_CONFERENCIA);
+      document.getElementById('form-exportar-conf-excel').submit();
+    }
+
+    document.addEventListener('DOMContentLoaded', renderizarTabelaConferencia);
+  </script>
+<% } %>
+
+<%- include('../layouts/footer') %>
