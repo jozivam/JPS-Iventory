@@ -3,13 +3,14 @@
  * Cacheia assets, fontes, ícones e telas principais para funcionamento rápido e offline.
  */
 
-const STATIC_CACHE = 'jps-almox-static-v7';
-const PAGES_CACHE = 'jps-almox-pages-v7';
+const STATIC_CACHE = 'jps-almox-static-v8';
+const PAGES_CACHE = 'jps-almox-pages-v8';
 
 const CORE_ASSETS = [
   '/css/style.css',
   '/js/main.js',
   '/js/offline-manager.js',
+  '/js/assinatura-pad.js',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
@@ -105,7 +106,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.pathname.startsWith('/api/offline/')) return;
   if (url.pathname === '/login' || url.pathname === '/logout') return;
-  if (url.pathname.includes('/exportar/excel') || url.pathname.includes('/modelo/excel') || url.pathname.startsWith('/relatorios/exportar/') || url.pathname === '/relatorios/pdf' || url.pathname.startsWith('/conferencia')) return;
+  if (url.pathname.includes('/exportar/excel') || url.pathname.includes('/modelo/excel') || url.pathname.startsWith('/relatorios/exportar/') || url.pathname === '/relatorios/pdf' || url.pathname.endsWith('/pdf') || url.pathname.startsWith('/conferencia')) return;
 
   // 1. Assets Estáticos + Fontes + Ícones -> Cache-First com atualização em segundo plano
   if (isStaticAsset(url)) {

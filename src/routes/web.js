@@ -79,6 +79,9 @@ router.post('/movimentacoes/:id/excluir', requireRole('ADMIN'), EstoqueControlle
 
 // --- CONTROLE DE FICHAS DE COLABORADORES ---
 router.get('/fichas', FichaController.index);
+router.get('/fichas/:colaborador_id/pdf', FichaController.pdf);
+router.get('/fichas/:colaborador_id/exportar/excel', FichaController.exportarExcel);
+router.post('/fichas/:colaborador_id/assinatura', requireRole('ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'), FichaController.salvarAssinatura);
 router.get('/fichas/:colaborador_id', (req, res) => res.redirect('/fichas?colaborador_id=' + req.params.colaborador_id));
 
 // --- CONTROLE DE SUPRIMENTOS DO CANTEIRO ---

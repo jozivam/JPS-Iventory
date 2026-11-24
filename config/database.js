@@ -137,11 +137,17 @@ function initDatabase() {
     }
   });
 
-  // Migração segura de colunas na tabela de colaboradores (login, senha_hash)
+  // Migração segura de colunas na tabela de colaboradores (login, senha_hash e assinaturas digitais da ficha)
   const colsColabExistentes = db.prepare('PRAGMA table_info(colaboradores)').all().map(c => c.name);
   const colunasColabNecessarias = [
     { nome: 'login', tipo: 'TEXT' },
-    { nome: 'senha_hash', tipo: 'TEXT' }
+    { nome: 'senha_hash', tipo: 'TEXT' },
+    { nome: 'cpf_rg', tipo: 'TEXT' },
+    { nome: 'assinatura_colaborador', tipo: 'TEXT' },
+    { nome: 'assinatura_colaborador_em', tipo: 'DATETIME' },
+    { nome: 'assinatura_responsavel', tipo: 'TEXT' },
+    { nome: 'assinatura_responsavel_nome', tipo: 'TEXT' },
+    { nome: 'assinatura_responsavel_em', tipo: 'DATETIME' }
   ];
   colunasColabNecessarias.forEach(col => {
     if (!colsColabExistentes.includes(col.nome)) {

@@ -36,13 +36,23 @@
 
   <div class="page-actions-group">
     <% if (colaboradorAtual) { %>
+      <%
+        const qsFicha = new URLSearchParams();
+        if (filtros && filtros.busca) qsFicha.set('busca', filtros.busca);
+        if (filtros && filtros.tipo) qsFicha.set('tipo', filtros.tipo);
+        const qsFichaStr = qsFicha.toString() ? '?' + qsFicha.toString() : '';
+      %>
       <a href="/balcao?colaborador_id=<%= colaboradorAtual.id %>&colaborador_nome=<%= encodeURIComponent(colaboradorAtual.nome) %>" class="btn btn-primary" title="Fazer novo lançamento no balcão para este colaborador">
         <i class="fa-solid fa-cart-plus"></i> Novo Lançamento no Balcão
       </a>
 
-      <button type="button" class="btn btn-outline" onclick="window.print()" title="Imprimir Ficha de Cautela do Colaborador Selecionado">
-        <i class="fa-solid fa-print"></i> Imprimir Ficha
-      </button>
+      <a href="/fichas/<%= colaboradorAtual.id %>/exportar/excel<%= qsFichaStr %>" class="btn btn-outline" style="color: #047857; border-color: #A7F3D0; font-weight: 700;" title="Exportar Ficha Individual em Planilha Excel (.xlsx)">
+        <i class="fa-solid fa-file-excel"></i> Exportar Excel
+      </a>
+
+      <a href="/fichas/<%= colaboradorAtual.id %>/pdf<%= qsFichaStr %>" class="btn btn-outline" style="color: #B91C1C; border-color: #FECACA; font-weight: 700;" title="Abrir versão oficial A4 em PDF para assinar ou imprimir">
+        <i class="fa-solid fa-file-pdf"></i> Exportar PDF / Assinar
+      </a>
     <% } else { %>
       <a href="/balcao" class="btn btn-primary" title="Ir para o Balcão de Atendimento">
         <i class="fa-solid fa-store"></i> Balcão de Atendimento
@@ -777,32 +787,72 @@
     </div>
   </div>
 
-  <!-- Termo de Responsabilidade & Cautela A4 (Pronto para Impressão) -->
+  <!-- Termo de Responsabilidade & Cautela A4 (Assinatura Digital no App ou Impressão em PDF) -->
+  <%
+    const podeAssinarFicha = !!(typeof usuarioLogado !== 'undefined' && usuarioLogado && ['ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'].includes(usuarioLogado.nivel_acesso));
+    const nomeRespPadrao = (typeof usuarioLogado !== 'undefined' && usuarioLogado && usuarioLogado.nome) ? usuarioLogado.nome : 'Gestão de Almoxarifado';
+  %>
   <div class="table-card termo-cautela-box" style="padding: 1.5rem; margin-bottom: 2rem;">
-    <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">
-      Termo de Responsabilidade e Cautela de Materiais / EPIs
-    </h4>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.65rem;">
+      <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">
+        Termo de Responsabilidade e Cautela de Materiais / EPIs
+      </h4>
+      <% if (podeAssinarFicha) { %>
+        <span class="hide-on-print" style="font-size: 0.76rem; color: var(--primary); font-weight: 700; background: #EEF2FF; border: 1px solid #C7D2FE; padding: 3px 10px; border-radius: 999px;">
+          <i class="fa-solid fa-hand-pointer"></i> Toque ou clique nos quadros abaixo para assinar digitalmente
+        </span>
+      <% } %>
+    </div>
 
-    <p style="font-size: 0.84rem; color: var(--text-body); line-height: 1.55; margin-bottom: 2rem;">
+    <div id="ficha-assinatura-aviso" class="hide-on-print" style="display: none; margin-bottom: 0.85rem; padding: 0.65rem 0.9rem; border-radius: 8px; background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; font-size: 0.8rem; font-weight: 600;"></div>
+
+    <p style="font-size: 0.84rem; color: var(--text-body); line-height: 1.55; margin-bottom: 1.5rem;">
       Declaro para os devidos fins que recebi do <strong>Almoxarifado Central</strong> os materiais, equipamentos e ferramentas constantes nesta Ficha Individual em perfeitas condições de uso, conservação e funcionamento. Comprometo-me a zelar pela integridade dos itens emprestados, utilizá-los exclusivamente no desempenho de minhas atividades profissionais e devolvê-los imediatamente ao almoxarifado após o término dos serviços ou mediante solicitação.
     </p>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 2rem; padding-top: 1rem;">
+    <div class="ficha-assinaturas-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; margin-top: 1rem; padding-top: 0.5rem;">
       <div style="text-align: center;">
-        <div style="border-top: 1.5px solid #000000; width: 85%; margin: 0 auto 0.4rem auto;"></div>
+        <div class="sig-box-interactive" data-assinatura-box="COLABORADOR" title="Clique ou toque para assinar digitalmente"></div>
+        <div style="border-top: 1.5px solid #000000; width: 90%; margin: 0 auto 0.4rem auto;"></div>
         <div style="font-weight: 800; font-size: 0.88rem; color: var(--text-main);"><%= colaboradorAtual.nome %></div>
         <div style="font-size: 0.75rem; color: var(--text-muted);">Assinatura do Colaborador Solicitante</div>
-        <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">Matrícula: <%= colaboradorAtual.matricula || '-' %> • CPF/RG: ___________________</div>
+        <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">Matrícula: <%= colaboradorAtual.matricula || '-' %> • CPF/RG: <span id="ficha-cpf-rg-texto"><%= colaboradorAtual.cpf_rg || '___________________' %></span></div>
+        <div class="sig-meta-signed" id="sig-meta-COLABORADOR"></div>
       </div>
 
       <div style="text-align: center;">
-        <div style="border-top: 1.5px solid #000000; width: 85%; margin: 0 auto 0.4rem auto;"></div>
-        <div style="font-weight: 800; font-size: 0.88rem; color: var(--text-main);">Gestão de Almoxarifado</div>
+        <div class="sig-box-interactive" data-assinatura-box="RESPONSAVEL" title="Clique ou toque para assinar digitalmente"></div>
+        <div style="border-top: 1.5px solid #000000; width: 90%; margin: 0 auto 0.4rem auto;"></div>
+        <div style="font-weight: 800; font-size: 0.88rem; color: var(--text-main);" id="ficha-responsavel-nome"><%= colaboradorAtual.assinatura_responsavel_nome || nomeRespPadrao %></div>
         <div style="font-size: 0.75rem; color: var(--text-muted);">Assinatura do Responsável pela Entrega / Cautela</div>
         <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">Data da Emissão: <%= new Date().toLocaleDateString('pt-BR') %></div>
+        <div class="sig-meta-signed" id="sig-meta-RESPONSAVEL"></div>
       </div>
     </div>
   </div>
+
+  <script src="/js/assinatura-pad.js"></script>
+  <script>
+    window.initFichaAssinatura({
+      colaboradorId: <%- JSON.stringify(colaboradorAtual.id) %>,
+      colaboradorNome: <%- JSON.stringify(colaboradorAtual.nome || '') %>,
+      cpfRg: <%- JSON.stringify(colaboradorAtual.cpf_rg || '') %>,
+      assinaturaColaborador: <%- JSON.stringify(colaboradorAtual.assinatura_colaborador || null) %>,
+      assinaturaColaboradorEm: <%- JSON.stringify(colaboradorAtual.assinatura_colaborador_em ? formatDate(colaboradorAtual.assinatura_colaborador_em) : null) %>,
+      assinaturaResponsavel: <%- JSON.stringify(colaboradorAtual.assinatura_responsavel || null) %>,
+      assinaturaResponsavelEm: <%- JSON.stringify(colaboradorAtual.assinatura_responsavel_em ? formatDate(colaboradorAtual.assinatura_responsavel_em) : null) %>,
+      assinaturaResponsavelNome: <%- JSON.stringify(colaboradorAtual.assinatura_responsavel_nome || '') %>,
+      responsavelPadrao: <%- JSON.stringify(nomeRespPadrao) %>,
+      podeAssinar: <%= podeAssinarFicha ? 'true' : 'false' %>,
+      onAviso: (msg) => {
+        const box = document.getElementById('ficha-assinatura-aviso');
+        if (box) {
+          box.textContent = msg;
+          box.style.display = 'block';
+        }
+      }
+    });
+  </script>
 
 <% } %>
 

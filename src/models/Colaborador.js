@@ -716,6 +716,105 @@ class Colaborador {
     db.prepare('DELETE FROM colaboradores WHERE id = ?').run(id);
     return colab;
   }
+
+  /**
+   * Salva ou remove a assinatura digital na Ficha Individual do Colaborador
+   * papel: 'COLABORADOR' | 'RESPONSAVEL'
+   */
+  static async salvarAssinatura(id, { papel, assinatura_base64, cpf_rg, responsavel_nome } = {}) {
+    const colab = await this.findById(id);
+    if (!colab) {
+      throw new Error('Colaborador não encontrado.');
+    }
+
+    const papelNorm = String(papel || '').toUpperCase();
+    if (papelNorm !== 'COLABORADOR' && papelNorm !== 'RESPONSAVEL') {
+      throw new Error('Tipo de assinatura inválido. Use COLABORADOR ou RESPONSAVEL.');
+    }
+
+    const img = assinatura_base64 ? String(assinatura_base64).trim() : null;
+    if (img) {
+      if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(img)) {
+        throw new Error('Formato de imagem de assinatura inválido.');
+      }
+      if (img.length > 2 * 1024 * 1024) {
+        throw new Error('A imagem da assinatura excede o limite permitido.');
+      }
+    }
+
+    const agoraIso = img ? new Date().toISOString() : null;
+    const payload = {};
+
+    if (papelNorm === 'COLABORADOR') {
+      payload.assinatura_colaborador = img;
+      payload.assinatura_colaborador_em = agoraIso;
+      if (cpf_rg !== undefined) {
+        payload.cpf_rg = String(cpf_rg || '').trim() || null;
+      }
+    } else {
+      payload.assinatura_responsavel = img;
+      payload.assinatura_responsavel_em = agoraIso;
+      payload.assinatura_responsavel_nome = img
+        ? (String(responsavel_nome || '').trim() || 'Gestão de Almoxarifado')
+        : null;
+    }
+
+    if (useSupabase && supabase) {
+      const { error } = await supabase
+        .from('colaboradores')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) {
+        const msg = String(error.message || '');
+        if (msg.includes('column') || msg.includes('schema cache') || error.code === '42703' || error.code === 'PGRST204') {
+          return {
+            salvoNoBanco: false,
+            aviso: 'Assinatura aplicada localmente. Execute o script adicionar_assinatura_fichas.sql no Supabase para salvar permanentemente na nuvem.',
+            dados: payload
+          };
+        }
+        throw new Error('Erro ao salvar assinatura no Supabase: ' + error.message);
+      }
+
+      return { salvoNoBanco: true, dados: payload };
+    }
+
+    if (!db) throw new Error('Banco de dados não disponível');
+
+    if (papelNorm === 'COLABORADOR') {
+      db.prepare(`
+        UPDATE colaboradores SET
+          assinatura_colaborador = @assinatura_colaborador,
+          assinatura_colaborador_em = @assinatura_colaborador_em,
+          cpf_rg = CASE WHEN @atualizar_cpf = 1 THEN @cpf_rg ELSE cpf_rg END,
+          atualizado_em = datetime('now', 'localtime')
+        WHERE id = @id
+      `).run({
+        id,
+        assinatura_colaborador: payload.assinatura_colaborador,
+        assinatura_colaborador_em: payload.assinatura_colaborador_em,
+        atualizar_cpf: cpf_rg !== undefined ? 1 : 0,
+        cpf_rg: payload.cpf_rg !== undefined ? payload.cpf_rg : null
+      });
+    } else {
+      db.prepare(`
+        UPDATE colaboradores SET
+          assinatura_responsavel = @assinatura_responsavel,
+          assinatura_responsavel_nome = @assinatura_responsavel_nome,
+          assinatura_responsavel_em = @assinatura_responsavel_em,
+          atualizado_em = datetime('now', 'localtime')
+        WHERE id = @id
+      `).run({
+        id,
+        assinatura_responsavel: payload.assinatura_responsavel,
+        assinatura_responsavel_nome: payload.assinatura_responsavel_nome,
+        assinatura_responsavel_em: payload.assinatura_responsavel_em
+      });
+    }
+
+    return { salvoNoBanco: true, dados: payload };
+  }
 }
 
 module.exports = Colaborador;
