@@ -1,0 +1,720 @@
+<%- include('../layouts/header') %>
+
+<% if (typeof sucesso !== 'undefined' && sucesso) { %>
+  <div class="alert alert-success">
+    <div><i class="fa-solid fa-circle-check"></i> <%= sucesso %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+  <div class="alert alert-danger">
+    <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<!-- ========================================================================= -->
+<!-- CABEÇALHO DO DASHBOARD: VISÃO GERAL & AÇÕES RÁPIDAS                       -->
+<!-- ========================================================================= -->
+<div class="page-header-flex">
+  <div class="page-title-wrap">
+    <h2>Visão Geral do Almoxarifado</h2>
+    <p>Painel de controle em tempo real da saúde do estoque, requisições de equipe e cautela de ferramentas.</p>
+  </div>
+
+  <div class="page-actions-group">
+    <!-- Botão de Nova Requisição para Técnicos de Segurança e Encarregados -->
+    <button type="button" class="btn btn-outline" onclick="window.abrirModal('modal-nova-requisicao')" style="color: var(--primary); border-color: #C7D2FE; background: #EEF2FF; font-weight: 700;">
+      <i class="fa-solid fa-clipboard-question"></i> Nova Requisição (TST)
+    </button>
+
+    <!-- Botão de Ir para o Balcão -->
+    <a href="/balcao" class="btn btn-primary" title="Atendimento imediato no Balcão">
+      <i class="fa-solid fa-store"></i> Atendimento no Balcão
+    </a>
+
+    <!-- Botão de Novo Produto -->
+    <a href="/produtos/novo" class="btn btn-outline" title="Cadastrar novo item no inventário">
+      <i class="fa-solid fa-plus"></i> Novo Item
+    </a>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- BANNER DE ALERTA: REQUISIÇÕES PENDENTES DO ALMOXARIFE                      -->
+<!-- ========================================================================= -->
+<% if (metricas.requisicoes.estatisticas.pendentes > 0) { %>
+  <div class="table-card" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border: 1.5px solid #F59E0B; padding: 1rem 1.35rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 0.85rem;">
+      <div style="width: 44px; height: 44px; border-radius: 10px; background: #FDE68A; color: #B45309; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">
+        <i class="fa-solid fa-bell fa-shake"></i>
+      </div>
+      <div>
+        <div style="font-weight: 800; color: #92400E; font-size: 0.98rem; display: flex; align-items: center; gap: 0.45rem;">
+          <span>Você tem <%= metricas.requisicoes.estatisticas.pendentes %> requisição(ões) aguardando atendimento!</span>
+          <span class="badge" style="background: #B45309; color: #fff; font-size: 0.72rem;">Ação Necessária</span>
+        </div>
+        <div style="font-size: 0.82rem; color: #78350F; margin-top: 2px;">
+          Técnicos de segurança e encarregados solicitaram materiais para entrega no canteiro. Avalie e dê saída logo abaixo.
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+      <a href="#secao-requisicoes-pendentes" class="btn btn-sm" style="background: #D97706; color: #fff; font-weight: 700; border: none;">
+        <i class="fa-solid fa-arrow-down"></i> Ver Solicitações
+      </a>
+      <a href="/requisicoes" class="btn btn-sm btn-outline" style="border-color: #D97706; color: #92400E; background: #ffffff;">
+        Central de Requisições
+      </a>
+    </div>
+  </div>
+<% } %>
+
+<!-- ========================================================================= -->
+<!-- GRADE DE CARDS KPI: SAÚDE DO ESTOQUE E OPERAÇÕES                          -->
+<!-- ========================================================================= -->
+<div class="balcao-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 1.5rem;">
+  
+  <!-- Saúde Geral do Estoque -->
+  <div class="table-card" style="padding: 1.15rem 1.25rem; border-left: 5px solid <%= metricas.saudeEstoque.corSaude %>;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Saúde do Estoque</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-top: 3px;">
+          <%= metricas.saudeEstoque.percentualSaude %>%
+          <span style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; vertical-align: middle; background: <%= metricas.saudeEstoque.corSaude %>15; color: <%= metricas.saudeEstoque.corSaude %>;">
+            <%= metricas.saudeEstoque.nivelSaude %>
+          </span>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: <%= metricas.saudeEstoque.corSaude %>15; color: <%= metricas.saudeEstoque.corSaude %>; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-heart-pulse"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 8px; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <span style="color: var(--teal); font-weight: 600;">● <%= metricas.saudeEstoque.itensNormais %> OK</span>
+      <span style="color: #D97706; font-weight: 600;">● <%= metricas.saudeEstoque.itensBaixo %> Baixo</span>
+      <span style="color: var(--danger); font-weight: 600;">● <%= metricas.saudeEstoque.itensZerados %> Zerados</span>
+    </div>
+  </div>
+
+  <!-- Requisições Pendentes -->
+  <div class="table-card" style="padding: 1.15rem 1.25rem; border-left: 5px solid #F59E0B;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Requisições Pendentes</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #B45309; line-height: 1.2; margin-top: 3px;">
+          <%= metricas.requisicoes.estatisticas.pendentes %>
+          <small style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">pedidos</small>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-clipboard-list"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 8px;">
+      <a href="/requisicoes" style="color: var(--primary); font-weight: 600; text-decoration: none;">
+        Ver histórico de requisições ➔
+      </a>
+    </div>
+  </div>
+
+  <!-- Cautelas / Ferramentas em Campo -->
+  <div class="table-card" style="padding: 1.15rem 1.25rem; border-left: 5px solid #8B5CF6;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Cautelas Ativas</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #6D28D9; line-height: 1.2; margin-top: 3px;">
+          <%= metricas.cautelas.totalFerramentasEmCampo %>
+          <small style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">unidades em campo</small>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #F5F3FF; color: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-hand-holding-hand"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 8px;">
+      <span><strong><%= metricas.cautelas.totalCautelasAtivas %></strong> termo(s) em aberto na equipe</span>
+    </div>
+  </div>
+
+  <!-- Estoque Físico Geral -->
+  <div class="table-card" style="padding: 1.15rem 1.25rem; border-left: 5px solid var(--primary);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Inventário Físico</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-top: 3px;">
+          <%= metricas.saudeEstoque.totalUnidadesFisicas %>
+          <small style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">unidades</small>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #EEF2FF; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-boxes-stacked"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 8px;">
+      <span>Total de <strong><%= metricas.saudeEstoque.totalItens %></strong> referências cadastradas</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- CORPO PRINCIPAL DO DASHBOARD (2 COLUNAS)                                  -->
+<!-- ========================================================================= -->
+<div style="display: grid; grid-template-columns: 2fr 1.15fr; gap: 1.5rem; align-items: start;" class="dashboard-grid-responsive">
+  
+  <!-- COLUNA PRINCIPAL ESQUERDA -->
+  <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    
+    <!-- 1. PAINEL DE REQUISIÇÕES PENDENTES (AÇÃO DO ALMOXARIFE) -->
+    <div class="table-card" id="secao-requisicoes-pendentes" style="padding: 0; overflow: hidden; border: 1.5px solid <%= metricas.requisicoes.estatisticas.pendentes > 0 ? '#FCD34D' : 'var(--border-color)' %>;">
+      
+      <div style="padding: 1.15rem 1.35rem; background: <%= metricas.requisicoes.estatisticas.pendentes > 0 ? '#FFFBEB' : '#F8FAFC' %>; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h3 style="font-size: 1.02rem; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-clipboard-check" style="color: #D97706;"></i>
+            Requisições Aguardando o Almoxarife
+          </h3>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">
+            Solicitações feitas pela equipe de Segurança / Obra prontas para entrega
+          </span>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="window.abrirModal('modal-nova-requisicao')" style="font-weight: 700;">
+            <i class="fa-solid fa-plus"></i> Nova Requisição
+          </button>
+        </div>
+      </div>
+
+      <% if (metricas.requisicoes.pendentes && metricas.requisicoes.pendentes.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>CÓDIGO / DATA</th>
+                <th>SOLICITANTE & COLABORADOR</th>
+                <th>MATERIAL SOLICITADO</th>
+                <th style="text-align: center;">TIPO</th>
+                <th style="text-align: center;">QTD</th>
+                <th style="text-align: right; width: 210px;">AÇÃO DO ALMOXARIFE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% metricas.requisicoes.pendentes.forEach(r => { %>
+                <tr>
+                  <!-- Código e Data -->
+                  <td>
+                    <div style="font-family: var(--font-mono); font-weight: 800; color: var(--primary); font-size: 0.85rem;">
+                      <%= r.codigo %>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">
+                      <span class="data-hora-local" data-timestamp="<%= r.criado_em %>"><%= r.criado_em %></span>
+                    </div>
+                  </td>
+
+                  <!-- Solicitante e Colaborador -->
+                  <td>
+                    <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">
+                      <i class="fa-solid fa-user-check" style="color: var(--teal); font-size: 0.75rem;"></i> <%= r.colaborador_nome %>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                      Solicitado por: <strong><%= r.solicitante_nome %></strong>
+                      <% if (r.motivo) { %>
+                        <div style="font-style: italic; color: var(--text-dim); margin-top: 1px;">"<%= r.motivo %>"</div>
+                      <% } %>
+                    </div>
+                  </td>
+
+                  <!-- Produto Solicitado -->
+                  <td>
+                    <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">
+                      <%= r.produto_nome %>
+                    </div>
+                    <div style="font-size: 0.74rem; color: var(--text-muted); display: flex; gap: 0.4rem; align-items: center; margin-top: 2px;">
+                      <span style="font-family: var(--font-mono); background: var(--bg-surface); padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border-color); font-weight: 600;"><%= r.produto_sku %></span>
+                      <span>Disponível: <strong style="color: <%= r.produto_saldo_atual < r.quantidade ? 'var(--danger)' : 'var(--teal)' %>;"><%= r.produto_saldo_atual %> <%= r.produto_unidade %></strong></span>
+                    </div>
+                  </td>
+
+                  <!-- Tipo da Operação -->
+                  <td style="text-align: center;">
+                    <% if (r.tipo_operacao === 'SAIDA') { %>
+                      <span class="badge" style="background: #FEE2E2; color: #B91C1C; font-weight: 700; font-size: 0.72rem;">
+                        <i class="fa-solid fa-arrow-up"></i> Saída
+                      </span>
+                    <% } else if (r.tipo_operacao === 'EMPRESTIMO') { %>
+                      <span class="badge" style="background: #FEF3C7; color: #B45309; font-weight: 700; font-size: 0.72rem;">
+                        <i class="fa-solid fa-hand-holding-hand"></i> Empréstimo
+                      </span>
+                    <% } else { %>
+                      <span class="badge" style="background: #FEF9C3; color: #854D0E; font-weight: 700; font-size: 0.72rem;">
+                        <i class="fa-solid fa-repeat"></i> Troca
+                      </span>
+                    <% } %>
+                  </td>
+
+                  <!-- Quantidade -->
+                  <td style="text-align: center;">
+                    <strong style="font-size: 1rem; color: var(--text-main);"><%= r.quantidade %></strong>
+                    <span style="font-size: 0.75rem; color: var(--text-dim);"><%= r.produto_unidade %></span>
+                  </td>
+
+                  <!-- Ações Rápidas do Almoxarife -->
+                  <td style="text-align: right; white-space: nowrap;">
+                    <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                      <!-- Botão Aceitar / Entregar -->
+                      <button 
+                        type="button" 
+                        class="btn btn-sm" 
+                        style="background: #10B981; color: #fff; font-weight: 700; border: none; padding: 0.35rem 0.65rem;"
+                        title="Aceitar requisição e entregar ao colaborador"
+                        onclick="prepararModalAprovar('<%= r.id %>', '<%= r.codigo %>', '<%= r.produto_nome %>', '<%= r.quantidade %>', '<%= r.produto_unidade %>', '<%= r.colaborador_nome %>')"
+                        <%= r.produto_saldo_atual < r.quantidade ? 'disabled style="background: #9CA3AF; color: #fff; cursor: not-allowed;" title="Saldo insuficiente no estoque"' : '' %>
+                      >
+                        <i class="fa-solid fa-check"></i> Entregar
+                      </button>
+
+                      <!-- Botão Recusar -->
+                      <button 
+                        type="button" 
+                        class="btn btn-sm btn-outline" 
+                        style="color: var(--danger); border-color: #FCA5A5; padding: 0.35rem 0.55rem;"
+                        title="Recusar requisição com justificativa"
+                        onclick="prepararModalRecusar('<%= r.id %>', '<%= r.codigo %>', '<%= r.produto_nome %>')"
+                      >
+                        <i class="fa-solid fa-xmark"></i> Recusar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+          <div style="width: 52px; height: 52px; border-radius: 50%; background: #D1FAE5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 0.75rem auto;">
+            <i class="fa-solid fa-check-double"></i>
+          </div>
+          <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">Tudo em dia com as requisições!</div>
+          <div style="font-size: 0.82rem; margin-top: 3px;">Nenhuma requisição de material pendente de aprovação neste momento.</div>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- 2. ITENS COM ESTOQUE CRÍTICO OU ZERADO (REPOSIÇÃO URGENTE) -->
+    <div class="table-card" style="padding: 0; overflow: hidden;">
+      <div style="padding: 1.15rem 1.35rem; background: #F8FAFC; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h3 style="font-size: 1.02rem; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--danger);"></i>
+            Itens Críticos — Reposição Urgente
+          </h3>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Materiais com estoque zerado ou abaixo do mínimo de segurança</span>
+        </div>
+        <a href="/produtos?status=BAIXO" class="btn btn-outline btn-sm" style="font-weight: 700;">
+          Ver Todos no Inventário ➔
+        </a>
+      </div>
+
+      <% if (metricas.saudeEstoque.itensCriticos && metricas.saudeEstoque.itensCriticos.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>MATERIAL / DESCRIÇÃO</th>
+                <th>CATEGORIA</th>
+                <th style="text-align: center;">SALDO ATUAL</th>
+                <th style="text-align: center;">MÍNIMO</th>
+                <th>SITUAÇÃO</th>
+                <th style="text-align: right;">REPOR</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% metricas.saudeEstoque.itensCriticos.forEach(p => { %>
+                <tr>
+                  <!-- Nome e SKU -->
+                  <td>
+                    <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">
+                      <%= p.nome %>
+                      <% if (p.marca) { %>
+                        <span style="font-size: 0.72rem; color: var(--primary); background: var(--primary-light); padding: 1px 6px; border-radius: 4px; font-weight: 600;"><%= p.marca %></span>
+                      <% } %>
+                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">
+                      SKU: <%= p.sku %>
+                    </div>
+                  </td>
+
+                  <!-- Categoria -->
+                  <td style="font-size: 0.82rem; color: var(--text-body);">
+                    <%= p.categoria %>
+                  </td>
+
+                  <!-- Saldo Atual -->
+                  <td style="text-align: center;">
+                    <strong style="font-size: 1rem; color: <%= p.quantidade <= 0 ? 'var(--danger)' : '#D97706' %>;">
+                      <%= p.quantidade %>
+                    </strong>
+                    <span style="font-size: 0.74rem; color: var(--text-dim);"><%= p.unidade_medida %></span>
+                  </td>
+
+                  <!-- Estoque Mínimo -->
+                  <td style="text-align: center; font-size: 0.84rem; color: var(--text-muted);">
+                    <%= p.estoque_minimo %> <%= p.unidade_medida %>
+                  </td>
+
+                  <!-- Situação -->
+                  <td>
+                    <% if (p.quantidade <= 0) { %>
+                      <span class="status-pill out-of-stock" style="font-size: 0.72rem; padding: 2px 7px;">
+                        <span class="status-dot-sm"></span> Zerado
+                      </span>
+                    <% } else { %>
+                      <span class="status-pill low-stock" style="font-size: 0.72rem; padding: 2px 7px;">
+                        <span class="status-dot-sm"></span> Baixo
+                      </span>
+                    <% } %>
+                  </td>
+
+                  <!-- Ação de Entrada -->
+                  <td style="text-align: right;">
+                    <a href="/balcao?produto_id=<%= p.id %>&tipo=ENTRADA" class="btn btn-sm btn-outline" style="color: var(--teal); border-color: var(--teal); font-weight: 700;" title="Lançar entrada no Balcão">
+                      <i class="fa-solid fa-arrow-down"></i> Entrada
+                    </a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
+          <i class="fa-solid fa-circle-check" style="color: var(--teal); font-size: 1.5rem; display: block; margin-bottom: 0.4rem;"></i>
+          Nenhum item com estoque crítico ou zerado. Estoque 100% abastecido!
+        </div>
+      <% } %>
+    </div>
+
+  </div>
+
+  <!-- COLUNA LATERAL DIREITA (ESTATÍSTICAS & RESUMOS) -->
+  <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    
+    <!-- 1. ATENDIMENTOS HOJE NO BALCÃO -->
+    <div class="table-card" style="padding: 1.25rem;">
+      <h3 style="font-size: 0.96rem; font-weight: 800; color: var(--text-main); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-calendar-day" style="color: var(--primary);"></i>
+        Movimento de Hoje no Balcão
+      </h3>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 0.85rem; border-radius: 8px;">
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Saídas (Consumo)</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: var(--danger); margin-top: 2px;">
+            <%= metricas.atendimentosHoje.saidasHoje %> <small style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted);">itens</small>
+          </div>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 0.85rem; border-radius: 8px;">
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Empréstimos</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: #D97706; margin-top: 2px;">
+            <%= metricas.atendimentosHoje.emprestimosAbertos %> <small style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted);">em aberto</small>
+          </div>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 0.85rem; border-radius: 8px;">
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Devoluções</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: #6D28D9; margin-top: 2px;">
+            <%= metricas.atendimentosHoje.devolucoesHoje %> <small style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted);">retornados</small>
+          </div>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 0.85rem; border-radius: 8px;">
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Entradas (Reposição)</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: var(--teal); margin-top: 2px;">
+            <%= metricas.atendimentosHoje.entradasHoje %> <small style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted);">unidades</small>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top: 1rem; border-top: 1px solid var(--border-light); padding-top: 0.85rem;">
+        <a href="/balcao" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center; font-weight: 700;">
+          <i class="fa-solid fa-store"></i> Abrir Tela do Balcão
+        </a>
+      </div>
+    </div>
+
+    <!-- 2. DISTRIBUIÇÃO DO ESTOQUE POR CATEGORIA -->
+    <div class="table-card" style="padding: 1.25rem;">
+      <h3 style="font-size: 0.96rem; font-weight: 800; color: var(--text-main); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-chart-pie" style="color: var(--teal);"></i>
+        Categorias Mais Estocadas
+      </h3>
+
+      <% if (metricas.categoriasDestaque && metricas.categoriasDestaque.length > 0) { %>
+        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <% metricas.categoriasDestaque.forEach(c => { 
+             const perc = metricas.saudeEstoque.totalUnidadesFisicas > 0 
+               ? Math.round((c.unidades / metricas.saudeEstoque.totalUnidadesFisicas) * 100) 
+               : 0;
+          %>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 3px;">
+                <span style="font-weight: 700; color: var(--text-main);"><%= c.nome %></span>
+                <span style="color: var(--text-muted);"><%= c.unidades %> UN (<%= perc %>%)</span>
+              </div>
+              <div style="width: 100%; height: 7px; background: #F1F5F9; border-radius: 4px; overflow: hidden;">
+                <div style="width: <%= perc %>%; height: 100%; background: var(--primary); border-radius: 4px;"></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- 3. ÚLTIMAS ATIVIDADES NO ALMOXARIFADO -->
+    <div class="table-card" style="padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+        <h3 style="font-size: 0.96rem; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i>
+          Atividades Recentes
+        </h3>
+        <a href="/movimentacoes" style="font-size: 0.76rem; font-weight: 700; color: var(--primary); text-decoration: none;">Extrato ➔</a>
+      </div>
+
+      <% if (metricas.ultimasMovimentacoes && metricas.ultimasMovimentacoes.length > 0) { %>
+        <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+          <% metricas.ultimasMovimentacoes.slice(0, 5).forEach(m => { %>
+            <div style="padding: 0.55rem 0.65rem; background: #F8FAFC; border: 1px solid var(--border-light); border-radius: 6px; font-size: 0.8rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="color: var(--text-main); font-size: 0.84rem;"><%= m.produto_nome %></strong>
+                <span style="font-weight: 800; color: <%= m.tipo === 'ENTRADA' ? 'var(--teal)' : (m.tipo === 'SAIDA' ? 'var(--danger)' : '#D97706') %>;">
+                  <%= m.tipo === 'ENTRADA' ? '+' : '-' %><%= m.quantidade %> UN
+                </span>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; display: flex; justify-content: space-between;">
+                <span><%= m.colaborador || '-' %> (<%= m.tipo %>)</span>
+                <span class="data-hora-local" data-timestamp="<%= m.criado_em %>"><%= m.criado_em %></span>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: NOVA REQUISIÇÃO (TÉCNICOS DE SEGURANÇA E ENCARREGADOS)             -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-nova-requisicao">
+  <div class="modal-container" style="max-width: 600px; width: 95%;">
+    <div class="modal-header">
+      <h3 style="font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-clipboard-question" style="color: var(--primary);"></i>
+        Nova Requisição de Material / EPI
+      </h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-nova-requisicao')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form action="/requisicoes" method="POST">
+      <input type="hidden" name="origem" value="dashboard">
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        
+        <div style="background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.8rem; color: #3730A3;">
+          <i class="fa-solid fa-circle-info"></i> As requisições criadas aqui ficam com status <strong>PENDENTE</strong> no sistema. O Almoxarife avaliará o pedido no balcão e realizará a entrega física.
+        </div>
+
+        <!-- Seleção do Produto -->
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="req-produto-id">Material / EPI / Ferramenta <span class="required">*</span></label>
+          <select id="req-produto-id" name="produto_id" class="form-select" required>
+            <option value="">Selecione o produto...</option>
+            <% produtos.forEach(p => { %>
+              <option value="<%= p.id %>">
+                <%= p.nome %> (<%= p.sku %>) — Saldo: <%= p.quantidade %> <%= p.unidade_medida %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- Tipo e Quantidade -->
+        <div class="form-grid" style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="req-tipo-op">Natureza da Operação <span class="required">*</span></label>
+            <select id="req-tipo-op" name="tipo_operacao" class="form-select" required>
+              <option value="SAIDA">Saída / Consumo (EPI / Descarte)</option>
+              <option value="EMPRESTIMO">Empréstimo (Ferramenta / Cautela)</option>
+              <option value="TROCA">Troca (Devolução de item danificado)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="req-quantidade">Quantidade <span class="required">*</span></label>
+            <input type="number" id="req-quantidade" name="quantidade" class="form-control" min="1" value="1" required>
+          </div>
+        </div>
+
+        <!-- Colaborador Destinatário -->
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="req-colaborador-id">Colaborador Destinatário (Quem receberá) <span class="required">*</span></label>
+          <select id="req-colaborador-id" name="colaborador_id" class="form-select" required onchange="document.getElementById('req-colaborador-nome').value = this.options[this.selectedIndex].text.split(' (')[0]">
+            <option value="">Selecione o colaborador...</option>
+            <% colaboradores.forEach(c => { %>
+              <option value="<%= c.id %>"><%= c.nome %> (<%= c.matricula || 'Sem matrícula' %>) — <%= c.cargo || 'Técnico' %></option>
+            <% }) %>
+          </select>
+          <input type="hidden" id="req-colaborador-nome" name="colaborador_nome" value="">
+        </div>
+
+        <!-- Solicitante (TST / Encarregado) -->
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="req-solicitante">Nome do Solicitante / Setor <span class="required">*</span></label>
+          <input type="text" id="req-solicitante" name="solicitante_nome" class="form-control" value="Técnico de Segurança" placeholder="Ex: Técnico de Segurança (Carlos)" required>
+        </div>
+
+        <!-- Motivo / Justificativa -->
+        <div class="form-group">
+          <label class="form-label" for="req-motivo">Motivo / Justificativa da Requisição</label>
+          <textarea id="req-motivo" name="motivo" class="form-control" rows="2" placeholder="Ex: Desgaste natural do EPI em atividade na obra, troca preventiva..."></textarea>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="background: var(--bg-surface);">
+        <button type="button" class="btn btn-outline" onclick="window.fecharModal('modal-nova-requisicao')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" style="font-weight: 700;">
+          <i class="fa-solid fa-paper-plane"></i> Enviar Requisição
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: ACEITAR / ENTREGAR REQUISIÇÃO (ALMOXARIFE)                         -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-aprovar-requisicao">
+  <div class="modal-container" style="max-width: 500px; width: 95%;">
+    <div class="modal-header">
+      <h3 style="font-size: 1.05rem; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-circle-check" style="color: #10B981;"></i>
+        Confirmar Entrega de Material
+      </h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-aprovar-requisicao')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="form-aprovar-requisicao" method="POST">
+      <input type="hidden" name="origem" value="dashboard">
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        <p style="font-size: 0.88rem; color: var(--text-body); margin-bottom: 1rem;">
+          Você está aceitando a requisição <strong id="modal-aprov-codigo" style="color: var(--primary);">-</strong> e confirmando a entrega física do item:
+        </p>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.85rem; margin-bottom: 1.25rem;">
+          <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);" id="modal-aprov-produto">-</div>
+          <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 3px;">
+            Quantidade: <strong id="modal-aprov-qtd">-</strong> | Destinatário: <strong id="modal-aprov-colab">-</strong>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="aprov-almoxarife">Atendente do Almoxarifado Responsável <span class="required">*</span></label>
+          <input type="text" id="aprov-almoxarife" name="almoxarife_responsavel" class="form-control" value="Jozivam Silva" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="aprov-obs">Observações do Atendimento (Opcional)</label>
+          <input type="text" id="aprov-obs" name="motivo_atendimento" class="form-control" placeholder="Ex: Entregue lacrado, instruído sobre o uso...">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="background: var(--bg-surface);">
+        <button type="button" class="btn btn-outline" onclick="window.fecharModal('modal-aprovar-requisicao')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" style="background: #10B981; border-color: #10B981; font-weight: 700;">
+          <i class="fa-solid fa-check"></i> Aceitar & Dar Baixa no Estoque
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: RECUSAR REQUISIÇÃO (ALMOXARIFE)                                    -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-recusar-requisicao">
+  <div class="modal-container" style="max-width: 500px; width: 95%;">
+    <div class="modal-header">
+      <h3 style="font-size: 1.05rem; color: var(--danger); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-circle-xmark"></i>
+        Recusar Requisição
+      </h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-recusar-requisicao')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="form-recusar-requisicao" method="POST">
+      <input type="hidden" name="origem" value="dashboard">
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        <p style="font-size: 0.88rem; color: var(--text-body); margin-bottom: 1rem;">
+          Informe a justificativa para recusar a requisição <strong id="modal-recusa-codigo" style="color: var(--danger);">-</strong> (<span id="modal-recusa-produto">-</span>):
+        </p>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="recusa-motivo">Justificativa da Recusa <span class="required">*</span></label>
+          <textarea id="recusa-motivo" name="motivo_recusa" class="form-control" rows="3" placeholder="Ex: Produto sem estoque disponível, aguardando pedido de compra, item não autorizado para esta função..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="recusa-almoxarife">Almoxarife Responsável</label>
+          <input type="text" id="recusa-almoxarife" name="almoxarife_responsavel" class="form-control" value="Jozivam Silva">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="background: var(--bg-surface);">
+        <button type="button" class="btn btn-outline" onclick="window.fecharModal('modal-recusar-requisicao')">Voltar</button>
+        <button type="submit" class="btn btn-danger" style="font-weight: 700;">
+          <i class="fa-solid fa-xmark"></i> Confirmar Recusa
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function prepararModalAprovar(id, codigo, produto, qtd, un, colab) {
+    const form = document.getElementById('form-aprovar-requisicao');
+    if (form) form.action = `/requisicoes/${id}/aprovar`;
+    document.getElementById('modal-aprov-codigo').textContent = codigo;
+    document.getElementById('modal-aprov-produto').textContent = produto;
+    document.getElementById('modal-aprov-qtd').textContent = `${qtd} ${un}`;
+    document.getElementById('modal-aprov-colab').textContent = colab;
+    window.abrirModal('modal-aprovar-requisicao');
+  }
+
+  function prepararModalRecusar(id, codigo, produto) {
+    const form = document.getElementById('form-recusar-requisicao');
+    if (form) form.action = `/requisicoes/${id}/recusar`;
+    document.getElementById('modal-recusa-codigo').textContent = codigo;
+    document.getElementById('modal-recusa-produto').textContent = produto;
+    document.getElementById('recusa-motivo').value = '';
+    window.abrirModal('modal-recusar-requisicao');
+  }
+</script>
+
+<%- include('../layouts/footer') %>

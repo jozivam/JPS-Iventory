@@ -1,0 +1,650 @@
+<%- include('../layouts/header') %>
+
+<% if (typeof sucesso !== 'undefined' && sucesso) { %>
+  <div class="alert alert-success">
+    <div><i class="fa-solid fa-circle-check"></i> <%= sucesso %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+  <div class="alert alert-danger">
+    <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<!-- ========================================================================= -->
+<!-- CABEÇALHO DA CENTRAL DE REQUISIÇÕES                                       -->
+<!-- ========================================================================= -->
+<div class="page-header-flex">
+  <div class="page-title-wrap">
+    <h2>Requisições de Materiais e EPIs</h2>
+    <p>Central de solicitações feitas por Técnicos de Segurança (TST) e encarregados para liberação pelo Almoxarifado.</p>
+  </div>
+
+  <div class="page-actions-group">
+    <button type="button" class="btn btn-primary" onclick="window.abrirModal('modal-nova-requisicao-geral')">
+      <i class="fa-solid fa-plus"></i> Nova Requisição
+    </button>
+    <a href="/" class="btn btn-outline" title="Voltar ao Dashboard">
+      <i class="fa-solid fa-chart-pie"></i> Dashboard
+    </a>
+    <a href="/balcao" class="btn btn-outline" title="Ir para o Balcão">
+      <i class="fa-solid fa-store"></i> Balcão
+    </a>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- CARDS DE ESTATÍSTICAS DE REQUISIÇÕES                                      -->
+<!-- ========================================================================= -->
+<div class="balcao-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem;">
+  
+  <!-- Pendentes -->
+  <div class="table-card" style="padding: 1.1rem 1.25rem; border-left: 4px solid #F59E0B;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Aguardando Aceite</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: #B45309; line-height: 1.2; margin-top: 3px;">
+          <%= estatisticas.pendentes %>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-hourglass-half"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: #92400E; margin-top: 6px;">
+      Exigem liberação do almoxarife
+    </div>
+  </div>
+
+  <!-- Aprovadas / Entregues -->
+  <div class="table-card" style="padding: 1.1rem 1.25rem; border-left: 4px solid var(--teal);">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Aprovadas / Entregues</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: var(--teal); line-height: 1.2; margin-top: 3px;">
+          <%= estatisticas.aprovadas %>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #D1FAE5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 6px;">
+      Baixa/empréstimo gerado no estoque
+    </div>
+  </div>
+
+  <!-- Recusadas -->
+  <div class="table-card" style="padding: 1.1rem 1.25rem; border-left: 4px solid var(--danger);">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Recusadas</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: var(--danger); line-height: 1.2; margin-top: 3px;">
+          <%= estatisticas.recusadas %>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #FEE2E2; color: #DC2626; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-circle-xmark"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 6px;">
+      Justificativa documentada
+    </div>
+  </div>
+
+  <!-- Total Geral -->
+  <div class="table-card" style="padding: 1.1rem 1.25rem; border-left: 4px solid var(--primary);">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Total Histórico</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-top: 3px;">
+          <%= estatisticas.total %>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #EEF2FF; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-clipboard-list"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 6px;">
+      Registros computados
+    </div>
+  </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- BARRA DE FILTROS E ABAS                                                   -->
+<!-- ========================================================================= -->
+<div class="table-card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+  <form method="GET" action="/requisicoes" style="display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: space-between; align-items: center;">
+    
+    <!-- Filtros de Status em formato de Pílulas / Abas -->
+    <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+      <a href="/requisicoes?status=TODAS<%= filtros.busca ? '&busca=' + encodeURIComponent(filtros.busca) : '' %>" 
+         class="btn btn-sm <%= (!filtros.status || filtros.status === 'TODAS') ? 'btn-primary' : 'btn-outline' %>">
+        Todas (<%= estatisticas.total %>)
+      </a>
+      <a href="/requisicoes?status=PENDENTE<%= filtros.busca ? '&busca=' + encodeURIComponent(filtros.busca) : '' %>" 
+         class="btn btn-sm <%= filtros.status === 'PENDENTE' ? 'btn-primary' : 'btn-outline' %>"
+         style="<%= filtros.status === 'PENDENTE' ? 'background: #D97706; border-color: #D97706;' : 'color: #B45309; border-color: #FDE68A; background: #FEF3C7;' %>">
+        <i class="fa-solid fa-clock"></i> Pendentes (<%= estatisticas.pendentes %>)
+      </a>
+      <a href="/requisicoes?status=APROVADA<%= filtros.busca ? '&busca=' + encodeURIComponent(filtros.busca) : '' %>" 
+         class="btn btn-sm <%= filtros.status === 'APROVADA' ? 'btn-primary' : 'btn-outline' %>">
+        <i class="fa-solid fa-check"></i> Aprovadas (<%= estatisticas.aprovadas %>)
+      </a>
+      <a href="/requisicoes?status=RECUSADA<%= filtros.busca ? '&busca=' + encodeURIComponent(filtros.busca) : '' %>" 
+         class="btn btn-sm <%= filtros.status === 'RECUSADA' ? 'btn-primary' : 'btn-outline' %>">
+        <i class="fa-solid fa-xmark"></i> Recusadas (<%= estatisticas.recusadas %>)
+      </a>
+    </div>
+
+    <!-- Campo de Busca -->
+    <div style="display: flex; gap: 0.5rem; flex: 1; min-width: 260px; max-width: 450px;">
+      <input type="hidden" name="status" value="<%= filtros.status || 'TODAS' %>">
+      <div style="position: relative; width: 100%;">
+        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.85rem;"></i>
+        <input 
+          type="text" 
+          name="busca" 
+          value="<%= filtros.busca || '' %>" 
+          placeholder="Buscar por código, produto, solicitante, destinatário..." 
+          class="form-control" 
+          style="padding-left: 2.3rem; height: 38px; font-size: 0.85rem;"
+        >
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm" style="height: 38px;">
+        Filtrar
+      </button>
+      <% if (filtros.busca) { %>
+        <a href="/requisicoes?status=<%= filtros.status %>" class="btn btn-secondary btn-sm" style="height: 38px;" title="Limpar busca">
+          <i class="fa-solid fa-xmark"></i>
+        </a>
+      <% } %>
+    </div>
+  </form>
+</div>
+
+<!-- ========================================================================= -->
+<!-- TABELA DE REQUISIÇÕES                                                     -->
+<!-- ========================================================================= -->
+<div class="table-card">
+  <div class="table-card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <i class="fa-solid fa-list-check" style="color: var(--primary);"></i>
+      <strong style="font-size: 0.95rem; color: var(--text-main);">Listagem de Requisições</strong>
+      <span class="badge" style="background: var(--bg-surface); color: var(--text-muted); font-size: 0.75rem; border: 1px solid var(--border-light);">
+        <%= requisicoes.length %> registro(s)
+      </span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Data / Hora</th>
+          <th>Solicitante (TST)</th>
+          <th>Colaborador / Destinatário</th>
+          <th>Produto Solicitado</th>
+          <th style="text-align: center;">Tipo</th>
+          <th style="text-align: center;">Qtd</th>
+          <th style="text-align: center;">Status</th>
+          <th style="text-align: right;">Ações do Almoxarife</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!requisicoes || requisicoes.length === 0) { %>
+          <tr>
+            <td colspan="9" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-inbox" style="font-size: 2.5rem; color: var(--border-medium);"></i>
+                <div style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Nenhuma requisição encontrada</div>
+                <div style="font-size: 0.85rem;">Não há registros correspondentes aos filtros selecionados.</div>
+                <button type="button" class="btn btn-primary btn-sm" onclick="window.abrirModal('modal-nova-requisicao-geral')" style="margin-top: 0.5rem;">
+                  <i class="fa-solid fa-plus"></i> Abrir Primeira Requisição
+                </button>
+              </div>
+            </td>
+          </tr>
+        <% } else { %>
+          <% requisicoes.forEach(req => { %>
+            <tr>
+              <!-- Código -->
+              <td style="font-weight: 800; color: var(--primary); font-size: 0.86rem;">
+                <%= req.codigo %>
+              </td>
+
+              <!-- Data / Hora -->
+              <td style="font-size: 0.8rem; color: var(--text-dim); white-space: nowrap;">
+                <%= formatDate(req.criado_em) %>
+              </td>
+
+              <!-- Solicitante -->
+              <td>
+                <div style="font-weight: 600; color: var(--text-main); font-size: 0.84rem;">
+                  <i class="fa-solid fa-user-shield" style="color: #6366F1; font-size: 0.78rem; margin-right: 3px;"></i>
+                  <%= req.solicitante_nome %>
+                </div>
+                <% if (req.motivo) { %>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= req.motivo %>">
+                    Motivo: <%= req.motivo %>
+                  </div>
+                <% } %>
+              </td>
+
+              <!-- Colaborador Destinatário -->
+              <td>
+                <div style="font-weight: 600; color: var(--text-main); font-size: 0.84rem;">
+                  <%= req.colaborador_nome %>
+                </div>
+                <% if (req.colaborador_cargo) { %>
+                  <div style="font-size: 0.74rem; color: var(--text-dim);">
+                    <%= req.colaborador_cargo %>
+                    <% if (req.colaborador_matricula) { %> • Mat: <%= req.colaborador_matricula %><% } %>
+                  </div>
+                <% } %>
+              </td>
+
+              <!-- Produto -->
+              <td>
+                <div style="font-weight: 700; color: var(--text-main); font-size: 0.86rem;">
+                  <%= req.produto_nome %>
+                </div>
+                <div style="font-size: 0.74rem; color: var(--text-dim); display: flex; gap: 0.5rem; align-items: center;">
+                  <% if (req.produto_sku) { %><span>SKU: <%= req.produto_sku %></span><% } %>
+                  <span style="font-weight: 600; color: <%= req.produto_saldo_atual <= 0 ? 'var(--danger)' : (req.produto_saldo_atual < req.quantidade ? '#D97706' : 'var(--teal)') %>;">
+                    Saldo almoxarifado: <%= req.produto_saldo_atual %> <%= req.produto_unidade %>
+                  </span>
+                </div>
+              </td>
+
+              <!-- Tipo de Operação -->
+              <td style="text-align: center;">
+                <% if (req.tipo_operacao === 'SAIDA') { %>
+                  <span class="badge" style="background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; font-size: 0.72rem;">
+                    <i class="fa-solid fa-arrow-up"></i> Saída
+                  </span>
+                <% } else if (req.tipo_operacao === 'EMPRESTIMO') { %>
+                  <span class="badge" style="background: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; font-size: 0.72rem;">
+                    <i class="fa-solid fa-hand-holding-hand"></i> Empréstimo
+                  </span>
+                <% } else if (req.tipo_operacao === 'TROCA') { %>
+                  <span class="badge" style="background: #EDE9FE; color: #7C3AED; border: 1px solid #DDD6FE; font-size: 0.72rem;">
+                    <i class="fa-solid fa-repeat"></i> Troca
+                  </span>
+                <% } else { %>
+                  <span class="badge" style="background: var(--bg-surface); color: var(--text-main); font-size: 0.72rem;">
+                    <%= req.tipo_operacao %>
+                  </span>
+                <% } %>
+              </td>
+
+              <!-- Quantidade -->
+              <td style="text-align: center; font-weight: 800; font-size: 0.95rem; color: var(--text-main);">
+                <%= req.quantidade %> <span style="font-size: 0.74rem; font-weight: 500; color: var(--text-dim);"><%= req.produto_unidade %></span>
+              </td>
+
+              <!-- Status -->
+              <td style="text-align: center;">
+                <% if (req.status === 'PENDENTE') { %>
+                  <span class="badge" style="background: #FEF3C7; color: #B45309; border: 1px solid #FDE68A; font-size: 0.74rem; font-weight: 700;">
+                    <i class="fa-solid fa-clock"></i> Pendente
+                  </span>
+                <% } else if (req.status === 'APROVADA') { %>
+                  <span class="badge" style="background: #D1FAE5; color: #047857; border: 1px solid #A7F3D0; font-size: 0.74rem; font-weight: 700;">
+                    <i class="fa-solid fa-circle-check"></i> Aprovada
+                  </span>
+                <% } else if (req.status === 'RECUSADA') { %>
+                  <span class="badge" style="background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA; font-size: 0.74rem; font-weight: 700;">
+                    <i class="fa-solid fa-circle-xmark"></i> Recusada
+                  </span>
+                <% } else { %>
+                  <span class="badge" style="background: var(--bg-surface); color: var(--text-muted); font-size: 0.74rem;">
+                    <%= req.status %>
+                  </span>
+                <% } %>
+              </td>
+
+              <!-- Ações do Almoxarife -->
+              <td style="text-align: right; white-space: nowrap;">
+                <% if (req.status === 'PENDENTE') { %>
+                  <div style="display: inline-flex; gap: 0.35rem;">
+                    <!-- Botão Aceitar & Entregar -->
+                    <button 
+                      type="button" 
+                      class="btn btn-sm btn-primary" 
+                      onclick="abrirModalAprovar('<%= req.id %>', '<%= req.codigo %>', '<%= req.produto_nome.replace(/'/g, '\\\'') %>', '<%= req.quantidade %>', '<%= req.produto_unidade %>', '<%= req.colaborador_nome.replace(/'/g, '\\\'') %>', '<%= req.tipo_operacao %>', '<%= req.produto_saldo_atual %>')"
+                      title="Aceitar e dar baixa/entrega imediata no estoque"
+                      style="background: #059669; border-color: #059669; font-weight: 700; padding: 0.35rem 0.65rem;"
+                    >
+                      <i class="fa-solid fa-check"></i> Aceitar & Entregar
+                    </button>
+
+                    <!-- Botão Recusar -->
+                    <button 
+                      type="button" 
+                      class="btn btn-sm btn-outline" 
+                      onclick="abrirModalRecusar('<%= req.id %>', '<%= req.codigo %>', '<%= req.produto_nome.replace(/'/g, '\\\'') %>', '<%= req.colaborador_nome.replace(/'/g, '\\\'') %>')"
+                      title="Recusar solicitação com motivo"
+                      style="color: var(--danger); border-color: #FECACA; background: #FEF2F2; padding: 0.35rem 0.65rem;"
+                    >
+                      <i class="fa-solid fa-xmark"></i> Recusar
+                    </button>
+                  </div>
+                <% } else if (req.status === 'APROVADA') { %>
+                  <div style="font-size: 0.74rem; color: var(--text-dim); text-align: right;">
+                    <span style="color: var(--teal); font-weight: 700;"><i class="fa-solid fa-check-double"></i> Entregue</span>
+                    <% if (req.almoxarife_responsavel) { %><br>Por: <%= req.almoxarife_responsavel %><% } %>
+                    <% if (req.respondido_em) { %><br><%= formatDate(req.respondido_em) %><% } %>
+                  </div>
+                <% } else if (req.status === 'RECUSADA') { %>
+                  <div style="font-size: 0.74rem; color: var(--danger); text-align: right;">
+                    <span style="font-weight: 700;"><i class="fa-solid fa-ban"></i> Recusada</span>
+                    <% if (req.motivo_recusa) { %>
+                      <div style="color: var(--text-muted); font-size: 0.7rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis;" title="<%= req.motivo_recusa %>">
+                        "<%= req.motivo_recusa %>"
+                      </div>
+                    <% } %>
+                  </div>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: NOVA REQUISIÇÃO (TÉCNICO DE SEGURANÇA / ENCARREGADO)                -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-nova-requisicao-geral">
+  <div class="modal-container" style="max-width: 580px;">
+    <div class="modal-header">
+      <h3 style="font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-clipboard-question" style="color: var(--primary);"></i> Nova Requisição de Material / EPI
+      </h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-nova-requisicao-geral')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form action="/requisicoes" method="POST" id="form-nova-requisicao-geral">
+      <input type="hidden" name="origem" value="requisicoes">
+
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+        
+        <div style="background: #EEF2FF; border: 1px solid #C7D2FE; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; color: #3730A3;">
+          <i class="fa-solid fa-circle-info"></i> Esta requisição ficará aguardando aceite do Almoxarife. Ao ser aceita, o item será baixado ou emprestado no estoque automaticamente.
+        </div>
+
+        <!-- Solicitante (TST / Encarregado) -->
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" for="req-solicitante-geral">
+            Solicitante (Técnico de Segurança / Encarregado) <span style="color: var(--danger);">*</span>
+          </label>
+          <% 
+            const usuarioNomePadraoReq = (typeof usuarioLogado !== 'undefined' && usuarioLogado) 
+              ? usuarioLogado.nome 
+              : 'Técnico de Segurança';
+          %>
+          <input 
+            type="text" 
+            id="req-solicitante-geral" 
+            name="solicitante_nome" 
+            class="form-control" 
+            value="<%= usuarioNomePadraoReq %>" 
+            placeholder="Ex: Carlos Oliveira - TST" 
+            required
+          >
+        </div>
+
+        <!-- Colaborador Destinatário -->
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" for="req-colaborador-geral">
+            Colaborador que receberá o material <span style="color: var(--danger);">*</span>
+          </label>
+          <select id="req-colaborador-geral" name="colaborador_id" class="form-select" required onchange="aoSelecionarColaboradorReq(this)">
+            <option value="">-- Selecione o colaborador da lista --</option>
+            <% colaboradores.forEach(c => { %>
+              <option value="<%= c.id %>" data-nome="<%= c.nome %>">
+                <%= c.nome %> <%= c.cargo ? '• ' + c.cargo : '' %> <%= c.matricula ? '(' + c.matricula + ')' : '' %>
+              </option>
+            <% }) %>
+          </select>
+          <input type="hidden" id="req-colaborador-nome-hidden" name="colaborador_nome" value="">
+        </div>
+
+        <!-- Produto / Ferramenta -->
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" for="req-produto-geral">
+            Item / EPI / Ferramenta <span style="color: var(--danger);">*</span>
+          </label>
+          <select id="req-produto-geral" name="produto_id" class="form-select" required onchange="aoSelecionarProdutoReq(this)">
+            <option value="">-- Selecione o item do estoque --</option>
+            <% produtos.forEach(p => { %>
+              <option value="<%= p.id %>" data-saldo="<%= p.quantidade %>" data-un="<%= p.unidade_medida || 'UN' %>" data-cat="<%= p.categoria || '' %>">
+                <%= p.nome %> <%= p.sku ? '[' + p.sku + ']' : '' %> (Saldo: <%= p.quantidade %> <%= p.unidade_medida || 'UN' %>)
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+          <!-- Tipo de Operação -->
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="req-tipo-op-geral">Natureza da Entrega</label>
+            <select id="req-tipo-op-geral" name="tipo_operacao" class="form-select">
+              <option value="SAIDA">Saída / Consumo / EPI Descartável</option>
+              <option value="EMPRESTIMO">Empréstimo (Cautela de Ferramenta)</option>
+              <option value="TROCA">Troca de EPI Danificado</option>
+            </select>
+          </div>
+
+          <!-- Quantidade -->
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="req-quantidade-geral">Quantidade <span style="color: var(--danger);">*</span></label>
+            <input type="number" id="req-quantidade-geral" name="quantidade" class="form-control" value="1" min="1" required>
+          </div>
+        </div>
+
+        <!-- Motivo / Justificativa da Requisição -->
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" for="req-motivo-geral">Motivo / Frente de Trabalho / Justificativa</label>
+          <input type="text" id="req-motivo-geral" name="motivo" class="form-control" placeholder="Ex: Substituição de luva rasgada na frente elétrica bloco B">
+        </div>
+
+        <!-- Documento / O.S. de Referência -->
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" for="req-doc-ref-geral">Nº O.S. / Documento de Referência (Opcional)</label>
+          <input type="text" id="req-doc-ref-geral" name="documento_ref" class="form-control" placeholder="Ex: OS-2026-088 ou REQ-OBRA-12">
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="window.fecharModal('modal-nova-requisicao-geral')">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-paper-plane"></i> Enviar Requisição
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: ACEITAR & ENTREGAR (AÇÃO DO ALMOXARIFE)                             -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-aprovar-requisicao">
+  <div class="modal-container" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3 style="font-size: 1.05rem; color: #065F46; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-circle-check" style="color: #059669;"></i> Aceitar e Entregar Material
+      </h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-aprovar-requisicao')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="form-aprovar-requisicao" method="POST" action="">
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        
+        <div style="background: #D1FAE5; border: 1px solid #A7F3D0; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; color: #065F46;">
+          Você está confirmando a entrega física do item. O estoque será atualizado e a movimentação será registrada imediatamente.
+        </div>
+
+        <div style="background: var(--bg-surface); padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid var(--border-light); font-size: 0.86rem; line-height: 1.5;">
+          <div>Requisição: <strong id="aprov-codigo" style="color: var(--primary);">REQ-0000</strong></div>
+          <div>Colaborador: <strong id="aprov-colaborador">-</strong></div>
+          <div>Material: <strong id="aprov-produto">-</strong></div>
+          <div>Quantidade a entregar: <strong id="aprov-qtd" style="color: #059669; font-size: 1rem;">1</strong></div>
+          <div>Operação no estoque: <strong id="aprov-tipo">-</strong></div>
+          <div id="aprov-alerta-saldo" style="margin-top: 0.4rem; font-size: 0.78rem; display: none;"></div>
+        </div>
+
+        <!-- Almoxarife Responsável pela Entrega -->
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" for="aprov-almoxarife">
+            Almoxarife Responsável pela Entrega <span style="color: var(--danger);">*</span>
+          </label>
+          <% 
+            const almoxarifePadraoNome = (typeof usuarioLogado !== 'undefined' && usuarioLogado) 
+              ? usuarioLogado.nome 
+              : 'Almoxarife';
+          %>
+          <input 
+            type="text" 
+            id="aprov-almoxarife" 
+            name="almoxarife_responsavel" 
+            class="form-control" 
+            value="<%= almoxarifePadraoNome %>" 
+            required
+          >
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="window.fecharModal('modal-aprovar-requisicao')">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary" style="background: #059669; border-color: #059669;">
+          <i class="fa-solid fa-check-double"></i> Confirmar Entrega & Baixar Estoque
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: RECUSAR REQUISIÇÃO (COM JUSTIFICATIVA)                             -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-recusar-requisicao">
+  <div class="modal-container" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3 style="font-size: 1.05rem; color: #991B1B; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-circle-xmark" style="color: #DC2626;"></i> Recusar Solicitação
+      </h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-recusar-requisicao')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="form-recusar-requisicao" method="POST" action="">
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        
+        <p style="font-size: 0.86rem; color: var(--text-main); margin: 0;">
+          Deseja recusar a solicitação <strong id="recusa-codigo" style="color: var(--primary);">REQ-0000</strong> de <strong id="recusa-produto">-</strong> para <strong id="recusa-colaborador">-</strong>?
+        </p>
+
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" for="input-motivo-recusa">
+            Motivo da Recusa <span style="color: var(--danger);">*</span>
+          </label>
+          <textarea 
+            id="input-motivo-recusa" 
+            name="motivo_recusa" 
+            class="form-control" 
+            rows="3" 
+            placeholder="Ex: Item em falta temporária, aguardando chegada de pedido de compra." 
+            required
+          ></textarea>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="window.fecharModal('modal-recusar-requisicao')">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-danger">
+          <i class="fa-solid fa-ban"></i> Confirmar Recusa
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function aoSelecionarColaboradorReq(select) {
+    const opt = select.options[select.selectedIndex];
+    const nome = opt ? opt.getAttribute('data-nome') : '';
+    document.getElementById('req-colaborador-nome-hidden').value = nome || '';
+  }
+
+  function aoSelecionarProdutoReq(select) {
+    // Pode exibir saldo dinâmico se desejado
+  }
+
+  function abrirModalAprovar(id, codigo, produto, qtd, unidade, colab, tipo, saldoAtual) {
+    document.getElementById('aprov-codigo').innerText = codigo;
+    document.getElementById('aprov-colaborador').innerText = colab;
+    document.getElementById('aprov-produto').innerText = produto;
+    document.getElementById('aprov-qtd').innerText = `${qtd} ${unidade}`;
+    
+    let tipoFormatado = 'Saída de Estoque';
+    if (tipo === 'EMPRESTIMO') tipoFormatado = 'Empréstimo (Cautela)';
+    if (tipo === 'TROCA') tipoFormatado = 'Troca de Item';
+    document.getElementById('aprov-tipo').innerText = tipoFormatado;
+
+    const boxAlerta = document.getElementById('aprov-alerta-saldo');
+    const saldoNum = Number(saldoAtual) || 0;
+    const qtdNum = Number(qtd) || 0;
+    if (saldoNum < qtdNum && tipo !== 'ENTRADA') {
+      boxAlerta.style.display = 'block';
+      boxAlerta.className = 'badge';
+      boxAlerta.style.background = '#FEE2E2';
+      boxAlerta.style.color = '#B91C1C';
+      boxAlerta.style.border = '1px solid #FECACA';
+      boxAlerta.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Atenção: Estoque atual (${saldoNum} ${unidade}) é menor que a quantidade solicitada (${qtdNum}).`;
+    } else {
+      boxAlerta.style.display = 'none';
+    }
+
+    const form = document.getElementById('form-aprovar-requisicao');
+    form.action = `/requisicoes/${id}/aprovar`;
+
+    window.abrirModal('modal-aprovar-requisicao');
+  }
+
+  function abrirModalRecusar(id, codigo, produto, colab) {
+    document.getElementById('recusa-codigo').innerText = codigo;
+    document.getElementById('recusa-produto').innerText = produto;
+    document.getElementById('recusa-colaborador').innerText = colab;
+
+    const form = document.getElementById('form-recusar-requisicao');
+    form.action = `/requisicoes/${id}/recusar`;
+
+    window.abrirModal('modal-recusar-requisicao');
+  }
+</script>
+
+<%- include('../layouts/footer') %>

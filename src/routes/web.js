@@ -9,6 +9,8 @@ const upload = multer({
 });
 
 const AuthController = require('../controllers/AuthController');
+const DashboardController = require('../controllers/DashboardController');
+const RequisicaoController = require('../controllers/RequisicaoController');
 const ProdutoController = require('../controllers/ProdutoController');
 const EstoqueController = require('../controllers/EstoqueController');
 const BuscaController = require('../controllers/BuscaController');
@@ -38,10 +40,16 @@ router.use(requireAuth);
 // --- MINHA CONTA (Alteração da própria senha) ---
 router.post('/minha-conta/senha', AuthController.alterarSenha);
 
-// --- PÁGINA INICIAL (Direciona diretamente para o Inventário) ---
-router.get('/', (req, res) => {
-  res.redirect('/produtos');
-});
+// --- PÁGINA INICIAL & DASHBOARD (Visão Geral, Saúde do Estoque e Requisições) ---
+router.get('/', DashboardController.index);
+router.get('/dashboard', DashboardController.index);
+
+// --- CENTRAL DE REQUISIÇÕES (TST, Encarregados e Almoxarife) ---
+router.get('/requisicoes', RequisicaoController.index);
+router.post('/requisicoes', RequisicaoController.store);
+router.post('/requisicoes/:id/aprovar', requireRole('ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'), RequisicaoController.aprovar);
+router.post('/requisicoes/:id/recusar', requireRole('ADMIN', 'ALMOXARIFE', 'OPERADOR_FICHAS'), RequisicaoController.recusar);
+router.post('/requisicoes/:id/cancelar', RequisicaoController.cancelar);
 
 // --- BUSCA GERAL NO SISTEMA ---
 router.get('/busca', BuscaController.index);

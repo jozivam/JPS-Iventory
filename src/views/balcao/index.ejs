@@ -22,6 +22,14 @@
   </div>
 
   <div class="page-actions-group">
+    <a href="/requisicoes" class="btn btn-outline" style="color: var(--primary); border-color: #C7D2FE; background: #EEF2FF; font-weight: 700;" title="Ver e gerenciar requisições da equipe">
+      <i class="fa-solid fa-clipboard-list"></i> Requisições
+      <% if (typeof totalRequisicoesPendentes !== 'undefined' && totalRequisicoesPendentes > 0) { %>
+        <span class="badge" style="background: #F59E0B; color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; margin-left: 4px;">
+          <%= totalRequisicoesPendentes %>
+        </span>
+      <% } %>
+    </a>
     <a href="/movimentacoes" class="btn btn-outline" title="Ver histórico completo de movimentações">
       <i class="fa-solid fa-clock-rotate-left"></i> Histórico Completo
     </a>
@@ -90,9 +98,33 @@
   
   <!-- COLUNA 1: FORMULÁRIO DE ATENDIMENTO E LANÇAMENTO -->
   <div class="table-card" style="padding: 1.5rem;">
-    <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-      <i class="fa-solid fa-cash-register" style="color: var(--primary);"></i> Novo Lançamento no Balcão
-    </h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem;">
+      <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-cash-register" style="color: var(--primary);"></i> <span id="titulo-box-balcao">Novo Lançamento no Balcão</span>
+      </h3>
+
+      <!-- Seletor de Modo: Atendimento Direto vs Requisição TST -->
+      <div style="display: inline-flex; background: var(--bg-surface); padding: 3px; border-radius: 8px; border: 1.5px solid var(--border-light); gap: 3px;">
+        <button 
+          type="button" 
+          id="btn-modo-atendimento" 
+          class="btn btn-sm btn-primary" 
+          style="padding: 0.35rem 0.75rem; font-size: 0.76rem; font-weight: 700; border-radius: 6px;"
+          onclick="alternarModoBalcao('atendimento')"
+        >
+          <i class="fa-solid fa-boxes-packing"></i> Atendimento Direto
+        </button>
+        <button 
+          type="button" 
+          id="btn-modo-requisicao" 
+          class="btn btn-sm btn-outline" 
+          style="padding: 0.35rem 0.75rem; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: none;"
+          onclick="alternarModoBalcao('requisicao')"
+        >
+          <i class="fa-solid fa-clipboard-question"></i> Criar Requisição (TST / Obra)
+        </button>
+      </div>
+    </div>
 
 <%
   const nivelBalcao = (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? usuarioLogado.nivel_acesso : '';
@@ -101,6 +133,8 @@
   const tipoEfetivoBalcao = (isOperadorFichasBalcao && tipoPreSelecionado === 'ENTRADA') ? 'SAIDA' : tipoPreSelecionado;
 %>
     <form action="/balcao/registrar" method="POST" id="form-balcao">
+      <input type="hidden" name="origem" id="balcao-form-origem" value="balcao">
+      <input type="hidden" name="solicitante_nome" id="balcao-solicitante-nome-hidden" value="<%= (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? usuarioLogado.nome : 'Técnico de Segurança' %>">
       
       <!-- Seletor Interativo dos Tipos de Operação -->
       <div style="margin-bottom: 1.25rem;">
@@ -519,8 +553,13 @@
         </tr>
       </thead>
       <tbody>
-        <% if (ultimosAtendimentos && ultimosAtendimentos.length > 0) { %>
-          <% ultimosAtendimentos.forEach(m => { %>
+        <% 
+          const listaAtend = (typeof ultimosAtendimentos !== 'undefined' && ultimosAtendimentos) 
+            ? ultimosAtendimentos 
+            : ((typeof ultimasMovimentacoes !== 'undefined' && ultimasMovimentacoes) ? ultimasMovimentacoes : []);
+        %>
+        <% if (listaAtend && listaAtend.length > 0) { %>
+          <% listaAtend.forEach(m => { %>
             <tr>
               <td>
                 <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--text-main);">
@@ -751,6 +790,71 @@
       labelColab: 'Colaborador que Solicitou a Troca <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Digite para autocompletar e filtrar)</span>'
     }
   };
+
+  let modoBalcaoAtual = 'atendimento';
+
+  function alternarModoBalcao(modo) {
+    modoBalcaoAtual = modo;
+    const btnAtend = document.getElementById('btn-modo-atendimento');
+    const btnReq = document.getElementById('btn-modo-requisicao');
+    const form = document.getElementById('form-balcao');
+    const titulo = document.getElementById('titulo-box-balcao');
+    const btnEntrada = document.querySelector('.btn-tipo-op[data-tipo="ENTRADA"]');
+    const btnDevolucao = document.querySelector('.btn-tipo-op[data-tipo="DEVOLUCAO"]');
+    const banner = document.getElementById('banner-tipo-info');
+    const textoBanner = document.getElementById('texto-banner-info');
+    const iconeBanner = document.getElementById('icone-banner-info');
+    const btnSubmit = document.getElementById('btn-submit-balcao');
+    const btnSubmitTexto = document.getElementById('btn-submit-texto');
+
+    if (modo === 'requisicao') {
+      btnAtend.className = 'btn btn-sm btn-outline';
+      btnAtend.style.border = 'none';
+      btnReq.className = 'btn btn-sm btn-primary';
+      btnReq.style.background = 'var(--primary)';
+      btnReq.style.color = '#fff';
+
+      titulo.textContent = 'Criar Requisição de Material / EPI (TST / Obra)';
+      form.action = '/requisicoes';
+
+      if (btnEntrada) btnEntrada.style.display = 'none';
+      if (btnDevolucao) btnDevolucao.style.display = 'none';
+
+      const tipoAtual = document.getElementById('input-tipo-operacao').value;
+      if (tipoAtual === 'ENTRADA' || tipoAtual === 'DEVOLUCAO') {
+        const btnSaida = document.querySelector('.btn-tipo-op[data-tipo="SAIDA"]');
+        if (btnSaida) selecionarTipo('SAIDA', btnSaida);
+      }
+
+      banner.style.background = '#EEF2FF';
+      banner.style.color = '#3730A3';
+      banner.style.borderColor = '#C7D2FE';
+      iconeBanner.className = 'fa-solid fa-clipboard-question';
+      textoBanner.textContent = 'Modo Requisição: O pedido será enviado ao Almoxarife e ficará visível no Dashboard para liberação e entrega física.';
+
+      btnSubmit.style.background = 'var(--primary)';
+      btnSubmit.style.borderColor = 'var(--primary)';
+      btnSubmitTexto.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 5px;"></i> Enviar Requisição ao Almoxarife';
+    } else {
+      btnReq.className = 'btn btn-sm btn-outline';
+      btnReq.style.border = 'none';
+      btnAtend.className = 'btn btn-sm btn-primary';
+      btnAtend.style.background = '';
+      btnAtend.style.color = '';
+
+      titulo.textContent = 'Novo Lançamento no Balcão';
+      form.action = '/balcao/registrar';
+
+      if (btnEntrada) btnEntrada.style.display = '';
+      if (btnDevolucao) btnDevolucao.style.display = '';
+
+      const tipoAtual = document.getElementById('input-tipo-operacao').value || 'SAIDA';
+      const btnAtual = document.querySelector(`.btn-tipo-op[data-tipo="${tipoAtual}"]`);
+      if (btnAtual) {
+        selecionarTipo(tipoAtual, btnAtual);
+      }
+    }
+  }
 
   function selecionarTipo(tipo, btn) {
     document.getElementById('input-tipo-operacao').value = tipo;
