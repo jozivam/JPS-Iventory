@@ -1,0 +1,1194 @@
+<%- include('../layouts/header') %>
+
+<% if (typeof sucesso !== 'undefined' && sucesso) { %>
+  <div class="alert alert-success">
+    <div><i class="fa-solid fa-circle-check"></i> <%= sucesso %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+  <div class="alert alert-danger">
+    <div><i class="fa-solid fa-circle-exclamation"></i> <%= erro %></div>
+    <button type="button" class="alert-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+<% } %>
+
+<!-- ========================================================================= -->
+<!-- CABEÇALHO DO DASHBOARD: VISÃO GERAL & AÇÕES RÁPIDAS                       -->
+<!-- ========================================================================= -->
+<div class="page-header-flex">
+  <div class="page-title-wrap">
+    <h2>Visão Geral do Almoxarifado</h2>
+    <p>Painel de controle em tempo real da saúde do estoque, requisições de equipe e cautela de ferramentas.</p>
+  </div>
+
+  <div class="page-actions-group">
+    <!-- Botão de Nova Requisição para Técnicos de Segurança e Encarregados -->
+    <button type="button" class="btn btn-outline" onclick="window.abrirModal('modal-nova-requisicao')" style="color: var(--primary); border-color: #C7D2FE; background: #EEF2FF; font-weight: 700;">
+      <i class="fa-solid fa-clipboard-question"></i> Nova Requisição (TST)
+    </button>
+
+    <!-- Botão de Ir para o Balcão -->
+    <a href="/balcao" class="btn btn-primary" title="Atendimento imediato no Balcão">
+      <i class="fa-solid fa-store"></i> Atendimento no Balcão
+    </a>
+
+    <!-- Botão de Novo Produto -->
+    <a href="/produtos/novo" class="btn btn-outline" title="Cadastrar novo item no inventário">
+      <i class="fa-solid fa-plus"></i> Novo Item
+    </a>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- BANNER DE ALERTA: REQUISIÇÕES PENDENTES DO ALMOXARIFE                      -->
+<!-- ========================================================================= -->
+<% if (metricas.requisicoes.estatisticas.pendentes > 0) { %>
+  <div class="table-card" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border: 1.5px solid #F59E0B; padding: 1rem 1.35rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 0.85rem;">
+      <div style="width: 44px; height: 44px; border-radius: 10px; background: #FDE68A; color: #B45309; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">
+        <i class="fa-solid fa-bell fa-shake"></i>
+      </div>
+      <div>
+        <div style="font-weight: 800; color: #92400E; font-size: 0.98rem; display: flex; align-items: center; gap: 0.45rem;">
+          <span>Você tem <%= metricas.requisicoes.estatisticas.pendentes %> requisição(ões) aguardando atendimento!</span>
+          <span class="badge" style="background: #B45309; color: #fff; font-size: 0.72rem;">Ação Necessária</span>
+        </div>
+        <div style="font-size: 0.82rem; color: #78350F; margin-top: 2px;">
+          Técnicos de segurança e encarregados solicitaram materiais para entrega no canteiro. Avalie e dê saída logo abaixo.
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+      <a href="#secao-requisicoes-pendentes" class="btn btn-sm" style="background: #D97706; color: #fff; font-weight: 700; border: none;">
+        <i class="fa-solid fa-arrow-down"></i> Ver Solicitações
+      </a>
+      <a href="/requisicoes" class="btn btn-sm btn-outline" style="border-color: #D97706; color: #92400E; background: #ffffff;">
+        Central de Requisições
+      </a>
+    </div>
+  </div>
+<% } %>
+
+<!-- ========================================================================= -->
+<!-- GRADE DE CARDS KPI: SAÚDE DO ESTOQUE E OPERAÇÕES                          -->
+<!-- ========================================================================= -->
+<div class="balcao-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 1.5rem;">
+  
+  <!-- Saúde Geral do Estoque -->
+  <div class="table-card" style="padding: 1.15rem 1.25rem; border-left: 5px solid <%= metricas.saudeEstoque.corSaude %>;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Saúde do Estoque</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-top: 3px;">
+          <%= metricas.saudeEstoque.percentualSaude %>%
+          <span style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; vertical-align: middle; background: <%= metricas.saudeEstoque.corSaude %>15; color: <%= metricas.saudeEstoque.corSaude %>;">
+            <%= metricas.saudeEstoque.nivelSaude %>
+          </span>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: <%= metricas.saudeEstoque.corSaude %>15; color: <%= metricas.saudeEstoque.corSaude %>; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-heart-pulse"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 8px; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <span style="color: var(--teal); font-weight: 600;">● <%= metricas.saudeEstoque.itensNormais %> OK</span>
+      <span style="color: #D97706; font-weight: 600;">● <%= metricas.saudeEstoque.itensBaixo %> Baixo</span>
+      <span style="color: var(--danger); font-weight: 600;">● <%= metricas.saudeEstoque.itensZerados %> Zerados</span>
+    </div>
+  </div>
+
+  <!-- Requisições Pendentes -->
+  <div class="table-card" style="padding: 1.15rem 1.25rem; border-left: 5px solid #F59E0B;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Requisições Pendentes</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #B45309; line-height: 1.2; margin-top: 3px;">
+          <%= metricas.requisicoes.estatisticas.pendentes %>
+          <small style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">pedidos</small>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-clipboard-list"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 8px;">
+      <a href="/requisicoes" style="color: var(--primary); font-weight: 600; text-decoration: none;">
+        Ver histórico de requisições ➔
+      </a>
+    </div>
+  </div>
+
+  <!-- Cautelas / Ferramentas em Campo -->
+  <div class="table-card" style="padding: 1.15rem 1.25rem; border-left: 5px solid #8B5CF6;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Cautelas Ativas</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #6D28D9; line-height: 1.2; margin-top: 3px;">
+          <%= metricas.cautelas.totalFerramentasEmCampo %>
+          <small style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">unidades em campo</small>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #F5F3FF; color: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-hand-holding-hand"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 8px;">
+      <span><strong><%= metricas.cautelas.totalCautelasAtivas %></strong> termo(s) em aberto na equipe</span>
+    </div>
+  </div>
+
+  <!-- Estoque Físico Geral -->
+  <div class="table-card" style="padding: 1.15rem 1.25rem; border-left: 5px solid var(--primary);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Inventário Físico</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-top: 3px;">
+          <%= metricas.saudeEstoque.totalUnidadesFisicas %>
+          <small style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">unidades</small>
+        </div>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 10px; background: #EEF2FF; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+        <i class="fa-solid fa-boxes-stacked"></i>
+      </div>
+    </div>
+    <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 8px;">
+      <span>Total de <strong><%= metricas.saudeEstoque.totalItens %></strong> referências cadastradas</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- CORPO PRINCIPAL DO DASHBOARD (2 COLUNAS)                                  -->
+<!-- ========================================================================= -->
+<div style="display: grid; grid-template-columns: 2fr 1.15fr; gap: 1.5rem; align-items: start;" class="dashboard-grid-responsive">
+  
+  <!-- COLUNA PRINCIPAL ESQUERDA -->
+  <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    
+    <!-- 1. PAINEL DE REQUISIÇÕES PENDENTES (AÇÃO DO ALMOXARIFE) -->
+    <div class="table-card" id="secao-requisicoes-pendentes" style="padding: 0; overflow: hidden; border: 1.5px solid <%= metricas.requisicoes.estatisticas.pendentes > 0 ? '#FCD34D' : 'var(--border-color)' %>;">
+      
+      <div style="padding: 1.15rem 1.35rem; background: <%= metricas.requisicoes.estatisticas.pendentes > 0 ? '#FFFBEB' : '#F8FAFC' %>; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h3 style="font-size: 1.02rem; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-clipboard-check" style="color: #D97706;"></i>
+            Requisições Aguardando o Almoxarife
+          </h3>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">
+            Solicitações feitas pela equipe de Segurança / Obra prontas para entrega
+          </span>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="window.abrirModal('modal-nova-requisicao')" style="font-weight: 700;">
+            <i class="fa-solid fa-plus"></i> Nova Requisição
+          </button>
+        </div>
+      </div>
+
+      <% if (metricas.requisicoes.pendentes && metricas.requisicoes.pendentes.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>CÓDIGO / DATA</th>
+                <th>SOLICITANTE & COLABORADOR</th>
+                <th>MATERIAL SOLICITADO</th>
+                <th style="text-align: center;">TIPO</th>
+                <th style="text-align: center;">QTD</th>
+                <th style="text-align: right; width: 210px;">AÇÃO DO ALMOXARIFE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% metricas.requisicoes.pendentes.forEach(r => { %>
+                <tr>
+                  <!-- Código e Data -->
+                  <td>
+                    <div style="font-family: var(--font-mono); font-weight: 800; color: var(--primary); font-size: 0.85rem;">
+                      <%= r.codigo %>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">
+                      <span class="data-hora-local" data-timestamp="<%= r.criado_em %>"><%= r.criado_em %></span>
+                    </div>
+                  </td>
+
+                  <!-- Solicitante e Colaborador -->
+                  <td>
+                    <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">
+                      <i class="fa-solid fa-user-check" style="color: var(--teal); font-size: 0.75rem;"></i> <%= r.colaborador_nome %>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                      Solicitado por: <strong><%= r.solicitante_nome %></strong>
+                      <% if (r.motivo) { %>
+                        <div style="font-style: italic; color: var(--text-dim); margin-top: 1px;">"<%= r.motivo %>"</div>
+                      <% } %>
+                    </div>
+                  </td>
+
+                  <!-- Produto Solicitado -->
+                  <td>
+                    <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">
+                      <%= r.produto_nome %>
+                    </div>
+                    <div style="font-size: 0.74rem; color: var(--text-muted); display: flex; gap: 0.4rem; align-items: center; margin-top: 2px;">
+                      <span style="font-family: var(--font-mono); background: var(--bg-surface); padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border-color); font-weight: 600;"><%= r.produto_sku %></span>
+                      <span>Disponível: <strong style="color: <%= r.produto_saldo_atual < r.quantidade ? 'var(--danger)' : 'var(--teal)' %>;"><%= r.produto_saldo_atual %> <%= r.produto_unidade %></strong></span>
+                    </div>
+                  </td>
+
+                  <!-- Tipo da Operação -->
+                  <td style="text-align: center;">
+                    <% if (r.tipo_operacao === 'SAIDA') { %>
+                      <span class="badge" style="background: #FEE2E2; color: #B91C1C; font-weight: 700; font-size: 0.72rem;">
+                        <i class="fa-solid fa-arrow-up"></i> Saída
+                      </span>
+                    <% } else if (r.tipo_operacao === 'EMPRESTIMO') { %>
+                      <span class="badge" style="background: #FEF3C7; color: #B45309; font-weight: 700; font-size: 0.72rem;">
+                        <i class="fa-solid fa-hand-holding-hand"></i> Empréstimo
+                      </span>
+                    <% } else { %>
+                      <span class="badge" style="background: #FEF9C3; color: #854D0E; font-weight: 700; font-size: 0.72rem;">
+                        <i class="fa-solid fa-repeat"></i> Troca
+                      </span>
+                    <% } %>
+                  </td>
+
+                  <!-- Quantidade -->
+                  <td style="text-align: center;">
+                    <strong style="font-size: 1rem; color: var(--text-main);"><%= r.quantidade %></strong>
+                    <span style="font-size: 0.75rem; color: var(--text-dim);"><%= r.produto_unidade %></span>
+                  </td>
+
+                  <!-- Ações Rápidas do Almoxarife -->
+                  <td style="text-align: right; white-space: nowrap;">
+                    <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                      <!-- Botão Aceitar / Entregar -->
+                      <button 
+                        type="button" 
+                        class="btn btn-sm" 
+                        style="background: #10B981; color: #fff; font-weight: 700; border: none; padding: 0.35rem 0.65rem;"
+                        title="Aceitar requisição e entregar ao colaborador"
+                        onclick="prepararModalAprovar('<%= r.id %>', '<%= r.codigo %>', '<%= r.produto_nome %>', '<%= r.quantidade %>', '<%= r.produto_unidade %>', '<%= r.colaborador_nome %>')"
+                        <%= r.produto_saldo_atual < r.quantidade ? 'disabled style="background: #9CA3AF; color: #fff; cursor: not-allowed;" title="Saldo insuficiente no estoque"' : '' %>
+                      >
+                        <i class="fa-solid fa-check"></i> Entregar
+                      </button>
+
+                      <!-- Botão Recusar -->
+                      <button 
+                        type="button" 
+                        class="btn btn-sm btn-outline" 
+                        style="color: var(--danger); border-color: #FCA5A5; padding: 0.35rem 0.55rem;"
+                        title="Recusar requisição com justificativa"
+                        onclick="prepararModalRecusar('<%= r.id %>', '<%= r.codigo %>', '<%= r.produto_nome %>')"
+                      >
+                        <i class="fa-solid fa-xmark"></i> Recusar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+          <div style="width: 52px; height: 52px; border-radius: 50%; background: #D1FAE5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 0.75rem auto;">
+            <i class="fa-solid fa-check-double"></i>
+          </div>
+          <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">Tudo em dia com as requisições!</div>
+          <div style="font-size: 0.82rem; margin-top: 3px;">Nenhuma requisição de material pendente de aprovação neste momento.</div>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- 2. ITENS COM ESTOQUE CRÍTICO OU ZERADO (REPOSIÇÃO URGENTE) -->
+    <div class="table-card" style="padding: 0; overflow: hidden;">
+      <div style="padding: 1.15rem 1.35rem; background: #F8FAFC; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h3 style="font-size: 1.02rem; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--danger);"></i>
+            Itens Críticos — Reposição Urgente
+          </h3>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Materiais com estoque zerado ou abaixo do mínimo de segurança</span>
+        </div>
+        <a href="/produtos?status=BAIXO" class="btn btn-outline btn-sm" style="font-weight: 700;">
+          Ver Todos no Inventário ➔
+        </a>
+      </div>
+
+      <% if (metricas.saudeEstoque.itensCriticos && metricas.saudeEstoque.itensCriticos.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>MATERIAL / DESCRIÇÃO</th>
+                <th>CATEGORIA</th>
+                <th style="text-align: center;">SALDO ATUAL</th>
+                <th style="text-align: center;">MÍNIMO</th>
+                <th>SITUAÇÃO</th>
+                <th style="text-align: right;">REPOR</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% metricas.saudeEstoque.itensCriticos.forEach(p => { %>
+                <tr>
+                  <!-- Nome e SKU -->
+                  <td>
+                    <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem;">
+                      <%= p.nome %>
+                      <% if (p.marca) { %>
+                        <span style="font-size: 0.72rem; color: var(--primary); background: var(--primary-light); padding: 1px 6px; border-radius: 4px; font-weight: 600;"><%= p.marca %></span>
+                      <% } %>
+                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">
+                      SKU: <%= p.sku %>
+                    </div>
+                  </td>
+
+                  <!-- Categoria -->
+                  <td style="font-size: 0.82rem; color: var(--text-body);">
+                    <%= p.categoria %>
+                  </td>
+
+                  <!-- Saldo Atual -->
+                  <td style="text-align: center;">
+                    <strong style="font-size: 1rem; color: <%= p.quantidade <= 0 ? 'var(--danger)' : '#D97706' %>;">
+                      <%= p.quantidade %>
+                    </strong>
+                    <span style="font-size: 0.74rem; color: var(--text-dim);"><%= p.unidade_medida %></span>
+                  </td>
+
+                  <!-- Estoque Mínimo -->
+                  <td style="text-align: center; font-size: 0.84rem; color: var(--text-muted);">
+                    <%= p.estoque_minimo %> <%= p.unidade_medida %>
+                  </td>
+
+                  <!-- Situação -->
+                  <td>
+                    <% if (p.quantidade <= 0) { %>
+                      <span class="status-pill out-of-stock" style="font-size: 0.72rem; padding: 2px 7px;">
+                        <span class="status-dot-sm"></span> Zerado
+                      </span>
+                    <% } else { %>
+                      <span class="status-pill low-stock" style="font-size: 0.72rem; padding: 2px 7px;">
+                        <span class="status-dot-sm"></span> Baixo
+                      </span>
+                    <% } %>
+                  </td>
+
+                  <!-- Ação de Entrada -->
+                  <td style="text-align: right;">
+                    <a href="/balcao?produto_id=<%= p.id %>&tipo=ENTRADA" class="btn btn-sm btn-outline" style="color: var(--teal); border-color: var(--teal); font-weight: 700;" title="Lançar entrada no Balcão">
+                      <i class="fa-solid fa-arrow-down"></i> Entrada
+                    </a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
+          <i class="fa-solid fa-circle-check" style="color: var(--teal); font-size: 1.5rem; display: block; margin-bottom: 0.4rem;"></i>
+          Nenhum item com estoque crítico ou zerado. Estoque 100% abastecido!
+        </div>
+      <% } %>
+    </div>
+
+  </div>
+
+  <!-- COLUNA LATERAL DIREITA (ESTATÍSTICAS & RESUMOS) -->
+  <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    
+    <!-- 1. ATENDIMENTOS HOJE NO BALCÃO -->
+    <div class="table-card" style="padding: 1.25rem;">
+      <h3 style="font-size: 0.96rem; font-weight: 800; color: var(--text-main); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-calendar-day" style="color: var(--primary);"></i>
+        Movimento de Hoje no Balcão
+      </h3>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 0.85rem; border-radius: 8px;">
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Saídas (Consumo)</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: var(--danger); margin-top: 2px;">
+            <%= metricas.atendimentosHoje.saidasHoje %> <small style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted);">itens</small>
+          </div>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 0.85rem; border-radius: 8px;">
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Empréstimos</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: #D97706; margin-top: 2px;">
+            <%= metricas.atendimentosHoje.emprestimosAbertos %> <small style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted);">em aberto</small>
+          </div>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 0.85rem; border-radius: 8px;">
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Devoluções</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: #6D28D9; margin-top: 2px;">
+            <%= metricas.atendimentosHoje.devolucoesHoje %> <small style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted);">retornados</small>
+          </div>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); padding: 0.85rem; border-radius: 8px;">
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Entradas (Reposição)</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: var(--teal); margin-top: 2px;">
+            <%= metricas.atendimentosHoje.entradasHoje %> <small style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted);">unidades</small>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top: 1rem; border-top: 1px solid var(--border-light); padding-top: 0.85rem;">
+        <a href="/balcao" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center; font-weight: 700;">
+          <i class="fa-solid fa-store"></i> Abrir Tela do Balcão
+        </a>
+      </div>
+    </div>
+
+    <!-- 2. DISTRIBUIÇÃO DO ESTOQUE POR CATEGORIA -->
+    <div class="table-card" style="padding: 1.25rem;">
+      <h3 style="font-size: 0.96rem; font-weight: 800; color: var(--text-main); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-chart-pie" style="color: var(--teal);"></i>
+        Categorias Mais Estocadas
+      </h3>
+
+      <% if (metricas.categoriasDestaque && metricas.categoriasDestaque.length > 0) { %>
+        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <% metricas.categoriasDestaque.forEach(c => { 
+             const perc = metricas.saudeEstoque.totalUnidadesFisicas > 0 
+               ? Math.round((c.unidades / metricas.saudeEstoque.totalUnidadesFisicas) * 100) 
+               : 0;
+          %>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 3px;">
+                <span style="font-weight: 700; color: var(--text-main);"><%= c.nome %></span>
+                <span style="color: var(--text-muted);"><%= c.unidades %> UN (<%= perc %>%)</span>
+              </div>
+              <div style="width: 100%; height: 7px; background: #F1F5F9; border-radius: 4px; overflow: hidden;">
+                <div style="width: <%= perc %>%; height: 100%; background: var(--primary); border-radius: 4px;"></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- 3. ÚLTIMAS ATIVIDADES NO ALMOXARIFADO -->
+    <div class="table-card" style="padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+        <h3 style="font-size: 0.96rem; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i>
+          Atividades Recentes
+        </h3>
+        <a href="/movimentacoes" style="font-size: 0.76rem; font-weight: 700; color: var(--primary); text-decoration: none;">Extrato ➔</a>
+      </div>
+
+      <% if (metricas.ultimasMovimentacoes && metricas.ultimasMovimentacoes.length > 0) { %>
+        <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+          <% metricas.ultimasMovimentacoes.slice(0, 5).forEach(m => { %>
+            <div style="padding: 0.55rem 0.65rem; background: #F8FAFC; border: 1px solid var(--border-light); border-radius: 6px; font-size: 0.8rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="color: var(--text-main); font-size: 0.84rem;"><%= m.produto_nome %></strong>
+                <span style="font-weight: 800; color: <%= m.tipo === 'ENTRADA' ? 'var(--teal)' : (m.tipo === 'SAIDA' ? 'var(--danger)' : '#D97706') %>;">
+                  <%= m.tipo === 'ENTRADA' ? '+' : '-' %><%= m.quantidade %> UN
+                </span>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; display: flex; justify-content: space-between;">
+                <span><%= m.colaborador || '-' %> (<%= m.tipo %>)</span>
+                <span class="data-hora-local" data-timestamp="<%= m.criado_em %>"><%= m.criado_em %></span>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: NOVA REQUISIÇÃO (TÉCNICOS DE SEGURANÇA E ENCARREGADOS)             -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-nova-requisicao">
+  <div class="modal-container" style="max-width: 600px; width: 95%;">
+    <div class="modal-header">
+      <h3 style="font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-clipboard-question" style="color: var(--primary);"></i>
+        Nova Requisição de Material / EPI
+      </h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-nova-requisicao')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form action="/requisicoes" method="POST">
+      <input type="hidden" name="origem" value="dashboard">
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        
+        <div style="background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.8rem; color: #3730A3;">
+          <i class="fa-solid fa-circle-info"></i> As requisições criadas aqui ficam com status <strong>PENDENTE</strong> no sistema. O Almoxarife avaliará o pedido no balcão e realizará a entrega física.
+        </div>
+
+        <!-- Destinatário: Colaborador ou Balcão -->
+        <div class="form-group" style="margin-bottom: 1rem; position: relative;" id="dash-req-colaborador-wrapper">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+            <label class="form-label" style="margin: 0;" for="dash-req-colaborador-busca">
+              Destinatário do Material <span style="color: var(--danger);">*</span>
+            </label>
+            <button 
+              type="button" 
+              class="btn btn-sm btn-outline" 
+              onclick="selecionarDestinatarioBalcaoDash()" 
+              style="font-size: 0.74rem; padding: 2px 8px; color: var(--primary); border-color: #C7D2FE; background: #EEF2FF; font-weight: 700;"
+              title="Atribuir saída diretamente ao Balcão sem vincular a colaborador"
+            >
+              <i class="fa-solid fa-store"></i> Atribuir ao Balcão (Sem Ficha)
+            </button>
+          </div>
+
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="fa-solid fa-user" id="dash-req-icone-destinatario" style="position: absolute; left: 1rem; color: var(--text-dim); pointer-events: none; z-index: 2;"></i>
+            
+            <input 
+              type="text" 
+              id="dash-req-colaborador-busca" 
+              class="form-control" 
+              placeholder="Digite o nome (cadastrado ou avulso), matrícula, ou escolha Balcão..." 
+              autocomplete="off"
+              style="padding-left: 2.5rem; padding-right: 2.5rem; font-weight: 600; height: 44px;"
+              required
+            >
+
+            <button 
+              type="button" 
+              id="dash-btn-limpar-colab" 
+              title="Limpar seleção"
+              onclick="limparColaboradorDash()"
+              style="position: absolute; right: 0.6rem; background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: none; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 50%;"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Dropdown Flutuante Inteligente de Colaboradores e Balcão -->
+          <div id="dash-req-colaborador-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 14px 30px rgba(0,0,0,0.14); max-height: 250px; overflow-y: auto; z-index: 2100; padding: 0.35rem 0;">
+            <!-- Injetado via JS -->
+          </div>
+
+          <!-- Card Informativo do Destinatário Selecionado -->
+          <div id="dash-box-destinatario-selecionado" style="display: none; margin-top: 0.45rem; padding: 0.55rem 0.8rem; border-radius: 6px; font-size: 0.8rem; border: 1px solid var(--border-light); background: var(--bg-surface);">
+            <div id="dash-box-destinatario-conteudo"></div>
+          </div>
+
+          <input type="hidden" id="dash-req-colaborador-id" name="colaborador_id" value="">
+          <input type="hidden" id="dash-req-colaborador-nome" name="colaborador_nome" value="">
+        </div>
+
+        <!-- Seleção do Produto (Lista Inteligente) -->
+        <div class="form-group" style="margin-bottom: 1rem; position: relative;" id="dash-req-produto-wrapper">
+          <label class="form-label" for="dash-req-produto-busca" style="margin-bottom: 0.35rem; display: block;">
+            Item / EPI / Ferramenta <span class="required">*</span>
+            <small style="color: var(--text-muted); font-weight: normal; margin-left: 0.25rem;">(Digite para autocompletar e ver o saldo)</small>
+          </label>
+
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; color: var(--text-dim); pointer-events: none; z-index: 2;"></i>
+            
+            <input 
+              type="text" 
+              id="dash-req-produto-busca" 
+              class="form-control" 
+              placeholder="Digite o nome, código SKU ou categoria para buscar..." 
+              autocomplete="off"
+              style="padding-left: 2.5rem; padding-right: 2.5rem; font-weight: 600; height: 44px;"
+              required
+            >
+
+            <button 
+              type="button" 
+              id="dash-btn-limpar-prod" 
+              title="Limpar seleção"
+              onclick="limparProdutoDash()"
+              style="position: absolute; right: 0.6rem; background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: none; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 50%;"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Dropdown Flutuante Inteligente de Produtos -->
+          <div id="dash-req-produto-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 14px 30px rgba(0,0,0,0.14); max-height: 250px; overflow-y: auto; z-index: 2100; padding: 0.35rem 0;">
+            <!-- Injetado via JS -->
+          </div>
+
+          <!-- Detalhe do Produto Selecionado -->
+          <div id="dash-req-produto-detalhe-box" style="display: none; align-items: center; justify-content: space-between; margin-top: 0.45rem; padding: 0.55rem 0.8rem; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border-light); font-size: 0.82rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span id="dash-req-detalhe-sku" class="badge" style="background: #ffffff; border: 1px solid var(--border-light); font-weight: 700; font-family: var(--font-mono);"></span>
+              <span id="dash-req-detalhe-cat" style="color: var(--text-muted);"></span>
+            </div>
+            <div>
+              Saldo Almoxarifado: <strong id="dash-req-detalhe-saldo" style="font-size: 0.95rem;"></strong>
+            </div>
+          </div>
+
+          <input type="hidden" id="dash-req-produto-id" name="produto_id" value="" required>
+        </div>
+
+        <!-- Tipo e Quantidade -->
+        <div class="form-grid" style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="req-tipo-op">Natureza da Operação <span class="required">*</span></label>
+            <select id="req-tipo-op" name="tipo_operacao" class="form-select" required>
+              <option value="SAIDA">Saída / Consumo (EPI / Descarte)</option>
+              <option value="EMPRESTIMO">Empréstimo (Ferramenta / Cautela)</option>
+              <option value="TROCA">Troca (Devolução de item danificado)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="req-quantidade">Quantidade <span class="required">*</span></label>
+            <input type="number" id="req-quantidade" name="quantidade" class="form-control" min="1" value="1" required>
+          </div>
+        </div>
+
+        <!-- Solicitante: Sempre o Usuário Autenticado no Sistema -->
+        <%
+          const solicitantePadraoDash = (typeof usuarioLogado !== 'undefined' && usuarioLogado) 
+            ? `${usuarioLogado.nome}${usuarioLogado.cargo ? ' — ' + usuarioLogado.cargo : ''}`
+            : 'Usuário do Sistema';
+        %>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+            <label class="form-label" for="req-solicitante" style="margin: 0;">
+              Nome do Solicitante / Setor <span class="required">*</span>
+            </label>
+            <span class="badge" style="background: #EEF2FF; color: var(--primary); font-size: 0.72rem; font-weight: 700;">
+              <i class="fa-solid fa-user-shield"></i> Usuário Conectado
+            </span>
+          </div>
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="fa-solid fa-lock" style="position: absolute; left: 1rem; color: var(--primary); pointer-events: none; z-index: 2;"></i>
+            <input 
+              type="text" 
+              id="req-solicitante" 
+              name="solicitante_nome" 
+              class="form-control" 
+              value="<%= solicitantePadraoDash %>" 
+              readonly
+              style="padding-left: 2.5rem; background: var(--bg-surface); font-weight: 700; color: var(--text-main); cursor: default; border-color: #C7D2FE;"
+              required
+            >
+          </div>
+        </div>
+
+        <!-- Motivo / Justificativa -->
+        <div class="form-group">
+          <label class="form-label" for="req-motivo">Motivo / Justificativa da Requisição</label>
+          <textarea id="req-motivo" name="motivo" class="form-control" rows="2" placeholder="Ex: Desgaste natural do EPI em atividade na obra, troca preventiva..."></textarea>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="background: var(--bg-surface);">
+        <button type="button" class="btn btn-outline" onclick="window.fecharModal('modal-nova-requisicao')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" style="font-weight: 700;">
+          <i class="fa-solid fa-paper-plane"></i> Enviar Requisição
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: ACEITAR / ENTREGAR REQUISIÇÃO (ALMOXARIFE)                         -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-aprovar-requisicao">
+  <div class="modal-container" style="max-width: 500px; width: 95%;">
+    <div class="modal-header">
+      <h3 style="font-size: 1.05rem; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-circle-check" style="color: #10B981;"></i>
+        Confirmar Entrega de Material
+      </h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-aprovar-requisicao')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="form-aprovar-requisicao" method="POST">
+      <input type="hidden" name="origem" value="dashboard">
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        <p style="font-size: 0.88rem; color: var(--text-body); margin-bottom: 1rem;">
+          Você está aceitando a requisição <strong id="modal-aprov-codigo" style="color: var(--primary);">-</strong> e confirmando a entrega física do item:
+        </p>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.85rem; margin-bottom: 1.25rem;">
+          <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);" id="modal-aprov-produto">-</div>
+          <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 3px;">
+            Quantidade: <strong id="modal-aprov-qtd">-</strong> | Destinatário: <strong id="modal-aprov-colab">-</strong>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="aprov-almoxarife">Atendente do Almoxarifado Responsável <span class="required">*</span></label>
+          <input type="text" id="aprov-almoxarife" name="almoxarife_responsavel" class="form-control" value="Jozivam Silva" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="aprov-obs">Observações do Atendimento (Opcional)</label>
+          <input type="text" id="aprov-obs" name="motivo_atendimento" class="form-control" placeholder="Ex: Entregue lacrado, instruído sobre o uso...">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="background: var(--bg-surface);">
+        <button type="button" class="btn btn-outline" onclick="window.fecharModal('modal-aprovar-requisicao')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" style="background: #10B981; border-color: #10B981; font-weight: 700;">
+          <i class="fa-solid fa-check"></i> Aceitar & Dar Baixa no Estoque
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: RECUSAR REQUISIÇÃO (ALMOXARIFE)                                    -->
+<!-- ========================================================================= -->
+<div class="modal-overlay" id="modal-recusar-requisicao">
+  <div class="modal-container" style="max-width: 500px; width: 95%;">
+    <div class="modal-header">
+      <h3 style="font-size: 1.05rem; color: var(--danger); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <i class="fa-solid fa-circle-xmark"></i>
+        Recusar Requisição
+      </h3>
+      <button type="button" class="btn btn-secondary btn-icon" onclick="window.fecharModal('modal-recusar-requisicao')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="form-recusar-requisicao" method="POST">
+      <input type="hidden" name="origem" value="dashboard">
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        <p style="font-size: 0.88rem; color: var(--text-body); margin-bottom: 1rem;">
+          Informe a justificativa para recusar a requisição <strong id="modal-recusa-codigo" style="color: var(--danger);">-</strong> (<span id="modal-recusa-produto">-</span>):
+        </p>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="recusa-motivo">Justificativa da Recusa <span class="required">*</span></label>
+          <textarea id="recusa-motivo" name="motivo_recusa" class="form-control" rows="3" placeholder="Ex: Produto sem estoque disponível, aguardando pedido de compra, item não autorizado para esta função..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="recusa-almoxarife">Almoxarife Responsável</label>
+          <input type="text" id="recusa-almoxarife" name="almoxarife_responsavel" class="form-control" value="Jozivam Silva">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="background: var(--bg-surface);">
+        <button type="button" class="btn btn-outline" onclick="window.fecharModal('modal-recusar-requisicao')">Voltar</button>
+        <button type="submit" class="btn btn-danger" style="font-weight: 700;">
+          <i class="fa-solid fa-xmark"></i> Confirmar Recusa
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const LISTA_PRODUTOS_DASH = <%- JSON.stringify(produtos || []) %>;
+  const LISTA_COLABORADORES_DASH = <%- JSON.stringify(colaboradores || []) %>;
+
+  // =========================================================================
+  // LISTA INTELIGENTE: DESTINATÁRIO (COLABORADORES OU BALCÃO) NO DASHBOARD
+  // =========================================================================
+  const dashInputColab = document.getElementById('dash-req-colaborador-busca');
+  const dashDropdownColab = document.getElementById('dash-req-colaborador-dropdown');
+  const dashHiddenColabId = document.getElementById('dash-req-colaborador-id');
+  const dashHiddenColabNome = document.getElementById('dash-req-colaborador-nome');
+  const dashBtnLimparColab = document.getElementById('dash-btn-limpar-colab');
+  const dashBoxDestinatario = document.getElementById('dash-box-destinatario-selecionado');
+  const dashBoxDestinatarioConteudo = document.getElementById('dash-box-destinatario-conteudo');
+  const dashIconeDestinatario = document.getElementById('dash-req-icone-destinatario');
+
+  function renderizarDropdownColaboradorDash(filtro = '') {
+    if (!dashDropdownColab) return;
+    const termo = (filtro || '').trim().toLowerCase();
+
+    let html = `
+      <!-- OPÇÃO FIXA DESTACADA: BALCÃO (USO GERAL) -->
+      <div 
+        class="combobox-item-dash-colab" 
+        data-id="" 
+        data-nome="Balcão"
+        onclick="selecionarDestinatarioBalcaoDash()"
+        style="padding: 0.65rem 0.85rem; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; align-items: center; justify-content: space-between; background: #F8FAFC;"
+      >
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <div style="width: 32px; height: 32px; border-radius: 6px; background: #EEF2FF; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 700;">
+            <i class="fa-solid fa-store"></i>
+          </div>
+          <div>
+            <div style="font-weight: 700; color: var(--primary); font-size: 0.86rem;">
+              Balcão (Uso Geral / Sem Ficha)
+            </div>
+            <div style="font-size: 0.73rem; color: var(--text-dim);">
+              Saída avulsa atribuída ao almoxarifado sem vínculo individual
+            </div>
+          </div>
+        </div>
+        <span class="badge" style="background: #E0E7FF; color: var(--primary); font-size: 0.68rem; font-weight: 700;">
+          Sem Ficha
+        </span>
+      </div>
+    `;
+
+    // OPÇÃO DINÂMICA: SE DIGITOU UM NOME QUE PODE SER PESSOA NÃO CADASTRADA / TERCEIRO
+    if (termo && termo !== 'balcão' && termo !== 'balcao') {
+      html += `
+        <div 
+          class="combobox-item-dash-colab" 
+          onclick="selecionarPessoaAvulsaDash('${termo.replace(/'/g, "\\'")}')"
+          style="padding: 0.65rem 0.85rem; border-bottom: 1.5px solid #BBF7D0; cursor: pointer; display: flex; align-items: center; justify-content: space-between; background: #F0FDF4;"
+        >
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div style="width: 32px; height: 32px; border-radius: 6px; background: #DCFCE7; color: #166534; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 700;">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; color: #166534; font-size: 0.86rem;">
+                Requisitar para: "${filtro}"
+              </div>
+              <div style="font-size: 0.73rem; color: #15803D;">
+                Pessoa não registrada no sistema (Terceiro / Visitante / Sem cadastro)
+              </div>
+            </div>
+          </div>
+          <span class="badge" style="background: #BBF7D0; color: #166534; font-size: 0.68rem; font-weight: 700;">
+            Pessoa Avulsa
+          </span>
+        </div>
+      `;
+    }
+
+    const filtrados = LISTA_COLABORADORES_DASH.filter(c => {
+      if (!termo) return true;
+      return (c.nome && c.nome.toLowerCase().includes(termo)) ||
+             (c.matricula && c.matricula.toLowerCase().includes(termo)) ||
+             (c.cargo && c.cargo.toLowerCase().includes(termo));
+    });
+
+    if (filtrados.length === 0 && termo) {
+      // Já exibiu a opção acima de pessoa avulsa
+    } else {
+      filtrados.forEach(c => {
+        const iniciais = c.nome ? c.nome.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() : 'CO';
+        html += `
+          <div 
+            class="combobox-item-dash-colab" 
+            data-id="${c.id}" 
+            data-nome="${c.nome.replace(/"/g, '&quot;')}"
+            data-cargo="${(c.cargo || '').replace(/"/g, '&quot;')}"
+            data-mat="${(c.matricula || '').replace(/"/g, '&quot;')}"
+            onclick="selecionarColaboradorDash('${c.id}', '${c.nome.replace(/'/g, "\\'")}', '${(c.cargo || '').replace(/'/g, "\\'")}', '${(c.matricula || '').replace(/'/g, "\\'")}')"
+            style="padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+          >
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <div style="width: 30px; height: 30px; border-radius: 50%; background: var(--bg-surface); color: var(--text-main); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; border: 1px solid var(--border-light);">
+                ${iniciais}
+              </div>
+              <div>
+                <div style="font-weight: 700; color: var(--text-main); font-size: 0.84rem;">
+                  ${c.nome}
+                </div>
+                <div style="font-size: 0.73rem; color: var(--text-dim);">
+                  ${c.cargo || 'Colaborador'} ${c.matricula ? '• Mat: ' + c.matricula : ''}
+                </div>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right" style="font-size: 0.7rem; color: var(--border-medium);"></i>
+          </div>
+        `;
+      });
+    }
+
+    dashDropdownColab.innerHTML = html;
+    dashDropdownColab.style.display = 'block';
+
+    dashDropdownColab.querySelectorAll('.combobox-item-dash-colab').forEach(el => {
+      el.addEventListener('mouseenter', () => el.style.background = '#F1F5F9');
+      el.addEventListener('mouseleave', () => {
+        if (!el.getAttribute('data-nome') || el.getAttribute('data-nome') !== 'Balcão') {
+          el.style.background = '#ffffff';
+        } else {
+          el.style.background = '#F8FAFC';
+        }
+      });
+    });
+  }
+
+  function selecionarColaboradorDash(id, nome, cargo, matricula) {
+    dashHiddenColabId.value = id;
+    dashHiddenColabNome.value = nome;
+    dashInputColab.value = `${nome} ${matricula ? '(' + matricula + ')' : ''}`;
+    dashBtnLimparColab.style.display = 'flex';
+    dashDropdownColab.style.display = 'none';
+
+    dashIconeDestinatario.className = 'fa-solid fa-user-check';
+    dashIconeDestinatario.style.color = 'var(--primary)';
+
+    dashBoxDestinatario.style.display = 'block';
+    dashBoxDestinatario.style.background = 'var(--bg-surface)';
+    dashBoxDestinatario.style.borderColor = 'var(--border-light)';
+    dashBoxDestinatarioConteudo.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-id-badge" style="color: var(--primary);"></i>
+        <span>Colaborador: <strong>${nome}</strong> ${cargo ? '— ' + cargo : ''} ${matricula ? '(Matrícula: ' + matricula + ')' : ''}</span>
+      </div>
+    `;
+  }
+
+  function selecionarPessoaAvulsaDash(nome) {
+    const nomeLimpo = (nome || '').trim();
+    if (!nomeLimpo) return;
+    dashHiddenColabId.value = '';
+    dashHiddenColabNome.value = nomeLimpo;
+    dashInputColab.value = nomeLimpo;
+    dashBtnLimparColab.style.display = 'flex';
+    dashDropdownColab.style.display = 'none';
+
+    dashIconeDestinatario.className = 'fa-solid fa-user-tag';
+    dashIconeDestinatario.style.color = '#15803D';
+
+    dashBoxDestinatario.style.display = 'block';
+    dashBoxDestinatario.style.background = '#F0FDF4';
+    dashBoxDestinatario.style.borderColor = '#BBF7D0';
+    dashBoxDestinatarioConteudo.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem; color: #166534;">
+        <i class="fa-solid fa-circle-check" style="color: #15803D;"></i>
+        <span>Destinatário: <strong>${nomeLimpo}</strong> (Pessoa não registrada no sistema — saída sem ficha individual)</span>
+      </div>
+    `;
+  }
+
+  function selecionarDestinatarioBalcaoDash() {
+    dashHiddenColabId.value = '';
+    dashHiddenColabNome.value = 'Balcão';
+    dashInputColab.value = '🏪 Balcão (Uso Geral / Sem Ficha)';
+    dashBtnLimparColab.style.display = 'flex';
+    dashDropdownColab.style.display = 'none';
+
+    dashIconeDestinatario.className = 'fa-solid fa-store';
+    dashIconeDestinatario.style.color = '#059669';
+
+    dashBoxDestinatario.style.display = 'block';
+    dashBoxDestinatario.style.background = '#ECFDF5';
+    dashBoxDestinatario.style.borderColor = '#A7F3D0';
+    dashBoxDestinatarioConteudo.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem; color: #065F46;">
+        <i class="fa-solid fa-circle-check" style="color: #059669;"></i>
+        <span><strong>Atribuído ao Balcão:</strong> A saída não será cobrada nem vinculada à ficha individual de nenhum colaborador.</span>
+      </div>
+    `;
+  }
+
+  function limparColaboradorDash() {
+    dashHiddenColabId.value = '';
+    dashHiddenColabNome.value = '';
+    dashInputColab.value = '';
+    dashBtnLimparColab.style.display = 'none';
+    dashBoxDestinatario.style.display = 'none';
+    dashIconeDestinatario.className = 'fa-solid fa-user';
+    dashIconeDestinatario.style.color = 'var(--text-dim)';
+    dashInputColab.focus();
+    renderizarDropdownColaboradorDash('');
+  }
+
+  if (dashInputColab) {
+    dashInputColab.addEventListener('focus', () => {
+      renderizarDropdownColaboradorDash(dashInputColab.value);
+    });
+
+    dashInputColab.addEventListener('input', () => {
+      dashHiddenColabId.value = '';
+      dashHiddenColabNome.value = dashInputColab.value;
+      dashBtnLimparColab.style.display = dashInputColab.value ? 'flex' : 'none';
+      dashBoxDestinatario.style.display = 'none';
+      renderizarDropdownColaboradorDash(dashInputColab.value);
+    });
+
+    dashInputColab.addEventListener('blur', () => {
+      setTimeout(() => {
+        const val = (dashInputColab.value || '').trim();
+        if (val && !dashHiddenColabId.value && dashHiddenColabNome.value !== 'Balcão') {
+          dashHiddenColabNome.value = val;
+        }
+      }, 250);
+    });
+  }
+
+  // =========================================================================
+  // LISTA INTELIGENTE: PRODUTO / MATERIAL NO DASHBOARD
+  // =========================================================================
+  const dashInputProd = document.getElementById('dash-req-produto-busca');
+  const dashDropdownProd = document.getElementById('dash-req-produto-dropdown');
+  const dashHiddenProdId = document.getElementById('dash-req-produto-id');
+  const dashBtnLimparProd = document.getElementById('dash-btn-limpar-prod');
+  const dashBoxDetalheProd = document.getElementById('dash-req-produto-detalhe-box');
+  const dashDetalheSku = document.getElementById('dash-req-detalhe-sku');
+  const dashDetalheCat = document.getElementById('dash-req-detalhe-cat');
+  const dashDetalheSaldo = document.getElementById('dash-req-detalhe-saldo');
+
+  function renderizarDropdownProdutoDash(filtro = '') {
+    if (!dashDropdownProd) return;
+    const termo = (filtro || '').trim().toLowerCase();
+
+    const filtrados = LISTA_PRODUTOS_DASH.filter(p => {
+      if (!termo) return true;
+      return (p.nome && p.nome.toLowerCase().includes(termo)) ||
+             (p.sku && p.sku.toLowerCase().includes(termo)) ||
+             (p.categoria && p.categoria.toLowerCase().includes(termo)) ||
+             (p.marca && p.marca.toLowerCase().includes(termo));
+    });
+
+    if (filtrados.length === 0) {
+      dashDropdownProd.innerHTML = `
+        <div style="padding: 0.85rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+          Nenhum item encontrado com "${filtro}".
+        </div>
+      `;
+      dashDropdownProd.style.display = 'block';
+      return;
+    }
+
+    let html = '';
+    filtrados.slice(0, 50).forEach(p => {
+      const qtd = Number(p.quantidade) || 0;
+      const un = p.unidade_medida || 'UN';
+      const isZerado = qtd <= 0;
+      const isBaixo = !isZerado && qtd <= (p.estoque_minimo || 0);
+
+      const corSaldo = isZerado ? '#DC2626' : (isBaixo ? '#D97706' : '#059669');
+      const bgSaldo = isZerado ? '#FEE2E2' : (isBaixo ? '#FEF3C7' : '#D1FAE5');
+
+      html += `
+        <div 
+          class="combobox-item-dash-prod" 
+          data-id="${p.id}"
+          onclick="selecionarProdutoDash('${p.id}')"
+          style="padding: 0.65rem 0.85rem; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;"
+        >
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+              <span class="badge" style="background: var(--bg-surface); border: 1px solid var(--border-light); font-size: 0.7rem; font-family: var(--font-mono); font-weight: 700;">
+                ${p.sku || 'SEM SKU'}
+              </span>
+              <strong style="color: var(--text-main); font-size: 0.86rem;">
+                ${p.nome}
+              </strong>
+            </div>
+            <div style="font-size: 0.74rem; color: var(--text-dim); margin-top: 2px;">
+              ${p.categoria || 'Geral'} ${p.marca ? '• ' + p.marca : ''}
+            </div>
+          </div>
+
+          <div style="text-align: right; flex-shrink: 0;">
+            <span class="badge" style="background: ${bgSaldo}; color: ${corSaldo}; font-size: 0.74rem; font-weight: 800; border: 1px solid ${corSaldo}30;">
+              ${isZerado ? 'ZERADO' : qtd + ' ' + un}
+            </span>
+          </div>
+        </div>
+      `;
+    });
+
+    dashDropdownProd.innerHTML = html;
+    dashDropdownProd.style.display = 'block';
+
+    dashDropdownProd.querySelectorAll('.combobox-item-dash-prod').forEach(el => {
+      el.addEventListener('mouseenter', () => el.style.background = '#F1F5F9');
+      el.addEventListener('mouseleave', () => el.style.background = '#ffffff');
+    });
+  }
+
+  function selecionarProdutoDash(prodId) {
+    const p = LISTA_PRODUTOS_DASH.find(item => String(item.id) === String(prodId));
+    if (!p) return;
+
+    dashHiddenProdId.value = p.id;
+    dashInputProd.value = `[${p.sku}] ${p.nome}`;
+    dashBtnLimparProd.style.display = 'flex';
+    dashDropdownProd.style.display = 'none';
+
+    dashDetalheSku.textContent = p.sku || 'SEM SKU';
+    dashDetalheCat.textContent = `${p.categoria || 'Geral'}${p.marca ? ' • ' + p.marca : ''}`;
+
+    const qtd = Number(p.quantidade) || 0;
+    const un = p.unidade_medida || 'UN';
+    dashDetalheSaldo.textContent = `${qtd} ${un}`;
+    dashDetalheSaldo.style.color = qtd <= 0 ? 'var(--danger)' : '#059669';
+
+    dashBoxDetalheProd.style.display = 'flex';
+  }
+
+  function limparProdutoDash() {
+    dashHiddenProdId.value = '';
+    dashInputProd.value = '';
+    dashBtnLimparProd.style.display = 'none';
+    dashBoxDetalheProd.style.display = 'none';
+    dashInputProd.focus();
+    renderizarDropdownProdutoDash('');
+  }
+
+  if (dashInputProd) {
+    dashInputProd.addEventListener('focus', () => {
+      renderizarDropdownProdutoDash(dashInputProd.value);
+    });
+
+    dashInputProd.addEventListener('input', () => {
+      dashHiddenProdId.value = '';
+      dashBtnLimparProd.style.display = dashInputProd.value ? 'flex' : 'none';
+      dashBoxDetalheProd.style.display = 'none';
+      renderizarDropdownProdutoDash(dashInputProd.value);
+    });
+  }
+
+  // Fecha dropdowns ao clicar fora
+  document.addEventListener('click', (e) => {
+    const wrapColab = document.getElementById('dash-req-colaborador-wrapper');
+    if (wrapColab && !wrapColab.contains(e.target)) {
+      if (dashDropdownColab) dashDropdownColab.style.display = 'none';
+    }
+
+    const wrapProd = document.getElementById('dash-req-produto-wrapper');
+    if (wrapProd && !wrapProd.contains(e.target)) {
+      if (dashDropdownProd) dashDropdownProd.style.display = 'none';
+    }
+  });
+
+  // Funções de Aprovar / Recusar
+  function prepararModalAprovar(id, codigo, produto, qtd, un, colab) {
+    const form = document.getElementById('form-aprovar-requisicao');
+    if (form) form.action = `/requisicoes/${id}/aprovar`;
+    document.getElementById('modal-aprov-codigo').textContent = codigo;
+    document.getElementById('modal-aprov-produto').textContent = produto;
+    document.getElementById('modal-aprov-qtd').textContent = `${qtd} ${un}`;
+    document.getElementById('modal-aprov-colab').textContent = colab;
+    window.abrirModal('modal-aprovar-requisicao');
+  }
+
+  function prepararModalRecusar(id, codigo, produto) {
+    const form = document.getElementById('form-recusar-requisicao');
+    if (form) form.action = `/requisicoes/${id}/recusar`;
+    document.getElementById('modal-recusa-codigo').textContent = codigo;
+    document.getElementById('modal-recusa-produto').textContent = produto;
+    document.getElementById('recusa-motivo').value = '';
+    window.abrirModal('modal-recusar-requisicao');
+  }
+</script>
+
+<%- include('../layouts/footer') %>

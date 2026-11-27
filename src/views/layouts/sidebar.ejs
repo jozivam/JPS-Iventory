@@ -1,7 +1,7 @@
 <aside class="app-sidebar">
   <!-- Brand Logo & Botão Fechar no Mobile -->
   <div style="display: flex; align-items: center; justify-content: space-between; padding-right: 0.75rem;">
-    <a href="/produtos" class="sidebar-brand" style="margin-right: 0;">
+    <a href="/" class="sidebar-brand" style="margin-right: 0;">
       <div class="brand-icon">
         <i class="fa-solid fa-cube"></i>
       </div>
@@ -17,6 +17,23 @@
   <!-- Menu de Navegação -->
   <nav class="sidebar-nav">
     <div class="nav-section-title">MENU PRINCIPAL</div>
+
+    <a href="/" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'dashboard') ? 'active' : '' %>" id="nav-dashboard">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="/requisicoes" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'requisicoes') ? 'active' : '' %>" id="nav-requisicoes" style="display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <i class="fa-solid fa-clipboard-list"></i>
+        <span>Requisições</span>
+      </div>
+      <% if (typeof totalRequisicoesPendentes !== 'undefined' && totalRequisicoesPendentes > 0) { %>
+        <span class="badge" style="background: #F59E0B; color: #fff; font-size: 0.7rem; padding: 2px 7px; border-radius: 10px; font-weight: 800;">
+          <%= totalRequisicoesPendentes %>
+        </span>
+      <% } %>
+    </a>
 
     <a href="/produtos" class="nav-link <%= (typeof currentPage !== 'undefined' && currentPage === 'produtos') ? 'active' : '' %>" id="nav-produtos">
       <i class="fa-solid fa-boxes-stacked"></i>

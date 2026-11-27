@@ -71,6 +71,29 @@ function initDatabase() {
       criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
       atualizado_em DATETIME DEFAULT (datetime('now', 'localtime'))
     );
+
+    CREATE TABLE IF NOT EXISTS requisicoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT UNIQUE,
+      produto_id INTEGER NOT NULL,
+      colaborador_id INTEGER,
+      colaborador_nome TEXT NOT NULL,
+      solicitante_nome TEXT NOT NULL,
+      solicitante_id INTEGER,
+      tipo_operacao TEXT NOT NULL DEFAULT 'SAIDA' CHECK(tipo_operacao IN ('SAIDA', 'EMPRESTIMO', 'TROCA')),
+      quantidade INTEGER NOT NULL DEFAULT 1 CHECK(quantidade > 0),
+      status TEXT NOT NULL DEFAULT 'PENDENTE' CHECK(status IN ('PENDENTE', 'APROVADA', 'RECUSADA', 'CANCELADA')),
+      motivo TEXT,
+      documento_ref TEXT,
+      almoxarife_responsavel TEXT,
+      motivo_recusa TEXT,
+      movimentacao_id INTEGER,
+      criado_em DATETIME DEFAULT (datetime('now', 'localtime')),
+      respondido_em DATETIME,
+      FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE SET NULL,
+      FOREIGN KEY (movimentacao_id) REFERENCES movimentacoes(id) ON DELETE SET NULL
+    );
   `);
 
   // Migração segura para atualizar constraint e colunas de movimentações

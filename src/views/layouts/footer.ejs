@@ -81,9 +81,14 @@
 
   <!-- Barra de Navegação Inferior Móvel (Fixa para Celulares) -->
   <nav class="mobile-bottom-nav">
+    <a href="/" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'dashboard') ? 'active' : '' %>">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>Início</span>
+    </a>
+
     <a href="/produtos" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'produtos') ? 'active' : '' %>">
       <i class="fa-solid fa-boxes-stacked"></i>
-      <span>Inventário</span>
+      <span>Itens</span>
     </a>
     
     <a href="/balcao" class="mobile-nav-item mobile-nav-highlight <%= (typeof currentPage !== 'undefined' && currentPage === 'balcao') ? 'active' : '' %>">
@@ -93,16 +98,16 @@
       <span>Balcão</span>
     </a>
     
-    <a href="/movimentacoes" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'movimentacoes') ? 'active' : '' %>">
-      <i class="fa-solid fa-clock-rotate-left"></i>
-      <span>Histórico</span>
+    <a href="/requisicoes" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'requisicoes') ? 'active' : '' %>" style="position: relative;">
+      <i class="fa-solid fa-clipboard-list"></i>
+      <% if (typeof totalRequisicoesPendentes !== 'undefined' && totalRequisicoesPendentes > 0) { %>
+        <span style="position: absolute; top: 4px; right: calc(50% - 16px); background: #EF4444; color: #fff; font-size: 0.65rem; font-weight: 800; border-radius: 10px; padding: 1px 5px; line-height: 1;">
+          <%= totalRequisicoesPendentes %>
+        </span>
+      <% } %>
+      <span>Requisições</span>
     </a>
     
-    <a href="/colaboradores" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'colaboradores') ? 'active' : '' %>">
-      <i class="fa-solid fa-users"></i>
-      <span>Equipe</span>
-    </a>
-
     <a href="/fichas" class="mobile-nav-item <%= (typeof currentPage !== 'undefined' && currentPage === 'fichas') ? 'active' : '' %>">
       <i class="fa-solid fa-file-invoice"></i>
       <span>Fichas</span>

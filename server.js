@@ -85,6 +85,19 @@ app.use((req, res, next) => {
 // Carrega usuário autenticado em req.user e res.locals.usuarioLogado
 app.use(carregarUsuario);
 
+// Contagem global de requisições pendentes para exibição de badge de alerta na navegação
+app.use(async (req, res, next) => {
+  res.locals.totalRequisicoesPendentes = 0;
+  if (req.user && !req.path.startsWith('/api') && !req.path.startsWith('/css') && !req.path.startsWith('/js') && !req.path.endsWith('.ico')) {
+    try {
+      const Requisicao = require('./src/models/Requisicao');
+      const stats = await Requisicao.getEstatisticas();
+      res.locals.totalRequisicoesPendentes = stats.pendentes || 0;
+    } catch (_) {}
+  }
+  next();
+});
+
 // Rotas da aplicação
 app.use('/', webRoutes);
 
