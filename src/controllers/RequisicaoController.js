@@ -73,31 +73,34 @@ class RequisicaoController {
         origem // 'dashboard', 'balcao' ou 'requisicoes'
       } = req.body;
 
+      // Solicitante: sempre prioriza o usuário autenticado na sessão atual
+      let solicitanteFinal = (req.user && req.user.nome)
+        ? `${req.user.nome}${req.user.cargo ? ' (' + req.user.cargo + ')' : ''}`
+        : (solicitante_nome ? solicitante_nome.trim() : 'Usuário do Sistema');
+      let solicitanteIdFinal = (req.user && req.user.id) ? req.user.id : (solicitante_id ? parseInt(solicitante_id, 10) : null);
+
       let nomeColabFinal = (colaborador_nome || '').trim();
       let colabIdFinal = colaborador_id ? parseInt(colaborador_id, 10) : null;
 
       // Se for destinado ao Balcão ou estiver em branco, atribui ao Balcão sem ficha individual
-      if (!nomeColabFinal || nomeColabFinal.toLowerCase() === 'balcão' || nomeColabFinal.toLowerCase() === 'balcao' || !colabIdFinal) {
-        if (colabIdFinal) {
-          const c = await Colaborador.findById(colabIdFinal);
-          if (c) {
-            nomeColabFinal = c.nome;
-          } else {
-            nomeColabFinal = 'Balcão';
-            colabIdFinal = null;
-          }
-        } else {
-          nomeColabFinal = 'Balcão';
-          colabIdFinal = null;
+      if (!nomeColabFinal || nomeColabFinal.toLowerCase() === 'balcão' || nomeColabFinal.toLowerCase() === 'balcao') {
+        nomeColabFinal = 'Balcão';
+        colabIdFinal = null;
+      } else if (colabIdFinal) {
+        // Colaborador cadastrado no sistema
+        const c = await Colaborador.findById(colabIdFinal);
+        if (c) {
+          nomeColabFinal = c.nome;
         }
       }
+      // Se não tiver colabIdFinal mas tiver nomeColabFinal, é uma pessoa avulsa/não cadastrada (aceita livremente!)
 
       const novaReq = await Requisicao.create({
         produto_id: parseInt(produto_id, 10),
         colaborador_id: colabIdFinal,
         colaborador_nome: nomeColabFinal,
-        solicitante_nome: solicitante_nome || 'Técnico de Segurança',
-        solicitante_id: solicitante_id ? parseInt(solicitante_id, 10) : null,
+        solicitante_nome: solicitanteFinal,
+        solicitante_id: solicitanteIdFinal,
         tipo_operacao: tipo_operacao || 'SAIDA',
         quantidade: parseInt(quantidade, 10) || 1,
         motivo,

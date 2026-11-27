@@ -384,28 +384,37 @@
           <i class="fa-solid fa-circle-info"></i> Esta requisição ficará aguardando aceite do Almoxarife. Ao ser aceita, o item será baixado ou emprestado no estoque automaticamente.
         </div>
 
-        <!-- Solicitante (TST / Encarregado) -->
+        <!-- Solicitante: Sempre o Usuário Autenticado no Sistema -->
+        <% 
+          const usuarioNomePadraoReq = (typeof usuarioLogado !== 'undefined' && usuarioLogado) 
+            ? `${usuarioLogado.nome}${usuarioLogado.cargo ? ' — ' + usuarioLogado.cargo : ''}`
+            : 'Usuário do Sistema';
+        %>
         <div class="form-group" style="margin: 0;">
-          <label class="form-label" for="req-solicitante-geral">
-            Solicitante (Técnico de Segurança / Encarregado) <span style="color: var(--danger);">*</span>
-          </label>
-          <% 
-            const usuarioNomePadraoReq = (typeof usuarioLogado !== 'undefined' && usuarioLogado) 
-              ? usuarioLogado.nome 
-              : 'Técnico de Segurança';
-          %>
-          <input 
-            type="text" 
-            id="req-solicitante-geral" 
-            name="solicitante_nome" 
-            class="form-control" 
-            value="<%= usuarioNomePadraoReq %>" 
-            placeholder="Ex: Carlos Oliveira - TST" 
-            required
-          >
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+            <label class="form-label" for="req-solicitante-geral" style="margin: 0;">
+              Nome do Solicitante / Setor <span style="color: var(--danger);">*</span>
+            </label>
+            <span class="badge" style="background: #EEF2FF; color: var(--primary); font-size: 0.72rem; font-weight: 700;">
+              <i class="fa-solid fa-user-shield"></i> Usuário Conectado
+            </span>
+          </div>
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="fa-solid fa-lock" style="position: absolute; left: 1rem; color: var(--primary); pointer-events: none; z-index: 2;"></i>
+            <input 
+              type="text" 
+              id="req-solicitante-geral" 
+              name="solicitante_nome" 
+              class="form-control" 
+              value="<%= usuarioNomePadraoReq %>" 
+              readonly
+              style="padding-left: 2.5rem; background: var(--bg-surface); font-weight: 700; color: var(--text-main); cursor: default; border-color: #C7D2FE;"
+              required
+            >
+          </div>
         </div>
 
-        <!-- Destinatário: Colaborador ou Balcão -->
+        <!-- Destinatário: Colaborador, Pessoa Avulsa ou Balcão -->
         <div class="form-group" style="margin: 0; position: relative;" id="req-colaborador-wrapper">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
             <label class="form-label" style="margin: 0;" for="req-colaborador-busca">
@@ -430,7 +439,7 @@
               type="text" 
               id="req-colaborador-busca" 
               class="form-control" 
-              placeholder="Digite o nome, matrícula ou cargo, ou escolha Balcão..." 
+              placeholder="Digite o nome (cadastrado ou avulso), matrícula, ou escolha Balcão..." 
               autocomplete="off"
               style="padding-left: 2.5rem; padding-right: 2.5rem; font-weight: 600; height: 44px;"
               required
@@ -716,6 +725,34 @@
       </div>
     `;
 
+    // OPÇÃO DINÂMICA: SE DIGITOU UM NOME QUE PODE SER PESSOA NÃO CADASTRADA / TERCEIRO
+    if (termo && termo !== 'balcão' && termo !== 'balcao') {
+      html += `
+        <div 
+          class="combobox-item-req-colab" 
+          onclick="selecionarPessoaAvulsaReq('${termo.replace(/'/g, "\\'")}')"
+          style="padding: 0.65rem 0.85rem; border-bottom: 1.5px solid #BBF7D0; cursor: pointer; display: flex; align-items: center; justify-content: space-between; background: #F0FDF4;"
+        >
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div style="width: 32px; height: 32px; border-radius: 6px; background: #DCFCE7; color: #166534; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 700;">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; color: #166534; font-size: 0.86rem;">
+                Requisitar para: "${filtro}"
+              </div>
+              <div style="font-size: 0.73rem; color: #15803D;">
+                Pessoa não registrada no sistema (Terceiro / Visitante / Sem cadastro)
+              </div>
+            </div>
+          </div>
+          <span class="badge" style="background: #BBF7D0; color: #166534; font-size: 0.68rem; font-weight: 700;">
+            Pessoa Avulsa
+          </span>
+        </div>
+      `;
+    }
+
     const filtrados = LISTA_COLABORADORES_REQ.filter(c => {
       if (!termo) return true;
       return (c.nome && c.nome.toLowerCase().includes(termo)) ||
@@ -724,11 +761,7 @@
     });
 
     if (filtrados.length === 0 && termo) {
-      html += `
-        <div style="padding: 0.85rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
-          Nenhum colaborador encontrado com "${filtro}".
-        </div>
-      `;
+      // Já exibiu a opção acima de pessoa avulsa
     } else {
       filtrados.forEach(c => {
         const iniciais = c.nome ? c.nome.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() : 'CO';
@@ -798,6 +831,29 @@
     `;
   }
 
+  function selecionarPessoaAvulsaReq(nome) {
+    const nomeLimpo = (nome || '').trim();
+    if (!nomeLimpo) return;
+    hiddenColabIdReq.value = '';
+    hiddenColabNomeReq.value = nomeLimpo;
+    inputColabReq.value = nomeLimpo;
+    btnLimparColabReq.style.display = 'flex';
+    dropdownColabReq.style.display = 'none';
+
+    iconeDestinatario.className = 'fa-solid fa-user-tag';
+    iconeDestinatario.style.color = '#15803D';
+
+    boxDestinatario.style.display = 'block';
+    boxDestinatario.style.background = '#F0FDF4';
+    boxDestinatario.style.borderColor = '#BBF7D0';
+    boxDestinatarioConteudo.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem; color: #166534;">
+        <i class="fa-solid fa-user-check" style="color: #15803D;"></i>
+        <span>Destinatário: <strong>${nomeLimpo}</strong> (Pessoa não registrada no sistema — saída sem ficha individual)</span>
+      </div>
+    `;
+  }
+
   function selecionarDestinatarioBalcaoReq() {
     hiddenColabIdReq.value = '';
     hiddenColabNomeReq.value = 'Balcão';
@@ -842,6 +898,15 @@
       btnLimparColabReq.style.display = inputColabReq.value ? 'flex' : 'none';
       boxDestinatario.style.display = 'none';
       renderizarDropdownColaboradorReq(inputColabReq.value);
+    });
+
+    inputColabReq.addEventListener('blur', () => {
+      setTimeout(() => {
+        const val = (inputColabReq.value || '').trim();
+        if (val && !hiddenColabIdReq.value && hiddenColabNomeReq.value !== 'Balcão') {
+          hiddenColabNomeReq.value = val;
+        }
+      }, 250);
     });
   }
 

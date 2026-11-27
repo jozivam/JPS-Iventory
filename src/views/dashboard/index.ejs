@@ -559,7 +559,7 @@
               type="text" 
               id="dash-req-colaborador-busca" 
               class="form-control" 
-              placeholder="Digite o nome, matrícula ou cargo, ou escolha Balcão..." 
+              placeholder="Digite o nome (cadastrado ou avulso), matrícula, ou escolha Balcão..." 
               autocomplete="off"
               style="padding-left: 2.5rem; padding-right: 2.5rem; font-weight: 600; height: 44px;"
               required
@@ -657,10 +657,34 @@
           </div>
         </div>
 
-        <!-- Solicitante (TST / Encarregado) -->
+        <!-- Solicitante: Sempre o Usuário Autenticado no Sistema -->
+        <%
+          const solicitantePadraoDash = (typeof usuarioLogado !== 'undefined' && usuarioLogado) 
+            ? `${usuarioLogado.nome}${usuarioLogado.cargo ? ' — ' + usuarioLogado.cargo : ''}`
+            : 'Usuário do Sistema';
+        %>
         <div class="form-group" style="margin-bottom: 1rem;">
-          <label class="form-label" for="req-solicitante">Nome do Solicitante / Setor <span class="required">*</span></label>
-          <input type="text" id="req-solicitante" name="solicitante_nome" class="form-control" value="Técnico de Segurança" placeholder="Ex: Técnico de Segurança (Carlos)" required>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+            <label class="form-label" for="req-solicitante" style="margin: 0;">
+              Nome do Solicitante / Setor <span class="required">*</span>
+            </label>
+            <span class="badge" style="background: #EEF2FF; color: var(--primary); font-size: 0.72rem; font-weight: 700;">
+              <i class="fa-solid fa-user-shield"></i> Usuário Conectado
+            </span>
+          </div>
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="fa-solid fa-lock" style="position: absolute; left: 1rem; color: var(--primary); pointer-events: none; z-index: 2;"></i>
+            <input 
+              type="text" 
+              id="req-solicitante" 
+              name="solicitante_nome" 
+              class="form-control" 
+              value="<%= solicitantePadraoDash %>" 
+              readonly
+              style="padding-left: 2.5rem; background: var(--bg-surface); font-weight: 700; color: var(--text-main); cursor: default; border-color: #C7D2FE;"
+              required
+            >
+          </div>
         </div>
 
         <!-- Motivo / Justificativa -->
@@ -824,6 +848,34 @@
       </div>
     `;
 
+    // OPÇÃO DINÂMICA: SE DIGITOU UM NOME QUE PODE SER PESSOA NÃO CADASTRADA / TERCEIRO
+    if (termo && termo !== 'balcão' && termo !== 'balcao') {
+      html += `
+        <div 
+          class="combobox-item-dash-colab" 
+          onclick="selecionarPessoaAvulsaDash('${termo.replace(/'/g, "\\'")}')"
+          style="padding: 0.65rem 0.85rem; border-bottom: 1.5px solid #BBF7D0; cursor: pointer; display: flex; align-items: center; justify-content: space-between; background: #F0FDF4;"
+        >
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div style="width: 32px; height: 32px; border-radius: 6px; background: #DCFCE7; color: #166534; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 700;">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; color: #166534; font-size: 0.86rem;">
+                Requisitar para: "${filtro}"
+              </div>
+              <div style="font-size: 0.73rem; color: #15803D;">
+                Pessoa não registrada no sistema (Terceiro / Visitante / Sem cadastro)
+              </div>
+            </div>
+          </div>
+          <span class="badge" style="background: #BBF7D0; color: #166534; font-size: 0.68rem; font-weight: 700;">
+            Pessoa Avulsa
+          </span>
+        </div>
+      `;
+    }
+
     const filtrados = LISTA_COLABORADORES_DASH.filter(c => {
       if (!termo) return true;
       return (c.nome && c.nome.toLowerCase().includes(termo)) ||
@@ -832,11 +884,7 @@
     });
 
     if (filtrados.length === 0 && termo) {
-      html += `
-        <div style="padding: 0.85rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
-          Nenhum colaborador encontrado com "${filtro}".
-        </div>
-      `;
+      // Já exibiu a opção acima de pessoa avulsa
     } else {
       filtrados.forEach(c => {
         const iniciais = c.nome ? c.nome.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() : 'CO';
@@ -905,6 +953,29 @@
     `;
   }
 
+  function selecionarPessoaAvulsaDash(nome) {
+    const nomeLimpo = (nome || '').trim();
+    if (!nomeLimpo) return;
+    dashHiddenColabId.value = '';
+    dashHiddenColabNome.value = nomeLimpo;
+    dashInputColab.value = nomeLimpo;
+    dashBtnLimparColab.style.display = 'flex';
+    dashDropdownColab.style.display = 'none';
+
+    dashIconeDestinatario.className = 'fa-solid fa-user-tag';
+    dashIconeDestinatario.style.color = '#15803D';
+
+    dashBoxDestinatario.style.display = 'block';
+    dashBoxDestinatario.style.background = '#F0FDF4';
+    dashBoxDestinatario.style.borderColor = '#BBF7D0';
+    dashBoxDestinatarioConteudo.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem; color: #166534;">
+        <i class="fa-solid fa-circle-check" style="color: #15803D;"></i>
+        <span>Destinatário: <strong>${nomeLimpo}</strong> (Pessoa não registrada no sistema — saída sem ficha individual)</span>
+      </div>
+    `;
+  }
+
   function selecionarDestinatarioBalcaoDash() {
     dashHiddenColabId.value = '';
     dashHiddenColabNome.value = 'Balcão';
@@ -949,6 +1020,15 @@
       dashBtnLimparColab.style.display = dashInputColab.value ? 'flex' : 'none';
       dashBoxDestinatario.style.display = 'none';
       renderizarDropdownColaboradorDash(dashInputColab.value);
+    });
+
+    dashInputColab.addEventListener('blur', () => {
+      setTimeout(() => {
+        const val = (dashInputColab.value || '').trim();
+        if (val && !dashHiddenColabId.value && dashHiddenColabNome.value !== 'Balcão') {
+          dashHiddenColabNome.value = val;
+        }
+      }, 250);
     });
   }
 

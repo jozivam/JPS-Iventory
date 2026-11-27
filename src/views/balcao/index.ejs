@@ -132,7 +132,7 @@
 %>
     <form action="/balcao/registrar" method="POST" id="form-balcao">
       <input type="hidden" name="origem" id="balcao-form-origem" value="balcao">
-      <input type="hidden" name="solicitante_nome" id="balcao-solicitante-nome-hidden" value="<%= (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? usuarioLogado.nome : 'Técnico de Segurança' %>">
+      <input type="hidden" name="solicitante_nome" id="balcao-solicitante-nome-hidden" value="<%= (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? `${usuarioLogado.nome}${usuarioLogado.cargo ? ' — ' + usuarioLogado.cargo : ''}` : 'Usuário do Sistema' %>">
       
       <!-- Seletor Interativo dos Tipos de Operação -->
       <div style="margin-bottom: 1.25rem;">
@@ -1376,15 +1376,35 @@
       `;
     }
 
-    if (colabsFiltradosAtuais.length === 0 && (!q || !'balcão balcao geral'.includes(q))) {
-      dropdownColab.innerHTML = `
-        <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
-          <i class="fa-solid fa-user-xmark" style="margin-bottom: 0.35rem; display: block; font-size: 1.2rem; color: var(--border-color);"></i>
-          Nenhum colaborador encontrado para "<strong>${termo}</strong>"
+    // Opção dinâmica: Requisitar / Lançar para Pessoa Não Registrada (Avulsa / Terceiro)
+    if (q && !'balcão balcao geral'.includes(q)) {
+      html += `
+        <div class="combobox-colab-item" onclick="selecionarPessoaAvulsaBalcao('${termo.replace(/'/g, "\\'")}')" style="padding: 0.65rem 0.95rem; border-bottom: 1.5px solid #BBF7D0; cursor: pointer; transition: background 0.12s ease; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: #F0FDF4;">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div style="width: 32px; height: 32px; border-radius: 6px; background: #DCFCE7; color: #166534; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; color: #166534; font-size: 0.88rem;">Lançar para: "${termo}"</div>
+              <div style="font-size: 0.74rem; color: #15803D;">Pessoa não registrada no sistema (Terceiro / Visitante / Sem ficha individual)</div>
+            </div>
+          </div>
+          <span class="badge" style="background: #BBF7D0; color: #166534; font-size: 0.72rem; font-weight: 700;">PESSOA AVULSA</span>
         </div>
       `;
-      dropdownColab.style.display = 'block';
-      return;
+    }
+
+    if (colabsFiltradosAtuais.length === 0 && (!q || !'balcão balcao geral'.includes(q))) {
+      if (!q) {
+        dropdownColab.innerHTML = `
+          <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+            <i class="fa-solid fa-user-xmark" style="margin-bottom: 0.35rem; display: block; font-size: 1.2rem; color: var(--border-color);"></i>
+            Nenhum colaborador encontrado.
+          </div>
+        `;
+        dropdownColab.style.display = 'block';
+        return;
+      }
     }
 
     html += colabsFiltradosAtuais.map((c, idx) => {
@@ -1453,6 +1473,25 @@
     }
   }
 
+  function selecionarPessoaAvulsaBalcao(nome) {
+    const nomeLimpo = (nome || '').trim();
+    if (!nomeLimpo) return;
+    inputHiddenColabNome.value = nomeLimpo;
+    inputHiddenColabId.value = '';
+    inputBuscaColab.value = nomeLimpo;
+    btnLimparColab.style.display = 'flex';
+    dropdownColab.style.display = 'none';
+
+    if (badgeFicha && nomeColabFicha && linkFichaBalcao) {
+      nomeColabFicha.innerHTML = `<strong>${nomeLimpo}</strong> <span style="font-weight: normal; font-size: 0.72rem; color: #166534;">(Pessoa Avulsa — Sem Ficha)</span>`;
+      linkFichaBalcao.style.display = 'none';
+      badgeFicha.style.display = 'flex';
+      badgeFicha.style.background = '#F0FDF4';
+      badgeFicha.style.borderColor = '#BBF7D0';
+      badgeFicha.style.color = '#166534';
+    }
+  }
+
   function limparColaboradorSelecionado() {
     inputBuscaColab.value = '';
     inputHiddenColabNome.value = '';
@@ -1481,6 +1520,15 @@
       } else {
         inputHiddenColabNome.value = val.trim();
       }
+    });
+
+    inputBuscaColab.addEventListener('blur', () => {
+      setTimeout(() => {
+        const val = (inputBuscaColab.value || '').trim();
+        if (val && !inputHiddenColabId.value && inputHiddenColabNome.value !== 'Balcão') {
+          inputHiddenColabNome.value = val;
+        }
+      }, 250);
     });
 
     inputBuscaColab.addEventListener('keydown', (e) => {
