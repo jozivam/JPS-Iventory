@@ -137,6 +137,14 @@ function initDatabase() {
     }
   });
 
+  // Unifica automaticamente variações duplicadas de categoria ("EPI/Segurança" -> "EPI / Segurança")
+  db.prepare(`
+    UPDATE produtos
+    SET categoria = 'EPI / Segurança'
+    WHERE REPLACE(LOWER(TRIM(categoria)), ' ', '') IN ('epi/segurança', 'epi/seguranca')
+      AND categoria != 'EPI / Segurança'
+  `).run();
+
   // Migração segura de colunas na tabela de colaboradores (login, senha_hash e assinaturas digitais da ficha)
   const colsColabExistentes = db.prepare('PRAGMA table_info(colaboradores)').all().map(c => c.name);
   const colunasColabNecessarias = [

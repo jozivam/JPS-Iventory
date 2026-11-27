@@ -3,8 +3,8 @@
  * Cacheia assets, fontes, ícones e telas principais para funcionamento rápido e offline.
  */
 
-const STATIC_CACHE = 'jps-almox-static-v8';
-const PAGES_CACHE = 'jps-almox-pages-v8';
+const STATIC_CACHE = 'jps-almox-static-v9';
+const PAGES_CACHE = 'jps-almox-pages-v9';
 
 const CORE_ASSETS = [
   '/css/style.css',

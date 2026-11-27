@@ -151,7 +151,7 @@ async function buscarTodasMovimentacoesCompletas() {
           ...m,
           produto_nome: m.produtos ? m.produtos.nome : 'Item',
           produto_sku: m.produtos ? m.produtos.sku : '',
-          produto_categoria: m.produtos ? (m.produtos.categoria || 'Outros') : 'Outros',
+          produto_categoria: Produto.normalizarCategoria(m.produtos ? m.produtos.categoria : 'Outros'),
           produto_marca: m.produtos ? (m.produtos.marca || '') : '',
           produto_unidade: m.produtos ? (m.produtos.unidade_medida || 'UN') : 'UN',
           produto_tag: m.produtos ? (m.produtos.tag || '') : '',
@@ -262,7 +262,7 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
     periodo,
     data_inicio: dataInicio,
     data_fim: dataFim,
-    categoria: (query.categoria || '').trim(),
+    categoria: query.categoria && query.categoria.trim() ? Produto.normalizarCategoria(query.categoria) : '',
     tipo_mov: (query.tipo_mov || '').trim(),
     colaborador_id: (query.colaborador_id || '').trim(),
     produto_id: (query.produto_id || '').trim(),
@@ -307,6 +307,7 @@ async function montarDadosRelatorio(query = {}, usuario = null) {
     const dataYMD = extrairDataLocalYMD(m.criado_em);
     return {
       ...m,
+      produto_categoria: Produto.normalizarCategoria(m.produto_categoria),
       data_ymd: dataYMD,
       data_br: formatarDataHoraBR(m.criado_em),
       tipo_label: LABELS_TIPO_MOV[m.tipo] || m.tipo,

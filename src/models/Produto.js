@@ -7,9 +7,24 @@ const useSupabase = isVercel || isSupabaseDriver;
 
 class Produto {
   /**
+   * Padroniza variações de nome de categoria (evita duplicidades como "EPI/Segurança" vs "EPI / Segurança")
+   */
+  static normalizarCategoria(categoria) {
+    const raw = String(categoria || '').replace(/\s+/g, ' ').trim();
+    if (!raw) return 'Outros';
+    const compact = raw.toLowerCase().replace(/\s+/g, '');
+    if (compact === 'epi/segurança' || compact === 'epi/seguranca') {
+      return 'EPI / Segurança';
+    }
+    return raw;
+  }
+
+  /**
    * Lista todos os produtos com filtros opcionais
    */
   static async findAll({ busca, categoria, status } = {}) {
+    const catFiltroNorm = categoria && categoria.trim() ? Produto.normalizarCategoria(categoria) : '';
+
     if (useSupabase && supabase) {
       let q = supabase.from('produtos').select('*');
 
@@ -18,8 +33,12 @@ class Produto {
         q = q.or(`nome.ilike.%${b}%,sku.ilike.%${b}%,marca.ilike.%${b}%,tag.ilike.%${b}%,patrimonio.ilike.%${b}%,ca.ilike.%${b}%,localizacao.ilike.%${b}%,numero_serie.ilike.%${b}%,observacao.ilike.%${b}%,condicao.ilike.%${b}%`);
       }
 
-      if (categoria && categoria.trim()) {
-        q = q.eq('categoria', categoria.trim());
+      if (catFiltroNorm) {
+        if (catFiltroNorm === 'EPI / Segurança') {
+          q = q.in('categoria', ['EPI / Segurança', 'EPI/Segurança', 'EPI/Seguranca', 'EPI / Seguranca']);
+        } else {
+          q = q.eq('categoria', catFiltroNorm);
+        }
       }
 
       const { data, error } = await q.order('id', { ascending: false });
@@ -30,6 +49,7 @@ class Produto {
 
       let list = (data || []).map(p => ({
         ...p,
+        categoria: Produto.normalizarCategoria(p.categoria),
         status_estoque: Number(p.quantidade) === 0 ? 'CRITICO' : (Number(p.quantidade) <= Number(p.estoque_minimo) ? 'BAIXO' : 'NORMAL')
       }));
 
@@ -72,9 +92,13 @@ class Produto {
       params.busca = `%${busca.trim()}%`;
     }
 
-    if (categoria && categoria.trim()) {
-      sql += ` AND p.categoria = @categoria`;
-      params.categoria = categoria.trim();
+    if (catFiltroNorm) {
+      if (catFiltroNorm === 'EPI / Segurança') {
+        sql += ` AND REPLACE(LOWER(TRIM(p.categoria)), ' ', '') IN ('epi/segurança', 'epi/seguranca')`;
+      } else {
+        sql += ` AND p.categoria = @categoria`;
+        params.categoria = catFiltroNorm;
+      }
     }
 
     if (status) {
@@ -89,7 +113,10 @@ class Produto {
 
     sql += ` ORDER BY p.id DESC`;
 
-    return db.prepare(sql).all(params);
+    return db.prepare(sql).all(params).map(p => ({
+      ...p,
+      categoria: Produto.normalizarCategoria(p.categoria)
+    }));
   }
 
   /**
@@ -101,6 +128,7 @@ class Produto {
       if (error || !data) return null;
       return {
         ...data,
+        categoria: Produto.normalizarCategoria(data.categoria),
         status_estoque: Number(data.quantidade) === 0 ? 'CRITICO' : (Number(data.quantidade) <= Number(data.estoque_minimo) ? 'BAIXO' : 'NORMAL')
       };
     }
@@ -118,7 +146,12 @@ class Produto {
       FROM produtos p
       WHERE p.id = ?
     `;
-    return db.prepare(sql).get(id);
+    const prod = db.prepare(sql).get(id);
+    if (!prod) return null;
+    return {
+      ...prod,
+      categoria: Produto.normalizarCategoria(prod.categoria)
+    };
   }
 
   /**
@@ -195,7 +228,7 @@ class Produto {
     const payload = {
       sku: skuFormatado,
       nome: nomeFormatado,
-      categoria: dados.categoria && dados.categoria.trim() ? dados.categoria.trim() : 'Outros',
+      categoria: Produto.normalizarCategoria(dados.categoria),
       marca: dados.marca && dados.marca.trim() ? dados.marca.trim() : null,
       unidade_medida: dados.unidade_medida && dados.unidade_medida.trim() ? dados.unidade_medida.trim().toUpperCase() : 'UN',
       quantidade: parseInt(dados.quantidade, 10) || 0,
@@ -245,7 +278,7 @@ class Produto {
     const payload = {
       sku: dados.sku && dados.sku.trim() ? dados.sku.trim().toUpperCase() : dados.sku_atual,
       nome: nomeFormatado,
-      categoria: dados.categoria && dados.categoria.trim() ? dados.categoria.trim() : 'Outros',
+      categoria: Produto.normalizarCategoria(dados.categoria),
       marca: dados.marca && dados.marca.trim() ? dados.marca.trim() : null,
       unidade_medida: dados.unidade_medida && dados.unidade_medida.trim() ? dados.unidade_medida.trim().toUpperCase() : 'UN',
       quantidade: parseInt(dados.quantidade, 10) || 0,
@@ -365,7 +398,9 @@ class Produto {
 
     if (useSupabase && supabase) {
       const { data } = await supabase.from('produtos').select('categoria');
-      const cats = (data || []).map(r => r.categoria).filter(c => c && c !== 'Outros');
+      const cats = (data || [])
+        .map(r => Produto.normalizarCategoria(r.categoria))
+        .filter(c => c && c !== 'Outros');
       const todas = Array.from(new Set([...categoriasBase, ...cats]));
       return [...todas, 'Outros'];
     }
@@ -379,7 +414,9 @@ class Produto {
       ORDER BY categoria ASC
     `).all();
 
-    const doBanco = rows.map(r => r.categoria).filter(c => c !== 'Outros');
+    const doBanco = rows
+      .map(r => Produto.normalizarCategoria(r.categoria))
+      .filter(c => c && c !== 'Outros');
     const todas = Array.from(new Set([...categoriasBase, ...doBanco]));
 
     return [...todas, 'Outros'];

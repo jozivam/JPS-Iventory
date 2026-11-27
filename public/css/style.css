@@ -1186,18 +1186,17 @@ body {
   margin-bottom: 0.35rem;
 }
 
-/* Modais */
+/* Modais — responsivos para qualquer altura de tela (notebooks, tablets e celulares) */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
   z-index: 9999;
   opacity: 0;
   pointer-events: none;
@@ -1214,35 +1213,86 @@ body {
   background: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
-  width: 90%;
+  width: 100%;
   max-width: 520px;
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: var(--shadow-dropdown);
   transform: scale(0.96);
   transition: var(--transition);
+  margin: auto;
 }
 
 .modal-overlay.active .modal-container {
   transform: scale(1);
 }
 
+/* Garante rolagem interna mesmo quando .modal-body e .modal-footer estão dentro de um <form> */
+.modal-container > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+}
+
 .modal-header {
-  padding: 1.25rem 1.5rem;
+  padding: 1.15rem 1.5rem;
   border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  background: #ffffff;
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .modal-footer {
-  padding: 1rem 1.5rem;
+  padding: 0.9rem 1.5rem;
   border-top: 1px solid var(--border-light);
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 0.75rem;
+  flex-shrink: 0;
+  background: #ffffff;
+}
+
+/* Otimização para telas com altura reduzida (ex.: notebooks 1366x768 / 720p) */
+@media (max-height: 780px) {
+  .modal-overlay {
+    padding: 0.6rem;
+  }
+
+  .modal-container {
+    max-height: calc(100vh - 1.2rem);
+    max-height: calc(100dvh - 1.2rem);
+  }
+
+  .modal-header {
+    padding: 0.85rem 1.25rem;
+  }
+
+  .modal-body {
+    padding: 1rem 1.25rem;
+  }
+
+  .modal-footer {
+    padding: 0.75rem 1.25rem;
+  }
 }
 
 /* Responsividade Mobile */
@@ -1923,36 +1973,44 @@ body.sidebar-locked {
   }
 
   /* Modais no Mobile */
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+
   .modal-container {
-    width: 95% !important;
-    max-height: 92vh !important;
+    width: 100% !important;
+    max-height: calc(100vh - 1rem) !important;
+    max-height: calc(100dvh - 1rem) !important;
     padding: 0 !important;
     border-radius: var(--radius-lg) !important;
   }
 
   .modal-header {
-    padding: 1rem 1.15rem;
+    padding: 0.9rem 1.1rem;
   }
 
   .modal-body {
-    padding: 1rem 1.15rem !important;
+    padding: 0.95rem 1.1rem !important;
   }
 
   .modal-footer {
-    padding: 0.85rem 1.15rem !important;
-    flex-direction: column;
-    gap: 0.65rem;
+    padding: 0.75rem 1.1rem !important;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .modal-footer > div {
     width: 100%;
     display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     justify-content: flex-end;
   }
 
   .modal-footer .btn {
-    flex: 1;
-    min-height: 44px;
+    flex: 1 1 120px;
+    min-height: 42px;
     justify-content: center;
   }
 
