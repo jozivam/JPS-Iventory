@@ -182,9 +182,13 @@ class Requisicao {
     documento_ref
   }) {
     if (!produto_id) throw new Error('Produto é obrigatório para abrir requisição.');
-    if (!colaborador_nome || !colaborador_nome.trim()) {
-      throw new Error('Colaborador destinatário é obrigatório.');
-    }
+    
+    // Se não informou colaborador ou se for Balcão, padroniza como 'Balcão' (uso geral sem ficha)
+    const colabNomeFinal = (colaborador_nome && colaborador_nome.trim() && colaborador_nome.trim().toLowerCase() !== 'balcão' && colaborador_nome.trim().toLowerCase() !== 'balcao')
+      ? colaborador_nome.trim()
+      : 'Balcão';
+    const colabIdFinal = (colabNomeFinal === 'Balcão') ? null : (colaborador_id ? parseInt(colaborador_id, 10) : null);
+
     if (!solicitante_nome || !solicitante_nome.trim()) {
       throw new Error('Nome do solicitante (ex: Técnico de Segurança) é obrigatório.');
     }
@@ -201,8 +205,8 @@ class Requisicao {
         .insert([{
           codigo,
           produto_id: parseInt(produto_id, 10),
-          colaborador_id: colaborador_id ? parseInt(colaborador_id, 10) : null,
-          colaborador_nome: colaborador_nome.trim(),
+          colaborador_id: colabIdFinal,
+          colaborador_nome: colabNomeFinal,
           solicitante_nome: solicitante_nome.trim(),
           solicitante_id: solicitante_id ? parseInt(solicitante_id, 10) : null,
           tipo_operacao: tipoOp,
@@ -236,8 +240,8 @@ class Requisicao {
     const info = stmt.run({
       codigo,
       produto_id: parseInt(produto_id, 10),
-      colaborador_id: colaborador_id ? parseInt(colaborador_id, 10) : null,
-      colaborador_nome: colaborador_nome.trim(),
+      colaborador_id: colabIdFinal,
+      colaborador_nome: colabNomeFinal,
       solicitante_nome: solicitante_nome.trim(),
       solicitante_id: solicitante_id ? parseInt(solicitante_id, 10) : null,
       tipo_operacao: tipoOp,

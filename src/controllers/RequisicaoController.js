@@ -73,15 +73,28 @@ class RequisicaoController {
         origem // 'dashboard', 'balcao' ou 'requisicoes'
       } = req.body;
 
-      let nomeColabFinal = colaborador_nome;
-      if (!nomeColabFinal && colaborador_id) {
-        const c = await Colaborador.findById(colaborador_id);
-        if (c) nomeColabFinal = c.nome;
+      let nomeColabFinal = (colaborador_nome || '').trim();
+      let colabIdFinal = colaborador_id ? parseInt(colaborador_id, 10) : null;
+
+      // Se for destinado ao Balcão ou estiver em branco, atribui ao Balcão sem ficha individual
+      if (!nomeColabFinal || nomeColabFinal.toLowerCase() === 'balcão' || nomeColabFinal.toLowerCase() === 'balcao' || !colabIdFinal) {
+        if (colabIdFinal) {
+          const c = await Colaborador.findById(colabIdFinal);
+          if (c) {
+            nomeColabFinal = c.nome;
+          } else {
+            nomeColabFinal = 'Balcão';
+            colabIdFinal = null;
+          }
+        } else {
+          nomeColabFinal = 'Balcão';
+          colabIdFinal = null;
+        }
       }
 
       const novaReq = await Requisicao.create({
         produto_id: parseInt(produto_id, 10),
-        colaborador_id: colaborador_id ? parseInt(colaborador_id, 10) : null,
+        colaborador_id: colabIdFinal,
         colaborador_nome: nomeColabFinal,
         solicitante_nome: solicitante_nome || 'Técnico de Segurança',
         solicitante_id: solicitante_id ? parseInt(solicitante_id, 10) : null,

@@ -351,9 +351,20 @@
       <div class="form-row-responsive">
         <!-- Seleção de Colaborador com Campo de Busca e Dropdown Inteligente -->
         <div class="form-group" style="position: relative;" id="balcao-colaborador-wrapper">
-          <label class="form-label" for="balcao-colaborador-busca" id="label-colaborador">
-            Colaborador / Solicitante <% if (isOperadorFichasBalcao) { %><span style="color: var(--danger);">*</span><% } %> <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Digite para autocompletar e filtrar)</span>
-          </label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
+            <label class="form-label" for="balcao-colaborador-busca" id="label-colaborador" style="margin: 0;">
+              Colaborador / Solicitante <% if (isOperadorFichasBalcao) { %><span style="color: var(--danger);">*</span><% } %> <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Digite para autocompletar e filtrar)</span>
+            </label>
+            <button 
+              type="button" 
+              class="btn btn-sm btn-outline" 
+              onclick="selecionarColaboradorCombobox(null)" 
+              style="font-size: 0.74rem; padding: 2px 8px; color: var(--primary); border-color: #C7D2FE; background: #EEF2FF; font-weight: 700;"
+              title="Atribuir saída diretamente ao Balcão sem vincular a ficha de colaborador"
+            >
+              <i class="fa-solid fa-store"></i> Balcão (Sem Ficha)
+            </button>
+          </div>
           
           <div style="position: relative; display: flex; align-items: center;">
             <i class="fa-solid fa-user" style="position: absolute; left: 1rem; color: var(--text-dim); pointer-events: none; z-index: 2;"></i>

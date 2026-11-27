@@ -405,35 +405,110 @@
           >
         </div>
 
-        <!-- Colaborador Destinatário -->
-        <div class="form-group" style="margin: 0;">
-          <label class="form-label" for="req-colaborador-geral">
-            Colaborador que receberá o material <span style="color: var(--danger);">*</span>
-          </label>
-          <select id="req-colaborador-geral" name="colaborador_id" class="form-select" required onchange="aoSelecionarColaboradorReq(this)">
-            <option value="">-- Selecione o colaborador da lista --</option>
-            <% colaboradores.forEach(c => { %>
-              <option value="<%= c.id %>" data-nome="<%= c.nome %>">
-                <%= c.nome %> <%= c.cargo ? '• ' + c.cargo : '' %> <%= c.matricula ? '(' + c.matricula + ')' : '' %>
-              </option>
-            <% }) %>
-          </select>
+        <!-- Destinatário: Colaborador ou Balcão -->
+        <div class="form-group" style="margin: 0; position: relative;" id="req-colaborador-wrapper">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+            <label class="form-label" style="margin: 0;" for="req-colaborador-busca">
+              Destinatário do Material <span style="color: var(--danger);">*</span>
+            </label>
+            <button 
+              type="button" 
+              class="btn btn-sm btn-outline" 
+              id="btn-destinar-balcao-req"
+              onclick="selecionarDestinatarioBalcaoReq()" 
+              style="font-size: 0.74rem; padding: 2px 8px; color: var(--primary); border-color: #C7D2FE; background: #EEF2FF; font-weight: 700;"
+              title="Atribuir saída diretamente ao Balcão sem vincular a colaborador"
+            >
+              <i class="fa-solid fa-store"></i> Atribuir ao Balcão (Sem Ficha)
+            </button>
+          </div>
+
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="fa-solid fa-user" id="req-icone-destinatario" style="position: absolute; left: 1rem; color: var(--text-dim); pointer-events: none; z-index: 2;"></i>
+            
+            <input 
+              type="text" 
+              id="req-colaborador-busca" 
+              class="form-control" 
+              placeholder="Digite o nome, matrícula ou cargo, ou escolha Balcão..." 
+              autocomplete="off"
+              style="padding-left: 2.5rem; padding-right: 2.5rem; font-weight: 600; height: 44px;"
+              required
+            >
+
+            <button 
+              type="button" 
+              id="btn-limpar-colab-req" 
+              title="Limpar seleção"
+              onclick="limparColaboradorReq()"
+              style="position: absolute; right: 0.6rem; background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: none; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 50%;"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Dropdown Flutuante Inteligente de Colaboradores e Balcão -->
+          <div id="req-colaborador-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 14px 30px rgba(0,0,0,0.14); max-height: 270px; overflow-y: auto; z-index: 2100; padding: 0.35rem 0;">
+            <!-- Itens filtrados serão injetados aqui -->
+          </div>
+
+          <!-- Card Informativo do Destinatário Selecionado -->
+          <div id="box-destinatario-selecionado" style="display: none; margin-top: 0.45rem; padding: 0.55rem 0.8rem; border-radius: 6px; font-size: 0.8rem; border: 1px solid var(--border-light); background: var(--bg-surface);">
+            <div id="box-destinatario-conteudo"></div>
+          </div>
+
+          <input type="hidden" id="req-colaborador-id-hidden" name="colaborador_id" value="">
           <input type="hidden" id="req-colaborador-nome-hidden" name="colaborador_nome" value="">
         </div>
 
-        <!-- Produto / Ferramenta -->
-        <div class="form-group" style="margin: 0;">
-          <label class="form-label" for="req-produto-geral">
+        <!-- Produto / Ferramenta (Lista Inteligente) -->
+        <div class="form-group" style="margin: 0; position: relative;" id="req-produto-wrapper">
+          <label class="form-label" for="req-produto-busca" style="margin-bottom: 0.35rem; display: block;">
             Item / EPI / Ferramenta <span style="color: var(--danger);">*</span>
+            <small style="color: var(--text-muted); font-weight: normal; margin-left: 0.25rem;">(Digite para autocompletar e ver o saldo)</small>
           </label>
-          <select id="req-produto-geral" name="produto_id" class="form-select" required onchange="aoSelecionarProdutoReq(this)">
-            <option value="">-- Selecione o item do estoque --</option>
-            <% produtos.forEach(p => { %>
-              <option value="<%= p.id %>" data-saldo="<%= p.quantidade %>" data-un="<%= p.unidade_medida || 'UN' %>" data-cat="<%= p.categoria || '' %>">
-                <%= p.nome %> <%= p.sku ? '[' + p.sku + ']' : '' %> (Saldo: <%= p.quantidade %> <%= p.unidade_medida || 'UN' %>)
-              </option>
-            <% }) %>
-          </select>
+
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; color: var(--text-dim); pointer-events: none; z-index: 2;"></i>
+            
+            <input 
+              type="text" 
+              id="req-produto-busca" 
+              class="form-control" 
+              placeholder="Digite o nome, código SKU ou categoria para buscar..." 
+              autocomplete="off"
+              style="padding-left: 2.5rem; padding-right: 2.5rem; font-weight: 600; height: 44px;"
+              required
+            >
+
+            <button 
+              type="button" 
+              id="btn-limpar-prod-req" 
+              title="Limpar seleção"
+              onclick="limparProdutoReq()"
+              style="position: absolute; right: 0.6rem; background: transparent; border: none; color: var(--text-dim); cursor: pointer; display: none; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 50%;"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Dropdown Flutuante Inteligente de Produtos -->
+          <div id="req-produto-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; box-shadow: 0 14px 30px rgba(0,0,0,0.14); max-height: 270px; overflow-y: auto; z-index: 2100; padding: 0.35rem 0;">
+            <!-- Itens de produtos filtrados serão injetados aqui -->
+          </div>
+
+          <!-- Detalhe do Produto Selecionado -->
+          <div id="req-produto-detalhe-box" style="display: none; align-items: center; justify-content: space-between; margin-top: 0.45rem; padding: 0.55rem 0.8rem; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border-light); font-size: 0.82rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span id="req-detalhe-sku" class="badge" style="background: #ffffff; border: 1px solid var(--border-light); font-weight: 700; font-family: var(--font-mono);"></span>
+              <span id="req-detalhe-cat" style="color: var(--text-muted);"></span>
+            </div>
+            <div>
+              Saldo Almoxarifado: <strong id="req-detalhe-saldo" style="font-size: 0.95rem;"></strong>
+            </div>
+          </div>
+
+          <input type="hidden" id="req-produto-id-hidden" name="produto_id" value="" required>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
@@ -594,16 +669,323 @@
 </div>
 
 <script>
-  function aoSelecionarColaboradorReq(select) {
-    const opt = select.options[select.selectedIndex];
-    const nome = opt ? opt.getAttribute('data-nome') : '';
-    document.getElementById('req-colaborador-nome-hidden').value = nome || '';
+  const LISTA_PRODUTOS_REQ = <%- JSON.stringify(produtos || []) %>;
+  const LISTA_COLABORADORES_REQ = <%- JSON.stringify(colaboradores || []) %>;
+
+  // =========================================================================
+  // LISTA INTELIGENTE: DESTINATÁRIO (COLABORADORES OU BALCÃO)
+  // =========================================================================
+  const inputColabReq = document.getElementById('req-colaborador-busca');
+  const dropdownColabReq = document.getElementById('req-colaborador-dropdown');
+  const hiddenColabIdReq = document.getElementById('req-colaborador-id-hidden');
+  const hiddenColabNomeReq = document.getElementById('req-colaborador-nome-hidden');
+  const btnLimparColabReq = document.getElementById('btn-limpar-colab-req');
+  const boxDestinatario = document.getElementById('box-destinatario-selecionado');
+  const boxDestinatarioConteudo = document.getElementById('box-destinatario-conteudo');
+  const iconeDestinatario = document.getElementById('req-icone-destinatario');
+
+  function renderizarDropdownColaboradorReq(filtro = '') {
+    if (!dropdownColabReq) return;
+    const termo = (filtro || '').trim().toLowerCase();
+
+    let html = `
+      <!-- OPÇÃO FIXA DESTACADA: BALCÃO (USO GERAL) -->
+      <div 
+        class="combobox-item-req-colab" 
+        data-id="" 
+        data-nome="Balcão"
+        onclick="selecionarDestinatarioBalcaoReq()"
+        style="padding: 0.65rem 0.85rem; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; align-items: center; justify-content: space-between; background: #F8FAFC;"
+      >
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <div style="width: 32px; height: 32px; border-radius: 6px; background: #EEF2FF; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 700;">
+            <i class="fa-solid fa-store"></i>
+          </div>
+          <div>
+            <div style="font-weight: 700; color: var(--primary); font-size: 0.86rem;">
+              Balcão (Uso Geral / Sem Ficha)
+            </div>
+            <div style="font-size: 0.73rem; color: var(--text-dim);">
+              Saída avulsa atribuída ao almoxarifado sem vínculo individual
+            </div>
+          </div>
+        </div>
+        <span class="badge" style="background: #E0E7FF; color: var(--primary); font-size: 0.68rem; font-weight: 700;">
+          Sem Ficha
+        </span>
+      </div>
+    `;
+
+    const filtrados = LISTA_COLABORADORES_REQ.filter(c => {
+      if (!termo) return true;
+      return (c.nome && c.nome.toLowerCase().includes(termo)) ||
+             (c.matricula && c.matricula.toLowerCase().includes(termo)) ||
+             (c.cargo && c.cargo.toLowerCase().includes(termo));
+    });
+
+    if (filtrados.length === 0 && termo) {
+      html += `
+        <div style="padding: 0.85rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+          Nenhum colaborador encontrado com "${filtro}".
+        </div>
+      `;
+    } else {
+      filtrados.forEach(c => {
+        const iniciais = c.nome ? c.nome.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() : 'CO';
+        html += `
+          <div 
+            class="combobox-item-req-colab" 
+            data-id="${c.id}" 
+            data-nome="${c.nome.replace(/"/g, '&quot;')}"
+            data-cargo="${(c.cargo || '').replace(/"/g, '&quot;')}"
+            data-mat="${(c.matricula || '').replace(/"/g, '&quot;')}"
+            onclick="selecionarColaboradorReq('${c.id}', '${c.nome.replace(/'/g, "\\'")}', '${(c.cargo || '').replace(/'/g, "\\'")}', '${(c.matricula || '').replace(/'/g, "\\'")}')"
+            style="padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+          >
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <div style="width: 30px; height: 30px; border-radius: 50%; background: var(--bg-surface); color: var(--text-main); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; border: 1px solid var(--border-light);">
+                ${iniciais}
+              </div>
+              <div>
+                <div style="font-weight: 700; color: var(--text-main); font-size: 0.84rem;">
+                  ${c.nome}
+                </div>
+                <div style="font-size: 0.73rem; color: var(--text-dim);">
+                  ${c.cargo || 'Colaborador'} ${c.matricula ? '• Mat: ' + c.matricula : ''}
+                </div>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right" style="font-size: 0.7rem; color: var(--border-medium);"></i>
+          </div>
+        `;
+      });
+    }
+
+    dropdownColabReq.innerHTML = html;
+    dropdownColabReq.style.display = 'block';
+
+    // Hover visual
+    dropdownColabReq.querySelectorAll('.combobox-item-req-colab').forEach(el => {
+      el.addEventListener('mouseenter', () => el.style.background = '#F1F5F9');
+      el.addEventListener('mouseleave', () => {
+        if (!el.getAttribute('data-nome') || el.getAttribute('data-nome') !== 'Balcão') {
+          el.style.background = '#ffffff';
+        } else {
+          el.style.background = '#F8FAFC';
+        }
+      });
+    });
   }
 
-  function aoSelecionarProdutoReq(select) {
-    // Pode exibir saldo dinâmico se desejado
+  function selecionarColaboradorReq(id, nome, cargo, matricula) {
+    hiddenColabIdReq.value = id;
+    hiddenColabNomeReq.value = nome;
+    inputColabReq.value = `${nome} ${matricula ? '(' + matricula + ')' : ''}`;
+    btnLimparColabReq.style.display = 'flex';
+    dropdownColabReq.style.display = 'none';
+
+    iconeDestinatario.className = 'fa-solid fa-user-check';
+    iconeDestinatario.style.color = 'var(--primary)';
+
+    boxDestinatario.style.display = 'block';
+    boxDestinatario.style.background = 'var(--bg-surface)';
+    boxDestinatario.style.borderColor = 'var(--border-light)';
+    boxDestinatarioConteudo.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-id-badge" style="color: var(--primary);"></i>
+        <span>Colaborador: <strong>${nome}</strong> ${cargo ? '— ' + cargo : ''} ${matricula ? '(Matrícula: ' + matricula + ')' : ''}</span>
+      </div>
+    `;
   }
 
+  function selecionarDestinatarioBalcaoReq() {
+    hiddenColabIdReq.value = '';
+    hiddenColabNomeReq.value = 'Balcão';
+    inputColabReq.value = '🏪 Balcão (Uso Geral / Sem Ficha)';
+    btnLimparColabReq.style.display = 'flex';
+    dropdownColabReq.style.display = 'none';
+
+    iconeDestinatario.className = 'fa-solid fa-store';
+    iconeDestinatario.style.color = '#059669';
+
+    boxDestinatario.style.display = 'block';
+    boxDestinatario.style.background = '#ECFDF5';
+    boxDestinatario.style.borderColor = '#A7F3D0';
+    boxDestinatarioConteudo.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem; color: #065F46;">
+        <i class="fa-solid fa-circle-check" style="color: #059669;"></i>
+        <span><strong>Atribuído ao Balcão:</strong> A saída não será cobrada nem vinculada à ficha individual de nenhum colaborador.</span>
+      </div>
+    `;
+  }
+
+  function limparColaboradorReq() {
+    hiddenColabIdReq.value = '';
+    hiddenColabNomeReq.value = '';
+    inputColabReq.value = '';
+    btnLimparColabReq.style.display = 'none';
+    boxDestinatario.style.display = 'none';
+    iconeDestinatario.className = 'fa-solid fa-user';
+    iconeDestinatario.style.color = 'var(--text-dim)';
+    inputColabReq.focus();
+    renderizarDropdownColaboradorReq('');
+  }
+
+  if (inputColabReq) {
+    inputColabReq.addEventListener('focus', () => {
+      renderizarDropdownColaboradorReq(inputColabReq.value);
+    });
+
+    inputColabReq.addEventListener('input', () => {
+      hiddenColabIdReq.value = '';
+      hiddenColabNomeReq.value = inputColabReq.value;
+      btnLimparColabReq.style.display = inputColabReq.value ? 'flex' : 'none';
+      boxDestinatario.style.display = 'none';
+      renderizarDropdownColaboradorReq(inputColabReq.value);
+    });
+  }
+
+  // =========================================================================
+  // LISTA INTELIGENTE: PRODUTO / MATERIAL / EPI / FERRAMENTA
+  // =========================================================================
+  const inputProdReq = document.getElementById('req-produto-busca');
+  const dropdownProdReq = document.getElementById('req-produto-dropdown');
+  const hiddenProdIdReq = document.getElementById('req-produto-id-hidden');
+  const btnLimparProdReq = document.getElementById('btn-limpar-prod-req');
+  const boxDetalheProd = document.getElementById('req-produto-detalhe-box');
+  const detalheSku = document.getElementById('req-detalhe-sku');
+  const detalheCat = document.getElementById('req-detalhe-cat');
+  const detalheSaldo = document.getElementById('req-detalhe-saldo');
+
+  function renderizarDropdownProdutoReq(filtro = '') {
+    if (!dropdownProdReq) return;
+    const termo = (filtro || '').trim().toLowerCase();
+
+    const filtrados = LISTA_PRODUTOS_REQ.filter(p => {
+      if (!termo) return true;
+      return (p.nome && p.nome.toLowerCase().includes(termo)) ||
+             (p.sku && p.sku.toLowerCase().includes(termo)) ||
+             (p.categoria && p.categoria.toLowerCase().includes(termo)) ||
+             (p.marca && p.marca.toLowerCase().includes(termo));
+    });
+
+    if (filtrados.length === 0) {
+      dropdownProdReq.innerHTML = `
+        <div style="padding: 0.85rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+          Nenhum item encontrado com "${filtro}".
+        </div>
+      `;
+      dropdownProdReq.style.display = 'block';
+      return;
+    }
+
+    let html = '';
+    filtrados.slice(0, 50).forEach(p => {
+      const qtd = Number(p.quantidade) || 0;
+      const un = p.unidade_medida || 'UN';
+      const isZerado = qtd <= 0;
+      const isBaixo = !isZerado && qtd <= (p.estoque_minimo || 0);
+
+      const corSaldo = isZerado ? '#DC2626' : (isBaixo ? '#D97706' : '#059669');
+      const bgSaldo = isZerado ? '#FEE2E2' : (isBaixo ? '#FEF3C7' : '#D1FAE5');
+
+      html += `
+        <div 
+          class="combobox-item-req-prod" 
+          data-id="${p.id}"
+          onclick="selecionarProdutoReq('${p.id}')"
+          style="padding: 0.65rem 0.85rem; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;"
+        >
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+              <span class="badge" style="background: var(--bg-surface); border: 1px solid var(--border-light); font-size: 0.7rem; font-family: var(--font-mono); font-weight: 700;">
+                ${p.sku || 'SEM SKU'}
+              </span>
+              <strong style="color: var(--text-main); font-size: 0.86rem;">
+                ${p.nome}
+              </strong>
+            </div>
+            <div style="font-size: 0.74rem; color: var(--text-dim); margin-top: 2px;">
+              ${p.categoria || 'Geral'} ${p.marca ? '• ' + p.marca : ''}
+            </div>
+          </div>
+
+          <div style="text-align: right; flex-shrink: 0;">
+            <span class="badge" style="background: ${bgSaldo}; color: ${corSaldo}; font-size: 0.74rem; font-weight: 800; border: 1px solid ${corSaldo}30;">
+              ${isZerado ? 'ZERADO' : qtd + ' ' + un}
+            </span>
+          </div>
+        </div>
+      `;
+    });
+
+    dropdownProdReq.innerHTML = html;
+    dropdownProdReq.style.display = 'block';
+
+    dropdownProdReq.querySelectorAll('.combobox-item-req-prod').forEach(el => {
+      el.addEventListener('mouseenter', () => el.style.background = '#F1F5F9');
+      el.addEventListener('mouseleave', () => el.style.background = '#ffffff');
+    });
+  }
+
+  function selecionarProdutoReq(prodId) {
+    const p = LISTA_PRODUTOS_REQ.find(item => String(item.id) === String(prodId));
+    if (!p) return;
+
+    hiddenProdIdReq.value = p.id;
+    inputProdReq.value = `[${p.sku}] ${p.nome}`;
+    btnLimparProdReq.style.display = 'flex';
+    dropdownProdReq.style.display = 'none';
+
+    detalheSku.textContent = p.sku || 'SEM SKU';
+    detalheCat.textContent = `${p.categoria || 'Geral'}${p.marca ? ' • ' + p.marca : ''}`;
+
+    const qtd = Number(p.quantidade) || 0;
+    const un = p.unidade_medida || 'UN';
+    detalheSaldo.textContent = `${qtd} ${un}`;
+    detalheSaldo.style.color = qtd <= 0 ? 'var(--danger)' : '#059669';
+
+    boxDetalheProd.style.display = 'flex';
+  }
+
+  function limparProdutoReq() {
+    hiddenProdIdReq.value = '';
+    inputProdReq.value = '';
+    btnLimparProdReq.style.display = 'none';
+    boxDetalheProd.style.display = 'none';
+    inputProdReq.focus();
+    renderizarDropdownProdutoReq('');
+  }
+
+  if (inputProdReq) {
+    inputProdReq.addEventListener('focus', () => {
+      renderizarDropdownProdutoReq(inputProdReq.value);
+    });
+
+    inputProdReq.addEventListener('input', () => {
+      hiddenProdIdReq.value = '';
+      btnLimparProdReq.style.display = inputProdReq.value ? 'flex' : 'none';
+      boxDetalheProd.style.display = 'none';
+      renderizarDropdownProdutoReq(inputProdReq.value);
+    });
+  }
+
+  // Fecha dropdowns ao clicar fora
+  document.addEventListener('click', (e) => {
+    const wrapColab = document.getElementById('req-colaborador-wrapper');
+    if (wrapColab && !wrapColab.contains(e.target)) {
+      if (dropdownColabReq) dropdownColabReq.style.display = 'none';
+    }
+
+    const wrapProd = document.getElementById('req-produto-wrapper');
+    if (wrapProd && !wrapProd.contains(e.target)) {
+      if (dropdownProdReq) dropdownProdReq.style.display = 'none';
+    }
+  });
+
+  // =========================================================================
+  // APROVAR E RECUSAR REQUISIÇÃO (ALMOXARIFE)
+  // =========================================================================
   function abrirModalAprovar(id, codigo, produto, qtd, unidade, colab, tipo, saldoAtual) {
     document.getElementById('aprov-codigo').innerText = codigo;
     document.getElementById('aprov-colaborador').innerText = colab;
