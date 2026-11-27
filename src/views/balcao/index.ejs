@@ -108,8 +108,7 @@
         <button 
           type="button" 
           id="btn-modo-atendimento" 
-          class="btn btn-sm btn-primary" 
-          style="padding: 0.35rem 0.75rem; font-size: 0.76rem; font-weight: 700; border-radius: 6px;"
+          class="modo-balcao-btn ativo" 
           onclick="alternarModoBalcao('atendimento')"
         >
           <i class="fa-solid fa-boxes-packing"></i> Atendimento Direto
@@ -117,8 +116,7 @@
         <button 
           type="button" 
           id="btn-modo-requisicao" 
-          class="btn btn-sm btn-outline" 
-          style="padding: 0.35rem 0.75rem; font-size: 0.76rem; font-weight: 700; border-radius: 6px; border: none;"
+          class="modo-balcao-btn" 
           onclick="alternarModoBalcao('requisicao')"
         >
           <i class="fa-solid fa-clipboard-question"></i> Criar Requisição (TST / Obra)
@@ -745,6 +743,31 @@
   .btn-tipo-op[data-tipo="DEVOLUCAO"].ativo { background: #06B6D4 !important; }
   .btn-tipo-op[data-tipo="ENTRADA"].ativo { background: #10B981 !important; }
   .btn-tipo-op[data-tipo="TROCA"].ativo { background: #8B5CF6 !important; }
+
+  /* Seletor de Modo no Balcão (Atendimento Direto vs Requisição TST) */
+  .modo-balcao-btn {
+    padding: 0.35rem 0.8rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    transition: all 0.15s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .modo-balcao-btn:hover {
+    color: var(--text-main);
+    background: rgba(0,0,0,0.05);
+  }
+  .modo-balcao-btn.ativo {
+    background: var(--primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+  }
 </style>
 
 <script>
@@ -818,12 +841,21 @@
     const btnSubmit = document.getElementById('btn-submit-balcao');
     const btnSubmitTexto = document.getElementById('btn-submit-texto');
 
+    // Reseta qualquer estilo inline que possa ter ficado
+    if (btnAtend) {
+      btnAtend.style.background = '';
+      btnAtend.style.color = '';
+      btnAtend.style.border = '';
+    }
+    if (btnReq) {
+      btnReq.style.background = '';
+      btnReq.style.color = '';
+      btnReq.style.border = '';
+    }
+
     if (modo === 'requisicao') {
-      btnAtend.className = 'btn btn-sm btn-outline';
-      btnAtend.style.border = 'none';
-      btnReq.className = 'btn btn-sm btn-primary';
-      btnReq.style.background = 'var(--primary)';
-      btnReq.style.color = '#fff';
+      if (btnAtend) btnAtend.classList.remove('ativo');
+      if (btnReq) btnReq.classList.add('ativo');
 
       titulo.textContent = 'Criar Requisição de Material / EPI (TST / Obra)';
       form.action = '/requisicoes';
@@ -847,11 +879,8 @@
       btnSubmit.style.borderColor = 'var(--primary)';
       btnSubmitTexto.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 5px;"></i> Enviar Requisição ao Almoxarife';
     } else {
-      btnReq.className = 'btn btn-sm btn-outline';
-      btnReq.style.border = 'none';
-      btnAtend.className = 'btn btn-sm btn-primary';
-      btnAtend.style.background = '';
-      btnAtend.style.color = '';
+      if (btnReq) btnReq.classList.remove('ativo');
+      if (btnAtend) btnAtend.classList.add('ativo');
 
       titulo.textContent = 'Novo Lançamento no Balcão';
       form.action = '/balcao/registrar';
